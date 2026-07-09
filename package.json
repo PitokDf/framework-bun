@@ -1,0 +1,57 @@
+{
+	"name": "buntok",
+	"module": "src/exports.ts",
+	"type": "module",
+	"version": "0.1.1",
+	"main": "src/exports.ts",
+	"types": "src/exports.ts",
+	"bin": {
+		"buntok": "./dist/cli.js"
+	},
+	"exports": {
+		".": {
+			"import": "./src/exports.ts",
+			"types": "./src/exports.ts"
+		},
+		"./middlewares/*": "./src/middlewares/*",
+		"./helpers/*": "./src/helpers/*"
+	},
+	"files": [
+		"src",
+		"dist",
+		"README.md"
+	],
+	"description": "High performance, batteries-included Bun backend framework",
+	"keywords": [
+		"bun",
+		"framework",
+		"web",
+		"api",
+		"typescript",
+		"sse",
+		"middleware"
+	],
+	"author": "",
+	"license": "MIT",
+	"devDependencies": {
+		"@biomejs/biome": "2.5.3",
+		"@types/bun": "latest",
+		"autocannon": "^8.0.0"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"build": "bun build src/cli.ts --outdir dist --target node",
+		"bench": "bun run bench.ts",
+		"bench:prod": "bun run bench.ts --prod",
+		"format": "bunx @biomejs/biome format --write .",
+		"lint": "bunx @biomejs/biome lint .",
+		"check": "bunx @biomejs/biome check --write .",
+		"prepublishOnly": "bun run build && bun run check"
+	},
+	"dependencies": {
+		"zod": "^4.4.3"
+	}
+}
