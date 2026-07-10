@@ -106,13 +106,6 @@ const benchmarks = [
 		url: `${BASE}/bench/static`,
 		method: "GET" as const,
 	},
-	{
-		name: "QUERY Method (RFC 10008)",
-		url: `${BASE}/bench/query-method`,
-		method: "QUERY" as const,
-		body: generate1KBJson(),
-		headers: { "Content-Type": "application/json" },
-	},
 ];
 
 async function runBenchmark(

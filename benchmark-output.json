@@ -1,0 +1,145 @@
+[
+  {
+    "name": "Plaintext",
+    "hz": 5566.4,
+    "stats": {
+      "mean": 178.73,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "JSON Serialization",
+    "hz": 5736.4,
+    "stats": {
+      "mean": 172.94,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Single Query (DB)",
+    "hz": 5694.4,
+    "stats": {
+      "mean": 174.01,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Multiple Queries (10)",
+    "hz": 5650.8,
+    "stats": {
+      "mean": 176.04,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Fortunes (HTML)",
+    "hz": 5604,
+    "stats": {
+      "mean": 177.12,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Data Updates (10)",
+    "hz": 5400.4,
+    "stats": {
+      "mean": 184.4,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Route Params",
+    "hz": 6147.2,
+    "stats": {
+      "mean": 161.06,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Query String",
+    "hz": 5740.4,
+    "stats": {
+      "mean": 172.39,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "POST JSON 1KB",
+    "hz": 18657.6,
+    "stats": {
+      "mean": 53.51,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Middleware 5 Layers",
+    "hz": 5851.6,
+    "stats": {
+      "mean": 169.12,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  },
+  {
+    "name": "Static File 100KB",
+    "hz": 3742.9,
+    "stats": {
+      "mean": 268.31,
+      "variance": 0,
+      "stddev": 0,
+      "sem": 0,
+      "rme": 0,
+      "sample": []
+    },
+    "samples": 100
+  }
+]
