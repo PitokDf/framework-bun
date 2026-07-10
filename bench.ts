@@ -159,16 +159,9 @@ async function main() {
 	const results = [];
 	const benchOutput: Array<{
 		name: string;
-		hz: number;
-		stats: {
-			mean: number;
-			variance: number;
-			stddev: number;
-			sem: number;
-			rme: number;
-			sample: number[];
-		};
-		samples: number;
+		unit: string;
+		value: number;
+		range: string;
 	}> = [];
 
 	for (const bench of benchmarks) {
@@ -179,16 +172,9 @@ async function main() {
 			results.push(formatted);
 		benchOutput.push({
 			name: bench.name,
-			hz: result.requests.average,
-			stats: {
-				mean: result.latency.average,
-				variance: 0,
-				stddev: 0,
-				sem: 0,
-				rme: 0,
-				sample: [],
-			},
-			samples: 100,
+			unit: "req/sec",
+			value: Math.round(result.requests.average),
+			range: `±${Math.round(((result.requests.average - result.requests.min) / result.requests.average) * 100)}%`,
 		});
 			console.log(" done");
 		} catch (err) {
