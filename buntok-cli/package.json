@@ -1,5 +1,5 @@
 {
-  "name": "@buntok/cli",
+  "name": "buntok-cli",
   "version": "0.1.0",
   "description": "Buntok CLI - Code generator for Buntok framework",
   "type": "module",
