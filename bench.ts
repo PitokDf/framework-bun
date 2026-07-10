@@ -214,17 +214,9 @@ async function main() {
 	);
 	console.log("\n✅ Benchmark output saved to benchmark-output.json");
 
-	// Cleanup with graceful shutdown
-	const cleanup = () => {
-		// Flush any remaining logs before exit
-		server.kill();
-		setTimeout(() => process.exit(0), 100);
-	};
-
-	process.on("SIGINT", cleanup);
-	process.on("SIGTERM", cleanup);
-
-	cleanup();
+	// Kill server and exit
+	server.kill();
+	process.exit(0);
 }
 
 main();
