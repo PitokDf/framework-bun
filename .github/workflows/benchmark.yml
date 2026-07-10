@@ -31,7 +31,7 @@ jobs:
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Buntok Benchmark
-          tool: 'custom'
+          tool: 'customBiggerIsBetter'
           output-file-path: benchmark-output.json
           auto-push: ${{ github.event_name != 'pull_request' }}
           gh-pages-branch: gh-pages
