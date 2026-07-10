@@ -166,10 +166,16 @@ async function main() {
 	const results = [];
 	const benchOutput: Array<{
 		name: string;
-		rank: number;
-		rme: number;
 		hz: number;
-		stats: { mean: number; variance: number; stddev: number; sem: number };
+		stats: {
+			mean: number;
+			variance: number;
+			stddev: number;
+			sem: number;
+			rme: number;
+			sample: number[];
+		};
+		samples: number;
 	}> = [];
 
 	for (const bench of benchmarks) {
@@ -178,18 +184,19 @@ async function main() {
 			const result = await runBenchmark(bench);
 			const formatted = formatResult(bench.name, result);
 			results.push(formatted);
-			benchOutput.push({
-				name: bench.name,
-				rank: 1,
+		benchOutput.push({
+			name: bench.name,
+			hz: result.requests.average,
+			stats: {
+				mean: result.latency.average,
+				variance: 0,
+				stddev: 0,
+				sem: 0,
 				rme: 0,
-				hz: result.requests.average,
-				stats: {
-					mean: result.latency.average,
-					variance: 0,
-					stddev: 0,
-					sem: 0,
-				},
-			});
+				sample: [],
+			},
+			samples: 100,
+		});
 			console.log(" done");
 		} catch (err) {
 			console.log(` FAILED: ${err}`);
