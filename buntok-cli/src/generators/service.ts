@@ -1,0 +1,45 @@
+export function generateService(entityName: string, pascalName: string): string {
+  return `import { ${pascalName}Repository } from "../repositories/${entityName}.repository";
+import type { ${pascalName}, New${pascalName} } from "../db/schemas/${entityName}";
+
+export class ${pascalName}Service {
+  private repository: ${pascalName}Repository;
+
+  constructor() {
+    this.repository = new ${pascalName}Repository();
+  }
+
+  async getAll(): Promise<${pascalName}[]> {
+    return this.repository.findAll();
+  }
+
+  async getById(id: string): Promise<${pascalName} | undefined> {
+    const ${entityName} = await this.repository.findById(id);
+    if (!${entityName}) {
+      throw new Error("${pascalName} not found");
+    }
+    return ${entityName};
+  }
+
+  async create(data: New${pascalName}): Promise<${pascalName}> {
+    return this.repository.create(data);
+  }
+
+  async update(id: string, data: Partial<New${pascalName}>): Promise<${pascalName}> {
+    const ${entityName} = await this.repository.update(id, data);
+    if (!${entityName}) {
+      throw new Error("${pascalName} not found");
+    }
+    return ${entityName};
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const deleted = await this.repository.delete(id);
+    if (!deleted) {
+      throw new Error("${pascalName} not found");
+    }
+    return true;
+  }
+}
+`;
+}

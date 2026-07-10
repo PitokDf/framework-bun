@@ -1,0 +1,26 @@
+{
+	// Format on save pakai Biome
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "biomejs.biome",
+
+	// Samakan dengan biome.json
+	"editor.tabSize": 2,
+	"editor.insertSpaces": false,
+
+	// Biome handle semua file ini
+	"[typescript]": {
+		"editor.defaultFormatter": "vscode.typescript-language-features"
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	}
+}

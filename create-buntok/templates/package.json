@@ -1,0 +1,27 @@
+{
+	"name": "{PROJECT_NAME}",
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"start": "bun run src/index.ts",
+		"db:push": "bunx drizzle-kit push",
+		"db:generate": "bunx drizzle-kit generate",
+		"db:migrate": "bunx drizzle-kit migrate",
+		"db:studio": "bunx drizzle-kit studio",
+		"check": "bunx @biomejs/biome check --write .",
+		"format": "bunx @biomejs/biome format --write .",
+		"lint": "bunx @biomejs/biome lint ."
+	},
+	"dependencies": {
+		"buntok": "latest",
+		"drizzle-orm": "^0.45.2"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.3",
+		"@types/bun": "latest",
+		"@types/node": "^22",
+		"drizzle-kit": "^0.30.0",
+		"typescript": "^5"
+	}
+}

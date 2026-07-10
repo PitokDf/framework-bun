@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-1212}:1212"
+    environment:
+      - NODE_ENV=production
+      - PORT=1212
+      - LOG_DIR=/app/logs
+    volumes:
+      - logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  logs:

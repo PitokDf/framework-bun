@@ -1,0 +1,24 @@
+{
+	"name": "create-buntok",
+	"version": "0.1.2",
+	"description": "CLI tool to create new Buntok projects",
+	"type": "module",
+	"bin": {
+		"create-buntok": "./src/index.ts"
+	},
+	"files": [
+		"src",
+		"templates"
+	],
+	"keywords": [
+		"buntok",
+		"bun",
+		"framework",
+		"cli",
+		"scaffold"
+	],
+	"license": "MIT",
+	"devDependencies": {
+		"@types/bun": "latest"
+	}
+}
