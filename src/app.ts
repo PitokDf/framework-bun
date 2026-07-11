@@ -21,19 +21,32 @@ export interface WSHandler<DI = Record<string, unknown>> {
 	drain?: (ws: ServerWebSocket<WSData<DI>>) => void;
 }
 
-export type Handler<DI = Record<string, unknown>> = (
-	ctx: Context<DI>,
-) => Response | Promise<Response>;
-export type Middleware<DI = Record<string, unknown>> = (
-	ctx: Context<DI>,
+export type ExtractParams<Path extends string> =
+	Path extends `${infer _Start}:${infer Param}/${infer Rest}`
+		? { [K in Param]: string } & ExtractParams<`/${Rest}`>
+		: Path extends `${infer _Start}:${infer Param}`
+			? { [K in Param]: string }
+			: Path extends `${infer _Start}*${infer Catchall}`
+				? { [K in Catchall]: string } & { "*": string }
+				: Record<string, never>;
+
+export type Handler<
+	DI = Record<string, unknown>,
+	Path extends string = string,
+> = (ctx: Context<DI, ExtractParams<Path>>) => Response | Promise<Response>;
+export type Middleware<
+	DI = Record<string, unknown>,
+	Path extends string = string,
+> = (
+	ctx: Context<DI, ExtractParams<Path>>,
 	next: () => Promise<Response> | Response,
 ) => Response | Promise<Response>;
 export type ErrorHandler<DI = Record<string, unknown>> = (
 	err: Error,
-	ctx: Context<DI>,
+	ctx: Context<DI, any>,
 ) => Response | Promise<Response>;
 export type NotFoundHandler<DI = Record<string, unknown>> = (
-	ctx: Context<DI>,
+	ctx: Context<DI, any>,
 ) => Response | Promise<Response>;
 
 export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
@@ -219,221 +232,230 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return join(import.meta.dir, "..", "public", "favicon.ico");
 	}
 
-	public get(path: string, handler: Handler<DI>): this;
-	public get(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public get<Path extends string>(path: Path, handler: Handler<DI, Path>): this;
+	public get<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public get(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		handler: Handler<DI>,
+	public get<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public get(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		handler: Handler<DI>,
+	public get<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public get(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		handler: Handler<DI>,
+	public get<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public get(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		m5: Middleware<DI>,
-		handler: Handler<DI>,
+	public get<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		m5: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public get(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public get<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.registerRoute("GET", path, handlers);
 		return this;
 	}
 
-	public post(path: string, handler: Handler<DI>): this;
-	public post(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public post<Path extends string>(
+		path: Path,
+		handler: Handler<DI, Path>,
 	): this;
-	public post(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		handler: Handler<DI>,
+	public post<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public post(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		handler: Handler<DI>,
+	public post<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public post(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		handler: Handler<DI>,
+	public post<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public post(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		m5: Middleware<DI>,
-		handler: Handler<DI>,
+	public post<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public post(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public post<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		m5: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
+	): this;
+	public post<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.registerRoute("POST", path, handlers);
 		return this;
 	}
 
-	public put(path: string, handler: Handler<DI>): this;
-	public put(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public put<Path extends string>(path: Path, handler: Handler<DI, Path>): this;
+	public put<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public put(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		handler: Handler<DI>,
+	public put<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public put(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		handler: Handler<DI>,
+	public put<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public put(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		handler: Handler<DI>,
+	public put<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public put(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		m5: Middleware<DI>,
-		handler: Handler<DI>,
+	public put<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		m5: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public put(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public put<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.registerRoute("PUT", path, handlers);
 		return this;
 	}
 
-	public delete(path: string, handler: Handler<DI>): this;
-	public delete(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public delete<Path extends string>(
+		path: Path,
+		handler: Handler<DI, Path>,
 	): this;
-	public delete(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		handler: Handler<DI>,
+	public delete<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public delete(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		handler: Handler<DI>,
+	public delete<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public delete(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		handler: Handler<DI>,
+	public delete<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public delete(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		m5: Middleware<DI>,
-		handler: Handler<DI>,
+	public delete<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public delete(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public delete<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		m5: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
+	): this;
+	public delete<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.registerRoute("DELETE", path, handlers);
 		return this;
 	}
 
-	public options(path: string, handler: Handler<DI>): this;
-	public options(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public options<Path extends string>(
+		path: Path,
+		handler: Handler<DI, Path>,
 	): this;
-	public options(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		handler: Handler<DI>,
+	public options<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public options(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		handler: Handler<DI>,
+	public options<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public options(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		handler: Handler<DI>,
+	public options<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public options(
-		path: string,
-		m1: Middleware<DI>,
-		m2: Middleware<DI>,
-		m3: Middleware<DI>,
-		m4: Middleware<DI>,
-		m5: Middleware<DI>,
-		handler: Handler<DI>,
+	public options<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public options(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public options<Path extends string>(
+		path: Path,
+		m1: Middleware<DI, Path>,
+		m2: Middleware<DI, Path>,
+		m3: Middleware<DI, Path>,
+		m4: Middleware<DI, Path>,
+		m5: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
+	): this;
+	public options<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.registerRoute("OPTIONS", path, handlers);
 		return this;
@@ -580,7 +602,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 	private compileGlobalPipeline(): void {
 		if (this.middlewares.length === 0) {
-			this.compiledGlobalPipeline = (ctx, finalHandler) => finalHandler(ctx);
+			this.compiledGlobalPipeline = (ctx, finalHandler) =>
+				finalHandler(ctx as any);
 			return;
 		}
 
@@ -919,15 +942,15 @@ export class RouterGroup<
 		return `${this.prefix}${cleanPath}`;
 	}
 
-	public get(path: string, handler: Handler<DI>): this;
-	public get(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public get<Path extends string>(path: Path, handler: Handler<DI, Path>): this;
+	public get<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public get(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public get<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.app.registerRoute("GET", this.normalizePath(path), [
 			...this.groupMiddlewares,
@@ -936,15 +959,18 @@ export class RouterGroup<
 		return this;
 	}
 
-	public post(path: string, handler: Handler<DI>): this;
-	public post(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public post<Path extends string>(
+		path: Path,
+		handler: Handler<DI, Path>,
 	): this;
-	public post(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public post<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
+	): this;
+	public post<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.app.registerRoute("POST", this.normalizePath(path), [
 			...this.groupMiddlewares,
@@ -953,15 +979,15 @@ export class RouterGroup<
 		return this;
 	}
 
-	public put(path: string, handler: Handler<DI>): this;
-	public put(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public put<Path extends string>(path: Path, handler: Handler<DI, Path>): this;
+	public put<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
 	): this;
-	public put(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public put<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.app.registerRoute("PUT", this.normalizePath(path), [
 			...this.groupMiddlewares,
@@ -970,15 +996,18 @@ export class RouterGroup<
 		return this;
 	}
 
-	public delete(path: string, handler: Handler<DI>): this;
-	public delete(
-		path: string,
-		middleware: Middleware<DI>,
-		handler: Handler<DI>,
+	public delete<Path extends string>(
+		path: Path,
+		handler: Handler<DI, Path>,
 	): this;
-	public delete(
-		path: string,
-		...handlers: Array<Middleware<DI> | Handler<DI>>
+	public delete<Path extends string>(
+		path: Path,
+		middleware: Middleware<DI, Path>,
+		handler: Handler<DI, Path>,
+	): this;
+	public delete<Path extends string>(
+		path: Path,
+		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
 		this.app.registerRoute("DELETE", this.normalizePath(path), [
 			...this.groupMiddlewares,

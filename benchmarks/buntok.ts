@@ -1,4 +1,4 @@
-import { App } from "../framework-bun/src/exports.ts";
+import { App } from "../src/exports.ts";
 
 const app = new App();
 app.disable("x-powered-by");

@@ -1,8 +1,11 @@
 import { createSSE, type SSE, type SSEOptions } from "./sse";
 
-export class Context<DI = Record<string, unknown>> {
+export class Context<
+	DI = Record<string, unknown>,
+	Params = Record<string, string>,
+> {
 	public request: Request;
-	public params: Record<string, string>;
+	public params: Params & Record<string, string>;
 
 	private _store: Record<string, unknown> | undefined;
 	private _cookies: Record<string, string> | undefined;
@@ -13,7 +16,7 @@ export class Context<DI = Record<string, unknown>> {
 
 	constructor(request: Request, params: Record<string, string>, di: DI) {
 		this.request = request;
-		this.params = params;
+		this.params = params as unknown as Params & Record<string, string>;
 		this.di = di;
 	}
 
