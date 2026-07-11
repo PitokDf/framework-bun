@@ -43,9 +43,11 @@ export type Middleware<
 ) => Response | Promise<Response>;
 export type ErrorHandler<DI = Record<string, unknown>> = (
 	err: Error,
+	// biome-ignore lint/suspicious/noExplicitAny: generic
 	ctx: Context<DI, any>,
 ) => Response | Promise<Response>;
 export type NotFoundHandler<DI = Record<string, unknown>> = (
+	// biome-ignore lint/suspicious/noExplicitAny: generic
 	ctx: Context<DI, any>,
 ) => Response | Promise<Response>;
 
@@ -603,6 +605,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private compileGlobalPipeline(): void {
 		if (this.middlewares.length === 0) {
 			this.compiledGlobalPipeline = (ctx, finalHandler) =>
+				// biome-ignore lint/suspicious/noExplicitAny: compiled
 				finalHandler(ctx as any);
 			return;
 		}
@@ -642,17 +645,21 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"  const method = request.method;\n" +
 			"  switch(method) {\n";
 
+		// biome-ignore lint/suspicious/noExplicitAny: generic
 		const handlersList: any[] = [];
+		// biome-ignore lint/suspicious/noExplicitAny: generic
 		const handlersMap = new Map<any, string>();
 
+		// biome-ignore lint/suspicious/noExplicitAny: generic
 		function getHandlerIndex(handler: any) {
 			if (handlersMap.has(handler)) return handlersMap.get(handler);
 			const idx = handlersList.length;
 			handlersList.push(handler);
-			handlersMap.set(handler, "handlers[" + idx + "]");
-			return "handlers[" + idx + "]";
+			handlersMap.set(handler, `handlers[${idx}]`);
+			return `handlers[${idx}]`;
 		}
 
+		// biome-ignore lint/suspicious/noExplicitAny: generic
 		const methodPaths = new Map<string, { path: string; handler: any }[]>();
 		for (const [path, methodMap] of this.router.staticRoutes.entries()) {
 			for (const [method, handler] of methodMap.entries()) {
@@ -663,11 +670,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		}
 
 		for (const [method, routes] of methodPaths.entries()) {
-			code += 'case "' + method + '": {\n';
+			code += `case "${method}": {\n`;
 			code += "  switch(pathname) {\n";
 			for (const route of routes) {
 				const handlerRef = getHandlerIndex(route.handler);
-				code += '    case "' + route.path + '": {\n';
+				code += `    case "${route.path}": {\n`;
 				code += "      const ctx = new Context(request, EMPTY_PARAMS, di);\n";
 				code += "      try {\n";
 				code +=

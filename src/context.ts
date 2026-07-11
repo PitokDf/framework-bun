@@ -12,7 +12,7 @@ export class Context<
 	private _query: Record<string, string> | undefined;
 	private _validated: Record<string, unknown> | undefined;
 	public readonly di: DI;
-	public _afterHooks?: Array<(res: Response) => Response | void>;
+	public _afterHooks?: Array<(res: Response) => Response | undefined>;
 
 	constructor(request: Request, params: Record<string, string>, di: DI) {
 		this.request = request;
@@ -214,7 +214,7 @@ export class Context<
 		});
 	}
 
-	public onAfterResponse(hook: (res: Response) => Response | void): void {
+	public onAfterResponse(hook: (res: Response) => Response | undefined): void {
 		if (!this._afterHooks) this._afterHooks = [];
 		this._afterHooks.push(hook);
 	}

@@ -10,6 +10,7 @@ const EMPTY_PARAMS: Record<string, string> = Object.freeze({});
 
 export class Router {
 	private root: RouterNode = new RouterNode("/", NodeType.STATIC);
+	// biome-ignore lint/suspicious/noExplicitAny: generic
 	public staticRoutes: Map<string, Map<string, (...args: any[]) => any>> =
 		new Map();
 
