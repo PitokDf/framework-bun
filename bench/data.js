@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783775368729,
+  "lastUpdate": 1783775873788,
   "repoUrl": "https://github.com/PitokDf/framework-bun",
   "entries": {
     "Buntok Benchmark": [
@@ -188,6 +188,105 @@ window.BENCHMARK_DATA = {
           {
             "name": "buntok /id/123",
             "value": 59273,
+            "unit": "req/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "committer": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "distinct": true,
+          "id": "940abeacd5a102b7b72d4e2e885aa61e912b1924",
+          "message": "feat: Implement strict typed path parameters via Template Literal Types",
+          "timestamp": "2026-07-11T20:16:08+07:00",
+          "tree_id": "e5c46aec6b969c6b14750dd97efb0d55c4a1d3e7",
+          "url": "https://github.com/PitokDf/framework-bun/commit/940abeacd5a102b7b72d4e2e885aa61e912b1924"
+        },
+        "date": 1783775872975,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "express /plaintext",
+            "value": 19085,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /json",
+            "value": 21363,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /id/123",
+            "value": 18789,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /plaintext",
+            "value": 25061,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /json",
+            "value": 24056,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /id/123",
+            "value": 24861,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /plaintext",
+            "value": 52795,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /json",
+            "value": 39405,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /id/123",
+            "value": 46697,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /plaintext",
+            "value": 68486,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /json",
+            "value": 64066,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /id/123",
+            "value": 68227,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /plaintext",
+            "value": 52675,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /json",
+            "value": 53088,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /id/123",
+            "value": 50502,
             "unit": "req/sec"
           }
         ]
