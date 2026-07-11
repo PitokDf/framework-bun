@@ -172,28 +172,28 @@ function DocsPage() {
           <h2 className="text-2xl font-semibold text-[#ededed]">Controllers & Routing</h2>
           <p className="text-[#888] leading-relaxed">Buntok uses decorators for routing. A Controller handles incoming HTTP requests and returns responses. Decorators bind methods to specific HTTP methods and paths.</p>
           <div className="bg-[#111] border border-[#222] p-5 rounded-md font-mono text-sm text-[#ccc] overflow-x-auto">
-<pre><code><span className="text-purple-400">import</span> { '{' } Controller, Get, Post, Context { '}' } <span className="text-purple-400">from</span> <span className="text-green-400">'buntok'</span>;
+<pre><code>{`import { Controller, Get, Post, Context } from 'buntok';
 
-<span className="text-blue-400">@Controller</span>(<span className="text-green-400">'/users'</span>)
-<span className="text-purple-400">export class</span> <span className="text-yellow-200">UserController</span> { '{' }
+@Controller('/users')
+export class UserController {
   
-  <span className="text-blue-400">@Get</span>(<span className="text-green-400">'/'</span>)
-  <span className="text-blue-300">getAll</span>(ctx: Context) { '{' }
-    <span className="text-purple-400">return</span> ctx.<span className="text-blue-300">json</span>({ '{' } users: [<span className="text-green-400">'Alice'</span>, <span className="text-green-400">'Bob'</span>] { '}' });
-  { '}' }
+  @Get('/')
+  getAll(ctx: Context) {
+    return ctx.json({ users: ['Alice', 'Bob'] });
+  }
 
-  <span className="text-blue-400">@Get</span>(<span className="text-green-400">'/:id'</span>)
-  <span className="text-blue-300">getOne</span>(ctx: Context) { '{' }
-    <span className="text-purple-400">const</span> { '{' } id { '}' } = ctx.params;
-    <span className="text-purple-400">return</span> ctx.<span className="text-blue-300">text</span>(<span className="text-green-400">{"`User ID: ${id}`"}</span>);
-  { '}' }
+  @Get('/:id')
+  getOne(ctx: Context) {
+    const { id } = ctx.params;
+    return ctx.text(\`User ID: \${id}\`);
+  }
 
-  <span className="text-blue-400">@Post</span>(<span className="text-green-400">'/'</span>)
-  <span className="text-purple-400">async</span> <span className="text-blue-300">create</span>(ctx: Context) { '{' }
-    <span className="text-purple-400">const</span> body = <span className="text-purple-400">await</span> ctx.<span className="text-blue-300">json</span>();
-    <span className="text-purple-400">return</span> ctx.<span className="text-blue-300">json</span>({ '{' } created: true, data: body { '}' }, <span className="text-orange-400">201</span>);
-  { '}' }
-{ '}' }</code></pre>
+  @Post('/')
+  async create(ctx: Context) {
+    const body = await ctx.json();
+    return ctx.json({ created: true, data: body }, 201);
+  }
+}`}</code></pre>
           </div>
           <p className="text-[#888] leading-relaxed mt-4">
             After defining a controller, register it in your main application file using <code>app.registerController(new UserController())</code>.
@@ -218,19 +218,19 @@ function DocsPage() {
           <h2 className="text-2xl font-semibold text-[#ededed]">Middlewares</h2>
           <p className="text-[#888] leading-relaxed">Buntok supports global middlewares. Middlewares are standard functions that receive the <code>Context</code> and a <code>next</code> function.</p>
           <div className="bg-[#111] border border-[#222] p-5 rounded-md font-mono text-sm text-[#ccc] overflow-x-auto">
-<pre><code><span className="text-purple-400">import</span> { '{' } App { '}' } <span className="text-purple-400">from</span> <span className="text-green-400">'buntok'</span>;
+<pre><code>{`import { App } from 'buntok';
 
-<span className="text-purple-400">const</span> app = <span className="text-purple-400">new</span> <span className="text-yellow-200">App</span>();
+const app = new App();
 
-<span className="text-gray-500">// Global Logger Middleware</span>
-app.<span className="text-blue-300">use</span>(<span className="text-purple-400">async</span> (ctx, next) =&gt; { '{' }
-  <span className="text-purple-400">const</span> start = Date.now();
-  <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> <span className="text-blue-300">next</span>();
-  <span className="text-purple-400">const</span> ms = Date.now() - start;
+// Global Logger Middleware
+app.use(async (ctx, next) => {
+  const start = Date.now();
+  const response = await next();
+  const ms = Date.now() - start;
   
-  console.<span className="text-blue-300">log</span>(<span className="text-green-400">{"`${ctx.req.method} ${ctx.req.url} - ${ms}ms`"}</span>);
-  <span className="text-purple-400">return</span> response;
-{ '}' });</code></pre>
+  console.log(\`\${ctx.req.method} \${ctx.req.url} - \${ms}ms\`);
+  return response;
+});`}</code></pre>
           </div>
         </section>
 
