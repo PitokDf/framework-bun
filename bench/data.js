@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783775968700,
+  "lastUpdate": 1783777246581,
   "repoUrl": "https://github.com/PitokDf/framework-bun",
   "entries": {
     "Buntok Benchmark": [
@@ -386,6 +386,105 @@ window.BENCHMARK_DATA = {
           {
             "name": "buntok /id/123",
             "value": 59992,
+            "unit": "req/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "committer": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "distinct": true,
+          "id": "69e02fb9f051fd937a7f6b9253dd0d4775221e47",
+          "message": "chore: setup tsup build and configure NPM publish workflow",
+          "timestamp": "2026-07-11T20:39:02+07:00",
+          "tree_id": "205b04ab2c5bcf33cd2036bb511e97b3f67a19ac",
+          "url": "https://github.com/PitokDf/framework-bun/commit/69e02fb9f051fd937a7f6b9253dd0d4775221e47"
+        },
+        "date": 1783777246118,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "express /plaintext",
+            "value": 28701,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /json",
+            "value": 26805,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /id/123",
+            "value": 28994,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /plaintext",
+            "value": 39024,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /json",
+            "value": 38644,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /id/123",
+            "value": 38743,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /plaintext",
+            "value": 60177,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /json",
+            "value": 51213,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /id/123",
+            "value": 58196,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /plaintext",
+            "value": 73072,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /json",
+            "value": 70227,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /id/123",
+            "value": 73154,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /plaintext",
+            "value": 61892,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /json",
+            "value": 62428,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /id/123",
+            "value": 59651,
             "unit": "req/sec"
           }
         ]
