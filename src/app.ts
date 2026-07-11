@@ -600,6 +600,99 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		) => Response | Promise<Response>;
 	}
 
+	private compileAOTRouter(): (
+		request: Request,
+		server?: Server<WSData<DI>>,
+	) => Response | Promise<Response> {
+		if (this.wsRoutes.size > 0) {
+			return this.fallbackHandleRequest.bind(this);
+		}
+
+		let code =
+			"return function(request, server) {\n" +
+			"  const url = request.url;\n" +
+			"  let start = url.indexOf('/', url.indexOf('//') + 2);\n" +
+			"  if (start === -1) start = url.length;\n" +
+			"  let end = url.indexOf('?', start);\n" +
+			"  if (end === -1) end = url.length;\n" +
+			"  const pathname = start === url.length ? '/' : url.substring(start, end);\n" +
+			"  const method = request.method;\n" +
+			"  switch(method) {\n";
+
+		const handlersList: any[] = [];
+		const handlersMap = new Map<any, string>();
+
+		function getHandlerIndex(handler: any) {
+			if (handlersMap.has(handler)) return handlersMap.get(handler);
+			const idx = handlersList.length;
+			handlersList.push(handler);
+			handlersMap.set(handler, "handlers[" + idx + "]");
+			return "handlers[" + idx + "]";
+		}
+
+		const methodPaths = new Map<string, { path: string; handler: any }[]>();
+		for (const [path, methodMap] of this.router.staticRoutes.entries()) {
+			for (const [method, handler] of methodMap.entries()) {
+				if (!methodPaths.has(method)) methodPaths.set(method, []);
+				// biome-ignore lint/style/noNonNullAssertion: guaranteed
+				methodPaths.get(method)!.push({ path, handler });
+			}
+		}
+
+		for (const [method, routes] of methodPaths.entries()) {
+			code += 'case "' + method + '": {\n';
+			code += "  switch(pathname) {\n";
+			for (const route of routes) {
+				const handlerRef = getHandlerIndex(route.handler);
+				code += '    case "' + route.path + '": {\n';
+				code += "      const ctx = new Context(request, EMPTY_PARAMS, di);\n";
+				code += "      try {\n";
+				code +=
+					"        const result = compiledGlobalPipeline(ctx, " +
+					handlerRef +
+					");\n";
+				code += "        if (result instanceof Promise) {\n";
+				code +=
+					"          return result.then((r) => logResponse(request, pathname, r)).catch((e) => handleError(request, pathname, ctx, e));\n";
+				code += "        }\n";
+				code += "        return logResponse(request, pathname, result);\n";
+				code += "      } catch (err) {\n";
+				code += "        return handleError(request, pathname, ctx, err);\n";
+				code += "      }\n";
+				code += "    }\n";
+			}
+			code += "  }\n";
+			code += "  break;\n";
+			code += "}\n";
+		}
+
+		code += "  }\n" + "  return fallback(request, server);\n" + "};\n";
+
+		const factory = new Function(
+			"Context",
+			"EMPTY_PARAMS",
+			"di",
+			"handlers",
+			"compiledGlobalPipeline",
+			"logResponse",
+			"handleError",
+			"fallback",
+			code,
+		);
+
+		const EMPTY_PARAMS = Object.freeze({});
+		return factory(
+			Context,
+			EMPTY_PARAMS,
+			this.di,
+			handlersList,
+			this.compiledGlobalPipeline,
+			this.logResponse,
+			this.handleError,
+			this.fallbackHandleRequest.bind(this),
+		);
+	}
+
 	private extractPathname(url: string): string {
 		// Skip protocol + authority (http://localhost:1212)
 		const start = url.indexOf("/", url.indexOf("//") + 2);
@@ -664,6 +757,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		init?: RequestInit,
 	): Promise<Response> {
 		if (!this.compiledGlobalPipeline) this.compileGlobalPipeline();
+		this._compiledAOTRouter = this.compileAOTRouter();
 		const request =
 			input instanceof Request && !init
 				? input
@@ -677,7 +771,19 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return this.handleRequest(request);
 	}
 
+	private _compiledAOTRouter: (
+		request: Request,
+		server?: Server<WSData<DI>>,
+	) => Response | Promise<Response> = this.fallbackHandleRequest.bind(this);
+
 	public handleRequest(
+		request: Request,
+		server?: Server<WSData<DI>>,
+	): Response | Promise<Response> {
+		return this._compiledAOTRouter(request, server);
+	}
+
+	public fallbackHandleRequest(
 		request: Request,
 		server?: Server<WSData<DI>>,
 	): Response | Promise<Response> {
@@ -734,6 +840,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		// Perform AOT compilation for global middlewares
 		this.compileGlobalPipeline();
+		this._compiledAOTRouter = this.compileAOTRouter();
 
 		const finalPort = port || Number(process.env.PORT) || 1212;
 

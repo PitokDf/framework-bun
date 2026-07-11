@@ -30,7 +30,7 @@ jobs:
           chmod +x bombardier
 
       - name: Run benchmark
-        run: bun run bench:prod
+        run: bun run bench:all
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
