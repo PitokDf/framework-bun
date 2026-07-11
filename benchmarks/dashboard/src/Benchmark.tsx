@@ -38,7 +38,7 @@ export function BenchmarkSection({ data }: { data: any }) {
           <h2 className="text-4xl font-bold tracking-tight text-white mb-2">Performance Benchmarks</h2>
           <p className="text-gray-400 text-lg">Real-world load testing on typical endpoints.</p>
         </div>
-        <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-5 mt-6 flex flex-wrap gap-6 text-sm text-gray-400">
+        <div className="bg-[#18181b] border border-gray-800 rounded-md p-5 mt-6 flex flex-wrap gap-6 text-sm text-gray-400">
           <div className="flex flex-col gap-1">
             <span className="uppercase text-xs font-semibold text-gray-500 tracking-wider">Machine</span>
             <div className="flex items-center gap-2 text-gray-200"><Cpu className="w-4 h-4" /> {machine.cpu}</div>
@@ -54,7 +54,7 @@ export function BenchmarkSection({ data }: { data: any }) {
         </div>
       </header>
 
-      <section className="bg-gradient-to-br from-[#18181b] to-[#0f0f11] border border-gray-800 rounded-2xl p-8 mb-6 relative overflow-hidden">
+      <section className="bg-gradient-to-br from-[#18181b] to-[#0f0f11] border border-gray-800 rounded-md p-8 mb-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
         <div className="relative z-10 flex flex-col md:flex-row gap-8">
@@ -82,7 +82,7 @@ export function BenchmarkSection({ data }: { data: any }) {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
+        <div className="bg-[#18181b] border border-gray-800 rounded-md p-6 relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Zap className="w-24 h-24 text-emerald-500" /></div>
           <h3 className="text-gray-400 text-sm font-medium mb-1">Buntok Avg Throughput</h3>
           <div className="text-4xl font-bold text-white tracking-tight">{overallData[targetFrameworkIndex]?.avgRps.toLocaleString()}</div>
@@ -90,19 +90,19 @@ export function BenchmarkSection({ data }: { data: any }) {
              <span className="text-gray-500 line-through mr-1">{overallData.find(f => f.name === 'hono')?.avgRps.toLocaleString()} (Hono)</span> vs Buntok
           </div>
         </div>
-        <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-blue-500/50 transition-colors">
+        <div className="bg-[#18181b] border border-gray-800 rounded-md p-6 relative overflow-hidden group hover:border-blue-500/50 transition-colors">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Clock className="w-24 h-24 text-blue-500" /></div>
           <h3 className="text-gray-400 text-sm font-medium mb-1">Buntok Avg Latency</h3>
           <div className="text-4xl font-bold text-white tracking-tight">{overallData[targetFrameworkIndex]?.avgLatency.toFixed(2)}ms</div>
           <div className="text-blue-400 text-sm mt-2 font-medium">Blazing Fast Object-Oriented</div>
         </div>
-        <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-orange-500/50 transition-colors">
+        <div className="bg-[#18181b] border border-gray-800 rounded-md p-6 relative overflow-hidden group hover:border-orange-500/50 transition-colors">
            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Activity className="w-24 h-24 text-orange-500" /></div>
           <h3 className="text-gray-400 text-sm font-medium mb-1">Buntok Startup Time</h3>
           <div className="text-4xl font-bold text-white tracking-tight">{overallData[targetFrameworkIndex]?.startupTime}ms</div>
           <div className="text-orange-400 text-sm mt-2 font-medium">Near-Instant Cold Start</div>
         </div>
-        <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-purple-500/50 transition-colors">
+        <div className="bg-[#18181b] border border-gray-800 rounded-md p-6 relative overflow-hidden group hover:border-purple-500/50 transition-colors">
            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Route className="w-24 h-24 text-purple-500" /></div>
           <h3 className="text-gray-400 text-sm font-medium mb-1">Endpoints Tested</h3>
           <div className="text-4xl font-bold text-white tracking-tight">3</div>
@@ -111,7 +111,7 @@ export function BenchmarkSection({ data }: { data: any }) {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 flex flex-col">
+        <div className="bg-[#18181b] border border-gray-800 rounded-md p-6 flex flex-col">
           <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><CheckCircle className="w-5 h-5 text-emerald-400"/> Framework Ranking</h2>
           <div className="flex-1 flex flex-col justify-center gap-4">
             {overallData.map((fw, idx) => (
@@ -131,7 +131,7 @@ export function BenchmarkSection({ data }: { data: any }) {
             ))}
           </div>
         </div>
-        <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6">
+        <div className="bg-[#18181b] border border-gray-800 rounded-md p-6">
           <h2 className="text-xl font-bold mb-6">Performance Radar</h2>
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -146,7 +146,7 @@ export function BenchmarkSection({ data }: { data: any }) {
         </div>
       </section>
 
-      <section className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 mb-6">
+      <section className="bg-[#18181b] border border-gray-800 rounded-md p-6 mb-6">
         <h2 className="text-xl font-bold mb-6">Route Performance Breakdown (Req/Sec)</h2>
         <div className="h-96 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -163,7 +163,7 @@ export function BenchmarkSection({ data }: { data: any }) {
       </section>
 
       {data.timeSeries && data.timeSeries['buntok'] && data.timeSeries['buntok'].length > 0 && (
-        <section className="bg-[#18181b] border border-gray-800 rounded-2xl p-6">
+        <section className="bg-[#18181b] border border-gray-800 rounded-md p-6">
           <h2 className="text-xl font-bold mb-6">Throughput Over Time (/plaintext)</h2>
           <div className="h-96 w-full">
             <ResponsiveContainer width="100%" height="100%">
