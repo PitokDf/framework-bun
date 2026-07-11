@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Terminal, Code, Zap, FileText, ArrowRight, Github, BookOpen, LayoutDashboard, Layers, Box, Webhook } from 'lucide-react';
+import { Terminal, Code, Zap, ArrowRight, Layers, Box, Webhook } from 'lucide-react';
 import { BenchmarkSection } from './Benchmark';
 
 export default function App() {
@@ -135,7 +135,7 @@ function DocsPage() {
                 setActiveMenu(item.id);
                 document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className={\`flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left \${activeMenu === item.id ? 'bg-[#222] text-white' : 'text-[#888] hover:bg-[#1a1a1a] hover:text-[#ccc]'}\`}
+              className={`flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left ${activeMenu === item.id ? 'bg-[#222] text-white' : 'text-[#888] hover:bg-[#1a1a1a] hover:text-[#ccc]'}`}
             >
               {item.icon}
               {item.label}
@@ -185,7 +185,7 @@ function DocsPage() {
   <span className="text-blue-400">@Get</span>(<span className="text-green-400">'/:id'</span>)
   <span className="text-blue-300">getOne</span>(ctx: Context) { '{' }
     <span className="text-purple-400">const</span> { '{' } id { '}' } = ctx.params;
-    <span className="text-purple-400">return</span> ctx.<span className="text-blue-300">text</span>(<span className="text-green-400">\`User ID: \${id}\`</span>);
+    <span className="text-purple-400">return</span> ctx.<span className="text-blue-300">text</span>(<span className="text-green-400">{"`User ID: ${id}`"}</span>);
   { '}' }
 
   <span className="text-blue-400">@Post</span>(<span className="text-green-400">'/'</span>)
@@ -228,7 +228,7 @@ app.<span className="text-blue-300">use</span>(<span className="text-purple-400"
   <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> <span className="text-blue-300">next</span>();
   <span className="text-purple-400">const</span> ms = Date.now() - start;
   
-  console.<span className="text-blue-300">log</span>(<span className="text-green-400">\`\${ctx.req.method} \${ctx.req.url} - \${ms}ms\`</span>);
+  console.<span className="text-blue-300">log</span>(<span className="text-green-400">{"`${ctx.req.method} ${ctx.req.url} - ${ms}ms`"}</span>);
   <span className="text-purple-400">return</span> response;
 { '}' });</code></pre>
           </div>
