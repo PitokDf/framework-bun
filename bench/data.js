@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783775873788,
+  "lastUpdate": 1783775968700,
   "repoUrl": "https://github.com/PitokDf/framework-bun",
   "entries": {
     "Buntok Benchmark": [
@@ -287,6 +287,105 @@ window.BENCHMARK_DATA = {
           {
             "name": "buntok /id/123",
             "value": 50502,
+            "unit": "req/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "committer": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "distinct": true,
+          "id": "b1201066d2af383207ef177219432c5f8bf4613a",
+          "message": "chore: fix biome lint warnings and suppress explicit any",
+          "timestamp": "2026-07-11T20:17:45+07:00",
+          "tree_id": "8f306bdc55d1c6bac11fa691b3586aba203d8b15",
+          "url": "https://github.com/PitokDf/framework-bun/commit/b1201066d2af383207ef177219432c5f8bf4613a"
+        },
+        "date": 1783775968225,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "express /plaintext",
+            "value": 29474,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /json",
+            "value": 26579,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /id/123",
+            "value": 29944,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /plaintext",
+            "value": 40507,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /json",
+            "value": 40780,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /id/123",
+            "value": 41558,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /plaintext",
+            "value": 61254,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /json",
+            "value": 55239,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /id/123",
+            "value": 59777,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /plaintext",
+            "value": 73110,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /json",
+            "value": 70069,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /id/123",
+            "value": 72864,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /plaintext",
+            "value": 61506,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /json",
+            "value": 63223,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /id/123",
+            "value": 59992,
             "unit": "req/sec"
           }
         ]
