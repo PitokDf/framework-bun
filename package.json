@@ -2,7 +2,7 @@
 	"name": "buntok",
 	"module": "src/exports.ts",
 	"type": "module",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"main": "src/exports.ts",
 	"types": "src/exports.ts",
 	"bin": {
@@ -36,7 +36,8 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.5.3",
 		"@types/bun": "latest",
-		"autocannon": "^8.0.0"
+		"autocannon": "^8.0.0",
+		"croner": "^10.0.1"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
@@ -52,6 +53,7 @@
 		"prepublishOnly": "bun run build && bun run check"
 	},
 	"dependencies": {
+		"@asteasolutions/zod-to-openapi": "^8.5.0",
 		"zod": "^4.4.3"
 	}
 }

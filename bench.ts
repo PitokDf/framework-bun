@@ -1,13 +1,11 @@
 #!/usr/bin/env bun
 
 import { spawn } from "node:child_process";
-import autocannon from "autocannon";
 
-const PORT = 1213;
+const PORT = 1214;
 const BASE = `http://localhost:${PORT}`;
 const DURATION = 10;
 const CONNECTIONS = 100; // TechEmpower standard: higher connection count
-const PIPELINING = 10; // TechEmpower standard: pipelining
 
 const isProd = process.argv.includes("--prod");
 const NODE_ENV = isProd ? "production" : "development";
@@ -31,13 +29,6 @@ await new Promise<void>((resolve) => {
 	});
 	setTimeout(resolve, 3000);
 });
-
-interface BenchmarkResult {
-	name: string;
-	throughput: { average: number; mean: number };
-	latency: { average: number; mean: number; p99: number };
-	requests: { average: number; total: number };
-}
 
 function generate1KBJson(): string {
 	return JSON.stringify({
@@ -108,51 +99,89 @@ const benchmarks = [
 	},
 ];
 
-async function runBenchmark(
-	config: (typeof benchmarks)[0],
-): Promise<BenchmarkResult> {
+// biome-ignore lint/suspicious/noExplicitAny: Required for arbitrary result objects
+async function runBenchmark(config: (typeof benchmarks)[0]): Promise<any> {
 	return new Promise((resolve, reject) => {
-		const instance = autocannon(
-			{
-				url: config.url,
-				method: config.method,
-				body: config.body,
-				headers: config.headers,
-				duration: DURATION,
-				connections: CONNECTIONS,
-				pipelining: PIPELINING,
-			},
-			(err, result) => {
-				if (err) reject(err);
-				else resolve(result as BenchmarkResult);
-			},
-		);
+		const args = [
+			"./bombardier",
+			"-c",
+			String(CONNECTIONS),
+			"-d",
+			`${DURATION}s`,
+			"-m",
+			config.method,
+			"-o",
+			"json",
+			"-p",
+			"r", // Print result only
+		];
 
-		autocannon.track(instance, { renderProgressBar: false });
+		if (config.headers) {
+			for (const [k, v] of Object.entries(config.headers)) {
+				args.push("-H", `${k}: ${v}`);
+			}
+		}
+
+		if (config.body) {
+			args.push("-b", config.body);
+		}
+
+		args.push(config.url);
+
+		const child = spawn(args[0] as string, args.slice(1), { stdio: "pipe" });
+
+		let stdout = "";
+		child.stdout?.on("data", (data: Buffer) => {
+			stdout += data.toString();
+		});
+
+		child.on("close", (code: number | null) => {
+			if (code !== 0) {
+				reject(
+					new Error(
+						`Bombardier failed with code ${code}. Please make sure you have downloaded it: wget https://github.com/codesenberg/bombardier/releases/download/v1.2.6/bombardier-linux-amd64 -O bombardier && chmod +x bombardier`,
+					),
+				);
+				return;
+			}
+			try {
+				const res = JSON.parse(stdout);
+				resolve(res);
+			} catch (_e) {
+				reject(new Error(`Failed to parse bombardier output: ${stdout}`));
+			}
+		});
 	});
 }
 
-function formatResult(name: string, result: BenchmarkResult) {
-	const reqPerSec = result.requests.average;
-	const latencyAvg = result.latency.average.toFixed(2);
-	const latencyP99 = result.latency.p99.toFixed(2);
-	const totalRequests = result.requests.total;
-	const throughputMB = (result.throughput.average / 1024 / 1024).toFixed(2);
+function formatResult(name: string, data: unknown) {
+	// biome-ignore lint/suspicious/noExplicitAny: Required to parse unknown JSON
+	const res = (data as any).result;
+
+	const reqPerSec = res.rps.mean;
+	const latencyAvg = res.latency.mean / 1000; // convert us to ms
+	const latencyMax = res.latency.max / 1000;
+
+	const totalRequests =
+		res.req1xx + res.req2xx + res.req3xx + res.req4xx + res.req5xx;
+	const throughputMB = res.bytesRead / 1024 / 1024 / res.timeTakenSeconds;
 
 	return {
 		Test: name,
-		"Req/sec": reqPerSec.toLocaleString(),
-		"Latency avg (ms)": latencyAvg,
-		"Latency p99 (ms)": latencyP99,
-		"Throughput (MB/s)": throughputMB,
+		"Req/sec": reqPerSec.toLocaleString(undefined, {
+			maximumFractionDigits: 0,
+		}),
+		"Latency avg (ms)": latencyAvg.toFixed(2),
+		"Latency max (ms)": latencyMax.toFixed(2),
+		"Throughput (MB/s)": throughputMB.toFixed(2),
 		"Total requests": totalRequests.toLocaleString(),
 	};
 }
 
 async function main() {
-	console.log("⚡ Buntok Benchmark (TechEmpower Standard)");
+	console.log("⚡ Buntok Benchmark (TechEmpower Standard via Bombardier)");
 	console.log(
-		`   Mode: ${isProd ? "production" : "development"} | Duration: ${DURATION}s | Connections: ${CONNECTIONS} | Pipelining: ${PIPELINING}`,
+		`   Mode: ${isProd ? "production" : "development"} | Duration: ${DURATION}s | Connections: ${CONNECTIONS}`,
 	);
 	console.log(`   Target: ${BASE}\n`);
 
@@ -170,12 +199,12 @@ async function main() {
 			const result = await runBenchmark(bench);
 			const formatted = formatResult(bench.name, result);
 			results.push(formatted);
-		benchOutput.push({
-			name: bench.name,
-			unit: "req/sec",
-			value: Math.round(result.requests.average),
-			range: `±${Math.round(((result.requests.average - result.requests.min) / result.requests.average) * 100)}%`,
-		});
+			benchOutput.push({
+				name: bench.name,
+				unit: "req/sec",
+				value: Math.round(result.result.rps.mean),
+				range: `±${Math.round((result.result.rps.stddev / result.result.rps.mean) * 100)}%`,
+			});
 			console.log(" done");
 		} catch (err) {
 			console.log(` FAILED: ${err}`);

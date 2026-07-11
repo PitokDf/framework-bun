@@ -27,6 +27,14 @@ src/
 └── index.ts        # Entry point
 ```
 
+| Feature | Description |
+|------|-------------|
+| 📦 **Code Generation** | CLI tool for generating schema, repo, service, controller |
+| 🧠 **Cache System** | Built-in driver-based Cache manager |
+| 🔄 **Queue System** | Built-in driver-based background Queues |
+| ⏱️ **Task Scheduler** | Native CRON job support via `@CronJob` |
+| 🛡️ **Auth Guards** | Granular access control via `@UseGuard` |
+
 ## Code Generation
 
 Generate CRUD files for an entity:
@@ -131,6 +139,74 @@ const api = app.group("/api");
 
 api.get("/users", getUsers);
 api.post("/users", createUser);
+```
+
+### Controllers (Decorators)
+
+```ts
+import { Controller, Get } from "buntok";
+
+@Controller("/users")
+export class UserController {
+  @Get("/")
+  getAll(ctx: Context) {
+    return ctx.json([{ id: 1 }]);
+  }
+}
+
+app.registerController(UserController);
+```
+
+### WebSockets
+
+```ts
+app.ws("/chat", {
+  open: (ws) => {
+    // Treat user ID as a room
+    ws.subscribe("user_123");
+  },
+  message: (ws, msg) => {
+    // Parse JSON for events
+    const payload = JSON.parse(String(msg));
+    if (payload.event === "typing") { /* ... */ }
+  }
+});
+```
+
+**Note on Frontend Clients:**
+Buntok uses **Raw WebSockets (RFC 6455)** natively.
+⚠️ **Do NOT use `socket.io-client`** to connect to Buntok.
+✅ **Recommended clients for React/Next.js:** `react-use-websocket`, `partysocket`, or native `WebSocket`.
+
+**Broadcasting Events from API/Jobs:**
+You can access the Bun Server instance natively via `app.server` to publish messages from anywhere in your backend!
+
+```typescript
+// Broadcast to a specific user
+app.post("/api/checkout", (ctx) => {
+  app.server?.publish("user_123", JSON.stringify({ 
+    event: "order_done", data: {} 
+  }));
+  return ctx.success();
+});
+```
+
+### Server-Sent Events (SSE)
+
+Lightweight alternative to WebSockets for Server-to-Client one-way streams.
+
+```ts
+app.get("/stream", (ctx) => {
+  return ctx.sse((stream) => {
+    stream.sendEvent("connected", { status: "ok" });
+
+    const timer = setInterval(() => {
+      stream.sendEvent("ping", { time: Date.now() });
+    }, 1000);
+
+    stream.onClose(() => clearInterval(timer));
+  });
+});
 ```
 
 ### Middleware

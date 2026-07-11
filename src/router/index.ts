@@ -123,47 +123,52 @@ export class Router {
 		}
 
 		// Slow path: trie traversal for param/catchall routes
-		const result: LookupResult = { handler: null, params: {} };
-		const segments = Router.splitPath(path);
-
+		const result: LookupResult = {
+			handler: null,
+			params: null as unknown as Record<string, string>,
+		};
 		let currentNode = this.root;
 
-		if (segments.length === 0) {
+		let start = path[0] === "/" ? 1 : 0;
+		if (start >= path.length) {
 			result.handler = this.root.handlers.get(method) || null;
+			if (result.handler) result.params = EMPTY_PARAMS;
+			else result.params = EMPTY_PARAMS;
 			return result;
 		}
 
-		for (let i = 0; i < segments.length; i++) {
-			const segment = segments[i] as string;
-			let nextNode: RouterNode | undefined;
+		while (start < path.length) {
+			let end = path.indexOf("/", start);
+			if (end === -1) end = path.length;
 
-			nextNode = currentNode.staticChildren.get(segment);
+			if (end > start) {
+				const segment = path.substring(start, end);
+				let nextNode = currentNode.staticChildren.get(segment);
 
-			if (!nextNode) {
-				const paramNode = currentNode.paramChild;
-				if (paramNode?.paramName && segment) {
-					result.params[paramNode.paramName] = segment;
-					nextNode = paramNode;
+				if (!nextNode) {
+					if (currentNode.paramChild) {
+						nextNode = currentNode.paramChild;
+						if (!result.params) result.params = {};
+						// biome-ignore lint/style/noNonNullAssertion: Known to exist due to node structure
+						result.params[nextNode.paramName!] = segment;
+					} else if (currentNode.catchAllChild) {
+						nextNode = currentNode.catchAllChild;
+						if (!result.params) result.params = {};
+						result.params["*"] = path.substring(start);
+						currentNode = nextNode;
+						break;
+					} else {
+						return { handler: null, params: EMPTY_PARAMS };
+					}
 				}
+				currentNode = nextNode;
 			}
-
-			if (!nextNode) {
-				const catchAllNode = currentNode.catchAllChild;
-				if (catchAllNode) {
-					result.params["*"] = segments.slice(i).join("/");
-					currentNode = catchAllNode;
-					break;
-				}
-			}
-
-			if (!nextNode) {
-				return result;
-			}
-
-			currentNode = nextNode;
+			start = end + 1;
 		}
 
 		result.handler = currentNode.handlers.get(method) || null;
+		if (!result.params) result.params = EMPTY_PARAMS;
+
 		return result;
 	}
 }

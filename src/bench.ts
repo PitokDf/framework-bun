@@ -60,7 +60,7 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 	// ===== TechEmpower Standard Tests =====
 
 	// 1. Plaintext - Simple text response (tests raw throughput)
-	app.get("/bench/plaintext", (_ctx) => {
+	app.get("/bench/plaintext", async (_ctx) => {
 		return new Response("Hello, World!", {
 			headers: { "Content-Type": "text/plain" },
 		});
@@ -114,7 +114,8 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 		);
 		const results = Array.from({ length: queries }, () => {
 			const id = randomWorldId();
-			const updatedWorld = { ...worlds[id - 1], randomNumber: randomWorldId() };
+			const world = worlds[id - 1] as { id: number; randomNumber: number };
+			const updatedWorld = { ...world, randomNumber: randomWorldId() };
 			worlds[id - 1] = updatedWorld;
 			return updatedWorld;
 		});

@@ -16,7 +16,7 @@ export function asyncHandler<DI = Record<string, unknown>>(
 				error instanceof Error ? error.message : "Internal Server Error";
 			const status = error instanceof HttpError ? error.status : 500;
 
-			return ctx.json({ error: message }, status);
+			return ctx.error(message, status);
 		}
 	};
 }

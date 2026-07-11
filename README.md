@@ -39,6 +39,10 @@
 | 🏥 **Health Check** | Built-in health check endpoint helper |
 | 🍪 **Cookie Helpers** | Parse, set, and delete cookies easily |
 | 📦 **Code Generation** | CLI tool for generating schema, repo, service, controller |
+| 🧠 **Cache System** | Built-in driver-based Cache manager |
+| 🔄 **Queue System** | Built-in driver-based background Queues |
+| ⏱️ **Task Scheduler** | Native CRON job support via `@CronJob` |
+| 🛡️ **Auth Guards** | Granular access control via `@UseGuard` |
 
 ## Requirements
 
@@ -414,6 +418,167 @@ app.query("/orders", async (ctx) => {
 | Safe (read-only) | ✅ | ✅ | ❌ |
 
 **Note:** QUERY is a new HTTP method standardized in June 2026 (RFC 10008). Support is growing but may not be available in all clients yet.
+
+---
+
+### `app.ws(path, handler)`
+
+Register a WebSocket endpoint. Backed directly by Bun's native WebSocket server for maximum performance.
+
+**Note on Frontend Clients:**
+Buntok uses **Raw WebSockets (RFC 6455)** natively. 
+⚠️ **Do NOT use `socket.io-client`** to connect to Buntok, as Socket.IO uses a proprietary Engine.IO protocol that is incompatible with Raw WebSockets.
+✅ **Recommended clients for React/Next.js:** `react-use-websocket`, `partysocket`, or native `WebSocket`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | `string` | Yes | Exact route path for the WebSocket endpoint |
+| `handler` | `WSHandler` | Yes | WebSocket event handlers (open, message, close, drain) |
+
+**Example:**
+
+```typescript
+app.ws("/ws", {
+  open: (ws) => {
+    // Treat the user's ID as their own private "room"
+    const userId = "user-123"; // Retrieve this from token/auth
+    ws.subscribe(`user_${userId}`);
+    
+    console.log("Client connected!");
+  },
+  message: (ws, msg) => {
+    // For handling incoming client events, parse the JSON
+    const payload = JSON.parse(String(msg));
+    if (payload.event === "typing") {
+      // Do something
+    }
+  }
+});
+```
+
+**Broadcasting Events to Specific Users (From API/Jobs):**
+You can access the Bun Server instance natively via `app.server` to publish messages from anywhere in your backend! Since Buntok uses raw WebSockets, the standard way to send "events" is to wrap them in a JSON payload.
+
+```typescript
+app.post("/api/checkout", (ctx) => {
+  const userId = "user-123";
+  
+  // Format standard event JSON
+  const payload = JSON.stringify({
+    event: "order_completed",
+    data: { orderId: 456, amount: 100 }
+  });
+
+  // Target ONLY this specific user
+  app.server?.publish(`user_${userId}`, payload);
+  
+  return ctx.success("Notification sent!");
+});
+```
+
+**Client-Side Example (Vanilla JS / React):**
+```javascript
+const ws = new WebSocket("ws://localhost:1212/ws");
+
+ws.onmessage = (e) => {
+  const payload = JSON.parse(e.data);
+  if (payload.event === "order_completed") {
+    alert("Order Completed: " + payload.data.orderId);
+  }
+};
+```
+
+---
+
+### `ctx.sse(callback, options?)`
+
+Start a Server-Sent Events (SSE) stream. SSE is a lightweight alternative to WebSockets when you only need one-way communication (Server to Client), such as real-time notifications or live scores.
+
+**Key Benefits of SSE:**
+- Built-in auto-reconnection in the browser.
+- Works over standard HTTP/HTTPS (passes through corporate firewalls easily).
+- Has native `.sendEvent()` support out of the box.
+
+**Example: Streaming Data**
+```typescript
+app.get("/stream", (ctx) => {
+  return ctx.sse((stream) => {
+    // Send a named event
+    stream.sendEvent("connected", { status: "ok" });
+
+    const timer = setInterval(() => {
+      // Send data periodically
+      stream.sendEvent("price_update", { price: Math.random() });
+    }, 1000);
+
+    // Buntok will automatically call this when the client disconnects!
+    stream.onClose(() => {
+      clearInterval(timer);
+      console.log("Client disconnected");
+    });
+  });
+});
+```
+
+**Client-Side Example:**
+```javascript
+const eventSource = new EventSource("/stream");
+
+// Listen to specific events
+eventSource.addEventListener("price_update", (e) => {
+  const data = JSON.parse(e.data);
+  console.log("New price:", data.price);
+});
+```
+
+---
+
+### `app.registerController(ControllerClass)`
+
+Register all routes declared on a class decorated with `@Controller`. This instantiates the class once at boot time and wires each decorated method (`@Get`, `@Post`, etc.) automatically.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ControllerClass` | `Class` | Yes | The class containing decorated route methods |
+
+**Example:**
+
+```typescript
+import { Controller, Get } from "buntok";
+
+@Controller("/users")
+class UserController {
+  @Get("/")
+  getAll(ctx: Context) {
+    return ctx.json([{ id: 1, name: "Pito" }]);
+  }
+}
+
+app.registerController(UserController);
+```
+
+---
+
+### `app.disable(feature) / app.enable(feature)`
+
+Disable or enable built-in framework features.
+
+**Supported Features:**
+- `"x-powered-by"`: Controls whether the `X-Powered-By: buntok` header is sent with HTTP responses.
+
+**Example:**
+
+```typescript
+// Disable the X-Powered-By header for security/stealth
+app.disable("x-powered-by");
+
+// Re-enable it
+app.enable("x-powered-by");
+```
 
 ---
 
@@ -1662,6 +1827,87 @@ app.get("/cookies", (ctx) => {
 ```
 
 ---
+
+## Enterprise Features
+
+Buntok is built to scale. It comes with built-in modules for common enterprise requirements.
+
+### Caching
+
+Buntok includes a robust caching system using a Driver pattern. By default, it uses `MemoryCacheDriver`.
+
+```typescript
+import { Cache, MemoryCacheDriver } from "buntok";
+
+// Initialize the Cache
+const cache = new Cache(new MemoryCacheDriver());
+
+// Set a value with a 60-second TTL
+await cache.set("user:1", { name: "John" }, 60);
+
+// Retrieve a value
+const user = await cache.get("user:1");
+```
+
+### Background Queues
+
+Handle long-running tasks asynchronously using the Queue system.
+
+```typescript
+import { Queue, MemoryQueueDriver } from "buntok";
+
+// Initialize the Queue
+const emailQueue = new Queue(new MemoryQueueDriver());
+
+// Define a worker
+emailQueue.process(async (job) => {
+	console.log("Sending email to:", job.data.to);
+});
+
+// Add jobs to the queue
+await emailQueue.add({ to: "admin@example.com", subject: "Hello" });
+```
+
+### Task Scheduling
+
+Run recurring background jobs using standard cron syntax and the `@CronJob()` decorator.
+
+```typescript
+import { Controller, CronJob } from "buntok";
+
+@Controller("/tasks")
+export class TaskController {
+	
+	// Runs every minute
+	@CronJob("* * * * *")
+	async performCleanup() {
+		console.log("Cleaning up expired sessions...");
+	}
+}
+```
+
+### Auth Guards
+
+Protect your endpoints using granular Auth Guards and the `@UseGuard()` decorator.
+
+```typescript
+import { Controller, Get, UseGuard, type GuardFn } from "buntok";
+
+const IsAdmin: GuardFn = async (ctx) => {
+	const user = await ctx.di.get("user");
+	return user?.role === "admin";
+};
+
+@Controller("/admin")
+export class AdminController {
+	
+	@Get("/dashboard")
+	@UseGuard(IsAdmin)
+	async dashboard(ctx) {
+		return ctx.json({ message: "Welcome Admin" });
+	}
+}
+```
 
 ## Examples
 

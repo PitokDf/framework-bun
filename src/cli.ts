@@ -16,6 +16,7 @@ function printUsage() {
 
 \x1b[36mCommands:\x1b[0m
   create <entity>        Generate all files for entity (schema, repo, service, controller, route)
+  make:docs              Generate OpenAPI docs and Scalar UI from Zod schemas
 
 \x1b[36mOptions:\x1b[0m
   --schema               Generate only Drizzle schema
@@ -163,10 +164,11 @@ export class ${pascalName}Service {
 }
 
 function generateController(entityName: string, pascalName: string): string {
-	return `import { asyncHandler } from "buntok";
+	return `import { Controller, Get, Post, Put, Delete, Use, zResponse, z } from "buntok";
+import type { Context } from "buntok";
 import { ${pascalName}Service } from "@/services/${entityName}.service";
-import type { New${pascalName} } from "@/db/schemas/${entityName}";
 
+@Controller("/${entityName}s")
 export class ${pascalName}Controller {
   private service: ${pascalName}Service;
 
@@ -174,37 +176,38 @@ export class ${pascalName}Controller {
     this.service = service ?? new ${pascalName}Service();
   }
 
-  // GET /${entityName}
-  getAll = asyncHandler(async (ctx) => {
+  @Get("/")
+  @Use(zResponse(200, z.array(z.any())))
+  async getAll(ctx: Context) {
     const ${entityName}s = await this.service.getAll();
-    return ctx.json({ data: ${entityName}s });
-  });
+    return ctx.success(${entityName}s, "Records retrieved successfully");
+  }
 
-  // GET /${entityName}/:id
-  getById = asyncHandler(async (ctx) => {
+  @Get("/:id")
+  async getById(ctx: Context) {
     const ${entityName} = await this.service.getById(ctx.params.id);
-    return ctx.json({ data: ${entityName} });
-  });
+    return ctx.success(${entityName}, "Record retrieved successfully");
+  }
 
-  // POST /${entityName}
-  create = asyncHandler(async (ctx) => {
-    const body = await ctx.body<New${pascalName}>();
+  @Post("/")
+  async create(ctx: Context) {
+    const body = await ctx.body<any>();
     const ${entityName} = await this.service.create(body);
-    return ctx.json({ data: ${entityName} }, 201);
-  });
+    return ctx.success(${entityName}, "Record created successfully", 201);
+  }
 
-  // PUT /${entityName}/:id
-  update = asyncHandler(async (ctx) => {
-    const body = await ctx.body<Partial<New${pascalName}>>();
+  @Put("/:id")
+  async update(ctx: Context) {
+    const body = await ctx.body<any>();
     const ${entityName} = await this.service.update(ctx.params.id, body);
-    return ctx.json({ data: ${entityName} });
-  });
+    return ctx.success(${entityName}, "Record updated successfully");
+  }
 
-  // DELETE /${entityName}/:id
-  delete = asyncHandler(async (ctx) => {
+  @Delete("/:id")
+  async delete(ctx: Context) {
     await this.service.delete(ctx.params.id);
-    return ctx.status(204);
-  });
+    return ctx.success(null, "Record deleted successfully", 200);
+  }
 }
 `;
 }
@@ -225,12 +228,8 @@ export function register${pascalName}Routes(app: App) {
   app.set("${entityName}Service", service);
   app.set("${entityName}Controller", controller);
 
-  // Register routes
-  app.get("/${entityName}", (ctx) => controller.getAll(ctx));
-  app.get("/${entityName}/:id", (ctx) => controller.getById(ctx));
-  app.post("/${entityName}", (ctx) => controller.create(ctx));
-  app.put("/${entityName}/:id", (ctx) => controller.update(ctx));
-  app.delete("/${entityName}/:id", (ctx) => controller.delete(ctx));
+  // Register controller routes
+  app.registerController(${pascalName}Controller);
 }
 `;
 }
@@ -401,20 +400,138 @@ async function createCommand(entityName: string, args: string[]) {
 `);
 }
 
+async function makeDocsCommand() {
+	console.log("\x1b[36mGenerating OpenAPI documentation...\x1b[0m");
+
+	const entryPath = join(process.cwd(), "src/index.ts");
+
+	try {
+		console.log(`\x1b[90mLoading app from ${entryPath}...\x1b[0m`);
+
+		const userApp = await import(entryPath);
+		const appInstance = userApp.app || userApp.default;
+
+		if (!appInstance?.openApiDocs) {
+			throw new Error(
+				"Could not find an exported 'app' instance in src/index.ts. Make sure you export your app: `export const app = new App();`",
+			);
+		}
+
+		// Dynamically import to avoid dependency if not needed
+		const { OpenAPIRegistry, OpenApiGeneratorV3 } = await import(
+			"@asteasolutions/zod-to-openapi"
+		);
+		const registry = new OpenAPIRegistry();
+
+		for (const doc of appInstance.openApiDocs) {
+			const openapiPath = doc.path.replace(/:([a-zA-Z0-9_]+)/g, "{$1}");
+
+			// biome-ignore lint/suspicious/noExplicitAny: RouteConfig missing fields dynamically populated
+			const routeConfig: any = {
+				method: doc.method,
+				path: openapiPath,
+				responses: {},
+			};
+
+			if (doc.request.params || doc.request.query || doc.request.body) {
+				routeConfig.request = {};
+				if (doc.request.params) routeConfig.request.params = doc.request.params;
+				if (doc.request.query) routeConfig.request.query = doc.request.query;
+				if (doc.request.body) {
+					routeConfig.request.body = {
+						content: { "application/json": { schema: doc.request.body } },
+					};
+				}
+			}
+
+			if (doc.responses.length > 0) {
+				for (const res of doc.responses) {
+					routeConfig.responses[res.status.toString()] = {
+						description: res.description,
+						content: { "application/json": { schema: res.schema } },
+					};
+				}
+			} else {
+				routeConfig.responses["200"] = { description: "Success" };
+			}
+
+			registry.registerPath(routeConfig);
+		}
+
+		const generator = new OpenApiGeneratorV3(registry.definitions);
+		const document = generator.generateDocument({
+			openapi: "3.0.0",
+			info: {
+				version: "1.0.0",
+				title: "Buntok API Documentation",
+				description: "Auto-generated OpenAPI docs from Zod schemas",
+			},
+		});
+
+		mkdirSync(join(process.cwd(), "public"), { recursive: true });
+		const outPath = join(process.cwd(), "public/swagger.json");
+		writeFileSync(outPath, JSON.stringify(document, null, 2));
+
+		console.log(
+			`\x1b[32m✔ OpenAPI JSON successfully generated at public/swagger.json!\x1b[0m`,
+		);
+
+		const htmlPath = join(process.cwd(), "public/docs.html");
+		const html = `<!doctype html>
+<html>
+  <head>
+    <title>API Reference</title>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <!-- Point to the generated swagger.json -->
+    <script id="api-reference" data-url="/swagger.json"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  </body>
+</html>`;
+		writeFileSync(htmlPath, html);
+		console.log(
+			`\x1b[32m✔ Scalar UI HTML generated at public/docs.html!\x1b[0m`,
+		);
+
+		console.log(`\n\x1b[36mNext steps:\x1b[0m`);
+		console.log(
+			`  1. Make sure static files are served: app.static("/", "./public")`,
+		);
+		console.log(
+			`  2. Visit http://localhost:1212/docs.html to view your API documentation!`,
+		);
+	} catch (error) {
+		console.error("\x1b[31mFailed to generate docs:\x1b[0m");
+		console.error(error);
+	}
+}
+
 async function main() {
 	const args = process.argv.slice(2);
 	const command = args[0];
 	const entityName = args[1];
 
-	if (!command || !entityName) {
+	if (!command) {
 		printBanner();
+		printUsage();
+		process.exit(1);
+	}
+
+	if (command === "create" && !entityName) {
+		console.error(
+			"\x1b[31mError: Entity name is required for create command\x1b[0m",
+		);
 		printUsage();
 		process.exit(1);
 	}
 
 	switch (command) {
 		case "create":
-			await createCommand(entityName, args.slice(2));
+			await createCommand(entityName as string, args.slice(2));
+			break;
+		case "make:docs":
+			await makeDocsCommand();
 			break;
 		default:
 			console.error(`\x1b[31mUnknown command: ${command}\x1b[0m`);

@@ -142,8 +142,10 @@ export async function createCommand(entityName: string, args: string[]) {
 
   console.log(`
 \x1b[36mNext steps:\x1b[0m
-  1. Import and register routes in src/index.ts
-  2. Run migrations: bunx drizzle-kit push
-  3. Start dev: bun run dev
+  1. Register your controller in src/index.ts:
+     \x1b[32mimport { ${pascalName}Controller } from "./controllers/${entityName}.controller";\x1b[0m
+     \x1b[32mapp.registerController(${pascalName}Controller);\x1b[0m
+  2. Run migrations: \x1b[33mbun run db:push\x1b[0m
+  3. Start dev server: \x1b[33mbun run dev\x1b[0m
 `);
 }

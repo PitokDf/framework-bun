@@ -1,4 +1,5 @@
-import type { Context, Middleware } from "../app";
+import type { Middleware } from "../app";
+import type { Context } from "../context";
 
 export interface RateLimiterOptions {
 	/** Maximum requests per window */
@@ -15,6 +16,14 @@ export interface RateLimiterOptions {
 	skip?: (ctx: Context) => boolean;
 	/** Headers to include in response */
 	headers?: boolean;
+	/**
+	 * Where counters are stored. Defaults to an in-memory Map, which is lost
+	 * on restart and not shared across processes/instances. Pass
+	 * `sqliteStore(path)` to persist counters in a bun:sqlite database instead
+	 * (e.g. shared across a clustered deployment via a shared file, or simply
+	 * to survive restarts without adding an external dependency like Redis).
+	 */
+	store?: RateLimitStore<unknown>;
 }
 
 interface RateLimitEntry {
@@ -22,8 +31,69 @@ interface RateLimitEntry {
 	resetTime: number;
 }
 
+/**
+ * Minimal Map-like interface the rate limiters need. Implemented by both the
+ * default in-memory store and the optional bun:sqlite-backed store below.
+ */
+export interface RateLimitStore<T> {
+	get(key: string): T | undefined;
+	set(key: string, value: T): void;
+	delete(key: string): void;
+	entries(): IterableIterator<[string, T]>;
+}
+
+function memoryStore<T>(): RateLimitStore<T> {
+	return new Map<string, T>();
+}
+
+/**
+ * Persist rate-limit counters in a bun:sqlite database file instead of an
+ * in-memory Map. Useful when you want counters to survive process restarts,
+ * or to be shared across multiple instances pointed at the same file, without
+ * pulling in an external dependency like Redis.
+ *
+ * Requires the Bun runtime (uses `bun:sqlite`).
+ */
+export function sqliteStore<T>(
+	path = "rate-limiter.sqlite",
+): RateLimitStore<T> {
+	const { Database } = require("bun:sqlite") as typeof import("bun:sqlite");
+	const db = new Database(path);
+	db.run(
+		"CREATE TABLE IF NOT EXISTS rate_limit_entries (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+	);
+
+	const getStmt = db.query(
+		"SELECT value FROM rate_limit_entries WHERE key = ?",
+	);
+	const setStmt = db.query(
+		"INSERT INTO rate_limit_entries (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+	);
+	const deleteStmt = db.query("DELETE FROM rate_limit_entries WHERE key = ?");
+	const allStmt = db.query("SELECT key, value FROM rate_limit_entries");
+
+	return {
+		get(key: string): T | undefined {
+			const row = getStmt.get(key) as { value: string } | null;
+			return row ? (JSON.parse(row.value) as T) : undefined;
+		},
+		set(key: string, value: T): void {
+			setStmt.run(key, JSON.stringify(value));
+		},
+		delete(key: string): void {
+			deleteStmt.run(key);
+		},
+		*entries(): IterableIterator<[string, T]> {
+			const rows = allStmt.all() as Array<{ key: string; value: string }>;
+			for (const row of rows) {
+				yield [row.key, JSON.parse(row.value) as T];
+			}
+		},
+	};
+}
+
 const DEFAULT_OPTIONS: Required<
-	Omit<RateLimiterOptions, "keyGenerator" | "skip">
+	Omit<RateLimiterOptions, "keyGenerator" | "skip" | "store">
 > = {
 	max: 100,
 	windowMs: 60000,
@@ -37,12 +107,14 @@ const DEFAULT_OPTIONS: Required<
  */
 export function rateLimiter(options: RateLimiterOptions = {}): Middleware {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
-	const store = new Map<string, RateLimitEntry>();
+	const store =
+		(options.store as RateLimitStore<RateLimitEntry>) ??
+		memoryStore<RateLimitEntry>();
 
 	// Cleanup old entries periodically
 	const cleanup = setInterval(() => {
 		const now = Date.now();
-		for (const [key, entry] of store) {
+		for (const [key, entry] of store.entries()) {
 			if (now > entry.resetTime) {
 				store.delete(key);
 			}
@@ -83,12 +155,6 @@ export function rateLimiter(options: RateLimiterOptions = {}): Middleware {
 		}
 
 		store.set(key, { count, resetTime });
-
-		// Set rate limit headers
-		if (opts.headers) {
-			ctx.status(200); // Ensure we can set headers
-			// Note: Headers will be set on the response
-		}
 
 		// Check if rate limit exceeded
 		if (count > opts.max) {
@@ -131,7 +197,24 @@ export function slidingWindowRateLimiter(
 	options: RateLimiterOptions = {},
 ): Middleware {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
-	const store = new Map<string, number[]>();
+	const store =
+		(options.store as RateLimitStore<number[]>) ?? memoryStore<number[]>();
+
+	const cleanup = setInterval(() => {
+		const windowStart = Date.now() - opts.windowMs;
+		for (const [key, timestamps] of store.entries()) {
+			const valid = timestamps.filter((t) => t > windowStart);
+			if (valid.length === 0) {
+				store.delete(key);
+			} else if (valid.length !== timestamps.length) {
+				store.set(key, valid);
+			}
+		}
+	}, opts.windowMs);
+
+	if (typeof cleanup === "object" && cleanup.unref) {
+		cleanup.unref();
+	}
 
 	const getKey =
 		options.keyGenerator ||
@@ -159,7 +242,7 @@ export function slidingWindowRateLimiter(
 		const validTimestamps = timestamps.filter((t) => t > windowStart);
 
 		if (validTimestamps.length >= opts.max) {
-			const oldestTimestamp = validTimestamps[0];
+			const oldestTimestamp = validTimestamps[0] || 0;
 			const retryAfter = Math.ceil(
 				(oldestTimestamp + opts.windowMs - now) / 1000,
 			);

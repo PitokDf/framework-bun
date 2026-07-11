@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Install bombardier
+        run: |
+          wget https://github.com/codesenberg/bombardier/releases/download/v1.2.6/bombardier-linux-amd64 -O bombardier
+          chmod +x bombardier
+
       - name: Run benchmark
         run: bun run bench:prod
 

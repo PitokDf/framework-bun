@@ -1,8 +1,23 @@
 // Core
 
-export type { Middleware } from "./app";
+export { z } from "zod";
+export type { Handler, Middleware, WSData, WSHandler } from "./app";
 export { App } from "./app";
+export { Cache, type CacheDriver, MemoryCacheDriver } from "./cache";
 export { Context } from "./context";
+// Decorators
+export {
+	Controller,
+	Delete,
+	Get,
+	type GuardFn,
+	Options,
+	Post,
+	Put,
+	Query,
+	Use,
+	UseGuard,
+} from "./decorators";
 export {
 	asyncHandler,
 	BadRequestError,
@@ -23,7 +38,9 @@ export {
 } from "./helpers/cookie";
 // Logger
 export { Logger, LogLevel, logger } from "./logger";
+export type { CompressOptions } from "./middlewares/compress";
 // Middlewares
+export { compress } from "./middlewares/compress";
 export { cors } from "./middlewares/cors";
 export type {
 	HealthCheckOptions,
@@ -43,13 +60,29 @@ export type { RequestIdOptions } from "./middlewares/request-id";
 export { requestId, shortId, uuid } from "./middlewares/request-id";
 export type { ResponseTimeOptions } from "./middlewares/response-time";
 export { responseTime } from "./middlewares/response-time";
+export type { ValidationTarget } from "./middlewares/validator";
 export {
 	validate,
 	validateBody,
 	validateParams,
+	zResponse,
+	zValidator,
 } from "./middlewares/validator";
+export {
+	type JobHandler,
+	MemoryQueueDriver,
+	Queue,
+	type QueueDriver,
+} from "./queue";
 // Router
 export { Router } from "./router";
+export {
+	CronJob,
+	MemorySchedulerDriver,
+	Scheduler,
+	type SchedulerDriver,
+	setDefaultSchedulerDriver,
+} from "./schedule";
 export type { SSEMessage, SSEOptions } from "./sse";
 // SSE
 export { createSSE, SSE } from "./sse";

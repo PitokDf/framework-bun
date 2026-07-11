@@ -1,6 +1,6 @@
 {
   "name": "buntok-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Buntok CLI - Code generator for Buntok framework",
   "type": "module",
   "bin": {
@@ -11,5 +11,9 @@
   },
   "keywords": ["buntok", "cli", "code-generator", "drizzle"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.5.0",
+    "zod": "^4.4.3"
+  }
 }

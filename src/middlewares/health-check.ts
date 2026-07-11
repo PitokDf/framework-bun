@@ -1,4 +1,4 @@
-import type { Context } from "../app";
+import type { Context } from "../context";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyApp = {
@@ -46,14 +46,13 @@ export function healthCheck(app: AnyApp, options: HealthCheckOptions = {}) {
 			}
 
 			const response: Record<string, unknown> = {
-				status: healthStatus.status,
+				...healthStatus,
 				timestamp: new Date().toISOString(),
 				uptime:
 					options.includeUptime !== false
 						? Math.floor((Date.now() - startTime) / 1000)
 						: undefined,
 				version: options.version,
-				...healthStatus,
 			};
 
 			// Clean up undefined values

@@ -1,57 +1,59 @@
 export function generateController(entityName: string, pascalName: string): string {
-  return `import type { Context } from "buntok";
+  return `import { Controller, Get, Post, Put, Delete } from "buntok";
+import type { Context } from "buntok";
 import { ${pascalName}Service } from "../services/${entityName}.service";
 
-const service = new ${pascalName}Service();
+@Controller("/${entityName}s")
+export class ${pascalName}Controller {
+  private service = new ${pascalName}Service();
 
-export const ${entityName}Controller = {
-  // GET /${entityName}
+  @Get("/")
   async getAll(ctx: Context) {
-    const ${entityName}s = await service.getAll();
-    return ctx.json({ data: ${entityName}s });
-  },
+    const ${entityName}s = await this.service.getAll();
+    return ctx.success(${entityName}s, "Records retrieved successfully");
+  }
 
-  // GET /${entityName}/:id
+  @Get("/:id")
   async getById(ctx: Context) {
     try {
-      const ${entityName} = await service.getById(ctx.params.id);
-      return ctx.json({ data: ${entityName} });
-    } catch (error) {
-      return ctx.json({ error: error.message }, 404);
+      const ${entityName} = await this.service.getById(ctx.params.id);
+      return ctx.success(${entityName}, "Record retrieved successfully");
+    } catch (error: any) {
+      return ctx.error(error.message, 404);
     }
-  },
+  }
 
-  // POST /${entityName}
+  @Post("/")
   async create(ctx: Context) {
     try {
       const body = await ctx.body();
-      const ${entityName} = await service.create(body);
-      return ctx.json({ data: ${entityName} }, 201);
-    } catch (error) {
-      return ctx.json({ error: error.message }, 400);
+      const ${entityName} = await this.service.create(body);
+      return ctx.success(${entityName}, "Record created successfully", 201);
+    } catch (error: any) {
+      return ctx.error(error.message, 400);
     }
-  },
+  }
 
-  // PUT /${entityName}/:id
+  @Put("/:id")
   async update(ctx: Context) {
     try {
       const body = await ctx.body();
-      const ${entityName} = await service.update(ctx.params.id, body);
-      return ctx.json({ data: ${entityName} });
-    } catch (error) {
-      return ctx.json({ error: error.message }, 400);
+      const ${entityName} = await this.service.update(ctx.params.id, body);
+      return ctx.success(${entityName}, "Record updated successfully");
+    } catch (error: any) {
+      return ctx.error(error.message, 400);
     }
-  },
+  }
 
-  // DELETE /${entityName}/:id
+  @Delete("/:id")
   async delete(ctx: Context) {
     try {
-      await service.delete(ctx.params.id);
-      return ctx.status(204);
-    } catch (error) {
-      return ctx.json({ error: error.message }, 404);
+      await this.service.delete(ctx.params.id);
+      return ctx.success(null, "Record deleted successfully", 200);
+    } catch (error: any) {
+      return ctx.error(error.message, 404);
     }
-  },
-};
+  }
+}
 `;
 }

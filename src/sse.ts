@@ -99,12 +99,25 @@ export class SSE {
 		this.send({ id, data });
 	}
 
+	private disconnectCallbacks: Array<() => void> = [];
+
+	/**
+	 * Register a callback to be called when the connection closes
+	 */
+	onClose(callback: () => void): void {
+		this.disconnectCallbacks.push(callback);
+	}
+
 	/**
 	 * Send raw string to the stream
 	 */
 	private sendRaw(raw: string): void {
 		if (this.closed || !this.controller) return;
-		this.controller.enqueue(this.encoder.encode(raw));
+		try {
+			this.controller.enqueue(this.encoder.encode(raw));
+		} catch (_error) {
+			this.close();
+		}
 	}
 
 	/**
@@ -152,13 +165,24 @@ export class SSE {
 		if (this.closed) return;
 		this.closed = true;
 
+		for (const cb of this.disconnectCallbacks) {
+			try {
+				cb();
+			} catch (e) {
+				console.error("SSE onClose error:", e);
+			}
+		}
+		this.disconnectCallbacks = [];
+
 		if (this.heartbeatInterval) {
 			clearInterval(this.heartbeatInterval);
 			this.heartbeatInterval = null;
 		}
 
 		if (this.controller) {
-			this.controller.close();
+			try {
+				this.controller.close();
+			} catch (_e) {}
 			this.controller = null;
 		}
 	}

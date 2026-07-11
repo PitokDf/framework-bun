@@ -30,7 +30,7 @@ export class Logger {
 	private format: "text" | "json";
 	private logDir: string | undefined;
 	private isProd: boolean;
-	private logRequests: boolean;
+	private _logRequests: boolean;
 	private flushScheduled = false;
 	private stdoutBuffer: string[] = [];
 	private stderrBuffer: string[] = [];
@@ -40,7 +40,7 @@ export class Logger {
 		this.level =
 			options?.level ?? (this.isProd ? LogLevel.WARN : LogLevel.INFO);
 		this.format = options?.format ?? (this.isProd ? "json" : "text");
-		this.logRequests = options?.logRequests ?? true;
+		this._logRequests = options?.logRequests ?? true;
 
 		this.logDir = process.env.LOG_DIR;
 		if (this.logDir && !existsSync(this.logDir)) {
@@ -106,7 +106,7 @@ export class Logger {
 				const keys = Object.keys(meta);
 				if (keys.length > 0) {
 					if (keys.length === 1) {
-						const val = meta[keys[0]];
+						const val = meta[keys[0] || 0];
 						logString += ` ${GRAY}{${JSON.stringify(keys[0])}:${JSON.stringify(val)}}${RESET}`;
 					} else {
 						logString += ` ${GRAY}${JSON.stringify(meta)}${RESET}`;
@@ -129,7 +129,7 @@ export class Logger {
 	}
 
 	public info(message: string, meta?: Record<string, unknown>) {
-		if (!this.logRequests) return;
+		if (!this._logRequests) return;
 		this.print(LogLevel.INFO, "INFO", message, meta);
 	}
 
@@ -139,6 +139,10 @@ export class Logger {
 
 	public error(message: string, meta?: Record<string, unknown>) {
 		this.print(LogLevel.ERROR, "ERROR", message, meta);
+	}
+
+	public get logRequests(): boolean {
+		return this._logRequests;
 	}
 
 	// Flush remaining logs (useful for graceful shutdown)
@@ -155,7 +159,6 @@ export class Logger {
 }
 
 // Create logger with env-based configuration
-// Set LOG_REQUESTS=false to disable request logging (useful for benchmarks)
 export const logger = new Logger({
 	logRequests: process.env.LOG_REQUESTS !== "false",
 });

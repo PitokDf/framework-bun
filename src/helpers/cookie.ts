@@ -29,6 +29,7 @@ export function parseCookies(cookieHeader: string): Record<string, string> {
 
 	for (const pair of pairs) {
 		const [name, ...valueParts] = pair.split("=");
+		if (name === undefined) continue;
 		const trimmedName = name.trim();
 		const value = valueParts.join("=").trim();
 
