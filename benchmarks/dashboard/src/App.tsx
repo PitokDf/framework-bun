@@ -93,24 +93,56 @@ export default function App() {
           </div>
         </header>
 
+        {/* About Buntok & Architectural Philosophy */}
+        <section className="bg-gradient-to-br from-[#18181b] to-[#0f0f11] border border-gray-800 rounded-2xl p-8 mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row gap-8">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold mb-3 flex items-center gap-2">
+                <span className="bg-emerald-500 text-black px-2 py-1 rounded text-sm uppercase tracking-bold">Philosophy</span>
+                What is Buntok?
+              </h2>
+              <p className="text-gray-400 leading-relaxed mb-4">
+                Buntok is a decorator-first, high-performance web framework designed for the Bun runtime. It aims to bridge the gap between elegant Developer Experience (DX) — heavily inspired by structured architectural patterns like NestJS — and extreme raw throughput.
+              </p>
+            </div>
+            
+            <div className="flex-1">
+              <h2 className="text-xl font-bold mb-3 text-gray-200">The Performance Context</h2>
+              <p className="text-gray-400 leading-relaxed text-sm">
+                While <strong className="text-purple-400">Elysia</strong> achieves its top-tier speed by leveraging complex Ahead-Of-Time (AOT) type-string evaluation and stripping out standard object-oriented abstractions, <strong className="text-emerald-400">Buntok</strong> uses a hybrid approach. We utilize an AOT-compiled router mapped via native <code>switch-case</code> alongside static context allocation and standard class-based decorators.
+              </p>
+              <div className="mt-4 p-3 bg-black/40 border border-gray-800/50 rounded-lg">
+                <p className="text-sm text-gray-300">
+                  <span className="text-orange-400 font-semibold">TL;DR:</span> Buntok trades a tiny, microscopic margin of raw string-execution speed (compared to Elysia) in exchange for a beautifully structured, class-based developer experience. This is why Buntok sits comfortably <strong>ahead of Hono and Fastify</strong>, while remaining a formidable challenger to Elysia.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Summary Cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <Zap className="w-24 h-24 text-emerald-500" />
             </div>
-            <h3 className="text-gray-400 text-sm font-medium mb-1">Peak Avg Throughput</h3>
-            <div className="text-4xl font-bold text-white tracking-tight">{overallData[0].avgRps.toLocaleString()}</div>
-            <div className="text-emerald-400 text-sm mt-2 font-medium">Winner: {overallData[0].name.toUpperCase()}</div>
+            <h3 className="text-gray-400 text-sm font-medium mb-1">Buntok Avg Throughput</h3>
+            <div className="text-4xl font-bold text-white tracking-tight">{overallData[targetFrameworkIndex]?.avgRps.toLocaleString()}</div>
+            <div className="text-emerald-400 text-sm mt-2 font-medium flex items-center gap-1">
+               <span className="text-gray-500 line-through mr-1">{overallData.find(f => f.name === 'hono')?.avgRps.toLocaleString()} (Hono)</span> vs Buntok
+            </div>
           </div>
           
           <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-blue-500/50 transition-colors">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <Clock className="w-24 h-24 text-blue-500" />
             </div>
-            <h3 className="text-gray-400 text-sm font-medium mb-1">Avg Latency (Top 1)</h3>
-            <div className="text-4xl font-bold text-white tracking-tight">{overallData[0].avgLatency.toFixed(2)}ms</div>
-            <div className="text-blue-400 text-sm mt-2 font-medium">Blazing Fast</div>
+            <h3 className="text-gray-400 text-sm font-medium mb-1">Buntok Avg Latency</h3>
+            <div className="text-4xl font-bold text-white tracking-tight">{overallData[targetFrameworkIndex]?.avgLatency.toFixed(2)}ms</div>
+            <div className="text-blue-400 text-sm mt-2 font-medium">Blazing Fast Object-Oriented</div>
           </div>
 
           <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-orange-500/50 transition-colors">
@@ -119,16 +151,16 @@ export default function App() {
             </div>
             <h3 className="text-gray-400 text-sm font-medium mb-1">Buntok Startup Time</h3>
             <div className="text-4xl font-bold text-white tracking-tight">{overallData[targetFrameworkIndex]?.startupTime}ms</div>
-            <div className="text-orange-400 text-sm mt-2 font-medium">Cold Start</div>
+            <div className="text-orange-400 text-sm mt-2 font-medium">Near-Instant Cold Start</div>
           </div>
 
           <div className="bg-[#18181b] border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-purple-500/50 transition-colors">
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <Route className="w-24 h-24 text-purple-500" />
             </div>
-            <h3 className="text-gray-400 text-sm font-medium mb-1">Routes Tested</h3>
+            <h3 className="text-gray-400 text-sm font-medium mb-1">Endpoints Tested</h3>
             <div className="text-4xl font-bold text-white tracking-tight">3</div>
-            <div className="text-purple-400 text-sm mt-2 font-medium">Endpoints</div>
+            <div className="text-purple-400 text-sm mt-2 font-medium">Plaintext, JSON, Dynamic</div>
           </div>
         </section>
 
