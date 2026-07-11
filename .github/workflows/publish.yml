@@ -2,11 +2,12 @@ name: Publish to NPM
 
 on:
   push:
-    tags:
-      - 'v*' # Trigger on tag push (e.g., v1.0.0)
     branches:
       - main
       - master
+    paths:
+      - 'package.json'
+      - 'create-buntok/package.json'
 
 jobs:
   publish:
@@ -33,6 +34,9 @@ jobs:
         run: bun run build
 
       - name: Publish to NPM
-        run: npm publish
+        run: |
+          npm publish || true
+          cd create-buntok
+          npm publish || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
