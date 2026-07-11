@@ -1,48 +1,63 @@
-name: Benchmark
+name: Benchmark Suite
 
 on:
   push:
-    branches: [main, master]
+    branches:
+      - master
+      - main
   pull_request:
-    branches: [main, master]
-
-permissions:
-  contents: write
-  pull-requests: write
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
 
-      - name: Install dependencies
-        run: bun install
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-      - name: Install bombardier
+      - name: Install Bombardier
         run: |
-          wget https://github.com/codesenberg/bombardier/releases/download/v1.2.6/bombardier-linux-amd64 -O bombardier
+          wget https://github.com/codesenberg/bombardier/releases/download/v1.2.6/bombardier-linux-amd64
+          mv bombardier-linux-amd64 bombardier
           chmod +x bombardier
 
-      - name: Run benchmark
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Run Benchmarks
         run: bun run bench:all
 
-      - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
+      - name: Build Dashboard
+        run: |
+          cd benchmarks/dashboard
+          npm install
+          cp ../../dashboard-data.json public/
+          npm run build
+        
+      - name: Upload Dashboard Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: Buntok Benchmark
-          tool: 'customBiggerIsBetter'
-          output-file-path: benchmark-output.json
-          auto-push: ${{ github.event_name != 'pull_request' }}
-          gh-pages-branch: gh-pages
-          benchmark-data-dir-path: 'bench'
-          alert-threshold: '110%'
-          fail-on-alert: true
-          comment-on-alert: ${{ github.event_name == 'pull_request' }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          summary-always: true
+          path: benchmarks/dashboard/dist
+
+  deploy:
+    needs: benchmark
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,309 @@
+{
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i5-6300U CPU @ 2.40GHz",
+    "cores": 4,
+    "memory": "12GB",
+    "os": "Linux 7.0.14-201.fc44.x86_64",
+    "runtime": "Bun 1.3.13",
+    "date": "2026-07-11T14:38:17.913Z"
+  },
+  "frameworks": {
+    "express": {
+      "startupTime": 224.67594599999995,
+      "/plaintext": {
+        "reqPerSec": 11876.782270020316,
+        "latencyAvg": 8419.131742633672,
+        "latencyMax": 133514,
+        "requests": 118648,
+        "errors": 0
+      },
+      "/json": {
+        "reqPerSec": 12746.092220840637,
+        "latencyAvg": 7841.48731717657,
+        "latencyMax": 61990,
+        "requests": 127377,
+        "errors": 0
+      },
+      "/id/123": {
+        "reqPerSec": 13014.945094196453,
+        "latencyAvg": 7678.089508662748,
+        "latencyMax": 55435,
+        "requests": 130155,
+        "errors": 0
+      }
+    },
+    "fastify": {
+      "startupTime": 3022.5472040000022,
+      "/plaintext": {
+        "reqPerSec": 15073.503843793413,
+        "latencyAvg": 6621.342875343393,
+        "latencyMax": 81835,
+        "requests": 0,
+        "errors": 0
+      },
+      "/json": {
+        "reqPerSec": 15147.996909433892,
+        "latencyAvg": 6576.646777193052,
+        "latencyMax": 50891,
+        "requests": 0,
+        "errors": 0
+      },
+      "/id/123": {
+        "reqPerSec": 14878.45916397906,
+        "latencyAvg": 6723.8563130376115,
+        "latencyMax": 80532,
+        "requests": 0,
+        "errors": 0
+      }
+    },
+    "hono": {
+      "startupTime": 53.37576999999874,
+      "/plaintext": {
+        "reqPerSec": 27365.13938057732,
+        "latencyAvg": 3650.249510738154,
+        "latencyMax": 87860,
+        "requests": 273371,
+        "errors": 0
+      },
+      "/json": {
+        "reqPerSec": 23513.270758621245,
+        "latencyAvg": 4255.120786277616,
+        "latencyMax": 39789,
+        "requests": 234828,
+        "errors": 0
+      },
+      "/id/123": {
+        "reqPerSec": 24320.918066919752,
+        "latencyAvg": 4105.610419603121,
+        "latencyMax": 27373,
+        "requests": 243349,
+        "errors": 0
+      }
+    },
+    "elysia": {
+      "startupTime": 187.6711970000033,
+      "/plaintext": {
+        "reqPerSec": 33700.574871528006,
+        "latencyAvg": 2968.901390351425,
+        "latencyMax": 52444,
+        "requests": 336174,
+        "errors": 0
+      },
+      "/json": {
+        "reqPerSec": 31528.327721265694,
+        "latencyAvg": 3168.978262593957,
+        "latencyMax": 22572,
+        "requests": 315171,
+        "errors": 0
+      },
+      "/id/123": {
+        "reqPerSec": 33096.32938911805,
+        "latencyAvg": 3023.2202246374836,
+        "latencyMax": 45657,
+        "requests": 330399,
+        "errors": 0
+      }
+    },
+    "buntok": {
+      "startupTime": 136.8889499999932,
+      "/plaintext": {
+        "reqPerSec": 18781.720849069407,
+        "latencyAvg": 5354.3922139475535,
+        "latencyMax": 95826,
+        "requests": 186513,
+        "errors": 0
+      },
+      "/json": {
+        "reqPerSec": 23721.75271317148,
+        "latencyAvg": 4207.574017910549,
+        "latencyMax": 50187,
+        "requests": 237402,
+        "errors": 0
+      },
+      "/id/123": {
+        "reqPerSec": 25714.832454405267,
+        "latencyAvg": 3888.0394960141994,
+        "latencyMax": 32773,
+        "requests": 256912,
+        "errors": 0
+      }
+    }
+  },
+  "timeSeries": {
+    "express": [
+      {
+        "reqPerSec": 12636
+      },
+      {
+        "reqPerSec": 13658
+      },
+      {
+        "reqPerSec": 14385
+      },
+      {
+        "reqPerSec": 7128
+      },
+      {
+        "reqPerSec": 12968
+      },
+      {
+        "reqPerSec": 14243
+      },
+      {
+        "reqPerSec": 14804
+      },
+      {
+        "reqPerSec": 14304
+      },
+      {
+        "reqPerSec": 11102
+      },
+      {
+        "reqPerSec": 13913
+      },
+      {
+        "reqPerSec": 0
+      }
+    ],
+    "fastify": [
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      },
+      {
+        "reqPerSec": 0
+      }
+    ],
+    "hono": [
+      {
+        "reqPerSec": 22435
+      },
+      {
+        "reqPerSec": 22512
+      },
+      {
+        "reqPerSec": 26027
+      },
+      {
+        "reqPerSec": 25047
+      },
+      {
+        "reqPerSec": 24122
+      },
+      {
+        "reqPerSec": 16401
+      },
+      {
+        "reqPerSec": 22197
+      },
+      {
+        "reqPerSec": 25202
+      },
+      {
+        "reqPerSec": 24763
+      },
+      {
+        "reqPerSec": 26038
+      },
+      {
+        "reqPerSec": 0
+      }
+    ],
+    "elysia": [
+      {
+        "reqPerSec": 21615
+      },
+      {
+        "reqPerSec": 24836
+      },
+      {
+        "reqPerSec": 23744
+      },
+      {
+        "reqPerSec": 23017
+      },
+      {
+        "reqPerSec": 23311
+      },
+      {
+        "reqPerSec": 23092
+      },
+      {
+        "reqPerSec": 13485
+      },
+      {
+        "reqPerSec": 24433
+      },
+      {
+        "reqPerSec": 24039
+      },
+      {
+        "reqPerSec": 24218
+      },
+      {
+        "reqPerSec": 0
+      }
+    ],
+    "buntok": [
+      {
+        "reqPerSec": 23301
+      },
+      {
+        "reqPerSec": 20391
+      },
+      {
+        "reqPerSec": 22965
+      },
+      {
+        "reqPerSec": 25148
+      },
+      {
+        "reqPerSec": 24172
+      },
+      {
+        "reqPerSec": 16018
+      },
+      {
+        "reqPerSec": 25001
+      },
+      {
+        "reqPerSec": 23931
+      },
+      {
+        "reqPerSec": 25905
+      },
+      {
+        "reqPerSec": 22611
+      },
+      {
+        "reqPerSec": 0
+      }
+    ]
+  }
+}

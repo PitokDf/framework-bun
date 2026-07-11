@@ -196,7 +196,15 @@ export class Context<
 	private static readonly TEXT_HEADERS = {
 		"Content-Type": "text/plain; charset=utf-8",
 	};
+	private static readonly TEXT_INIT = {
+		status: 200,
+		headers: Context.TEXT_HEADERS,
+	};
+	
 	public text(text: string, status = 200): Response {
+		if (status === 200) {
+			return new Response(text, Context.TEXT_INIT);
+		}
 		return new Response(text, {
 			status,
 			headers: Context.TEXT_HEADERS,

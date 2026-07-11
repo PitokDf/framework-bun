@@ -214,20 +214,9 @@ export class ${pascalName}Controller {
 
 function generateRoute(entityName: string, pascalName: string): string {
 	return `import type { App } from "buntok";
-import { ${pascalName}Repository } from "@/repositories/${entityName}.repository";
-import { ${pascalName}Service } from "@/services/${entityName}.service";
 import { ${pascalName}Controller } from "@/controllers/${entityName}.controller";
 
 export function register${pascalName}Routes(app: App) {
-  // Register to DI
-  const repository = new ${pascalName}Repository();
-  const service = new ${pascalName}Service(repository);
-  const controller = new ${pascalName}Controller(service);
-
-  app.set("${entityName}Repository", repository);
-  app.set("${entityName}Service", service);
-  app.set("${entityName}Controller", controller);
-
   // Register controller routes
   app.registerController(${pascalName}Controller);
 }

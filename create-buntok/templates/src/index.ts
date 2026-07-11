@@ -8,6 +8,8 @@ import {
 	MemorySchedulerDriver
 } from "buntok";
 
+import { HomeController } from "./controllers/home.controller";
+
 // 1. Set global default scheduler driver
 setDefaultSchedulerDriver(new MemorySchedulerDriver());
 
@@ -17,8 +19,7 @@ const app = new App();
 app.set("cache", new Cache(new MemoryCacheDriver()));
 app.set("queue", new Queue(new MemoryQueueDriver("main")));
 
-app.get("/", (ctx) => {
-	return ctx.json({ message: "Welcome to BUNTOK Enterprise!" });
-});
+// 3. Register Controllers
+app.registerController(HomeController);
 
 export default app;
