@@ -141,7 +141,7 @@ async function main() {
 		await new Promise((resolve) => instance.on('done', resolve));
 
 		server.kill();
-		await wait(1000);
+		await wait(3000);
 	}
 
 	const machineInfo = {

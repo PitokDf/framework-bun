@@ -5,126 +5,126 @@
     "memory": "12GB",
     "os": "Linux 7.0.14-201.fc44.x86_64",
     "runtime": "Bun 1.3.13",
-    "date": "2026-07-11T14:38:17.913Z"
+    "date": "2026-07-11T14:51:03.346Z"
   },
   "frameworks": {
     "express": {
-      "startupTime": 224.67594599999995,
+      "startupTime": 297.052669,
       "/plaintext": {
-        "reqPerSec": 11876.782270020316,
-        "latencyAvg": 8419.131742633672,
-        "latencyMax": 133514,
-        "requests": 118648,
+        "reqPerSec": 15134.739145909492,
+        "latencyAvg": 6617.15974861926,
+        "latencyMax": 57098,
+        "requests": 151006,
         "errors": 0
       },
       "/json": {
-        "reqPerSec": 12746.092220840637,
-        "latencyAvg": 7841.48731717657,
-        "latencyMax": 61990,
-        "requests": 127377,
+        "reqPerSec": 12470.836461814262,
+        "latencyAvg": 8026.3459682534585,
+        "latencyMax": 59987,
+        "requests": 124549,
         "errors": 0
       },
       "/id/123": {
-        "reqPerSec": 13014.945094196453,
-        "latencyAvg": 7678.089508662748,
-        "latencyMax": 55435,
-        "requests": 130155,
+        "reqPerSec": 15989.400125103217,
+        "latencyAvg": 6251.948097123945,
+        "latencyMax": 37360,
+        "requests": 159837,
         "errors": 0
       }
     },
     "fastify": {
-      "startupTime": 3022.5472040000022,
+      "startupTime": 3022.094793000004,
       "/plaintext": {
-        "reqPerSec": 15073.503843793413,
-        "latencyAvg": 6621.342875343393,
-        "latencyMax": 81835,
+        "reqPerSec": 17539.001093440915,
+        "latencyAvg": 5716.871439299698,
+        "latencyMax": 61616,
         "requests": 0,
         "errors": 0
       },
       "/json": {
-        "reqPerSec": 15147.996909433892,
-        "latencyAvg": 6576.646777193052,
-        "latencyMax": 50891,
+        "reqPerSec": 16865.742810655953,
+        "latencyAvg": 5918.3299595381895,
+        "latencyMax": 48472,
         "requests": 0,
         "errors": 0
       },
       "/id/123": {
-        "reqPerSec": 14878.45916397906,
-        "latencyAvg": 6723.8563130376115,
-        "latencyMax": 80532,
+        "reqPerSec": 17542.61269901863,
+        "latencyAvg": 5689.323848045228,
+        "latencyMax": 49320,
         "requests": 0,
         "errors": 0
       }
     },
     "hono": {
-      "startupTime": 53.37576999999874,
+      "startupTime": 93.37227400000847,
       "/plaintext": {
-        "reqPerSec": 27365.13938057732,
-        "latencyAvg": 3650.249510738154,
-        "latencyMax": 87860,
-        "requests": 273371,
+        "reqPerSec": 29582.9774562909,
+        "latencyAvg": 3386.146088880293,
+        "latencyMax": 73976,
+        "requests": 294711,
         "errors": 0
       },
       "/json": {
-        "reqPerSec": 23513.270758621245,
-        "latencyAvg": 4255.120786277616,
-        "latencyMax": 39789,
-        "requests": 234828,
+        "reqPerSec": 25926.662263475493,
+        "latencyAvg": 3852.587448718344,
+        "latencyMax": 20767,
+        "requests": 259352,
         "errors": 0
       },
       "/id/123": {
-        "reqPerSec": 24320.918066919752,
-        "latencyAvg": 4105.610419603121,
-        "latencyMax": 27373,
-        "requests": 243349,
+        "reqPerSec": 26285.456648228446,
+        "latencyAvg": 3802.015035104743,
+        "latencyMax": 23670,
+        "requests": 262785,
         "errors": 0
       }
     },
     "elysia": {
-      "startupTime": 187.6711970000033,
+      "startupTime": 145.4945899999875,
       "/plaintext": {
-        "reqPerSec": 33700.574871528006,
-        "latencyAvg": 2968.901390351425,
-        "latencyMax": 52444,
-        "requests": 336174,
+        "reqPerSec": 36696.50220610565,
+        "latencyAvg": 2723.2513150779214,
+        "latencyMax": 68427,
+        "requests": 366138,
         "errors": 0
       },
       "/json": {
-        "reqPerSec": 31528.327721265694,
-        "latencyAvg": 3168.978262593957,
-        "latencyMax": 22572,
-        "requests": 315171,
+        "reqPerSec": 33993.380239037295,
+        "latencyAvg": 2938.6965217314546,
+        "latencyMax": 25620,
+        "requests": 339853,
         "errors": 0
       },
       "/id/123": {
-        "reqPerSec": 33096.32938911805,
-        "latencyAvg": 3023.2202246374836,
-        "latencyMax": 45657,
-        "requests": 330399,
+        "reqPerSec": 36391.9127647182,
+        "latencyAvg": 2743.9480871388564,
+        "latencyMax": 16973,
+        "requests": 363879,
         "errors": 0
       }
     },
     "buntok": {
-      "startupTime": 136.8889499999932,
+      "startupTime": 153.32330300001195,
       "/plaintext": {
-        "reqPerSec": 18781.720849069407,
-        "latencyAvg": 5354.3922139475535,
-        "latencyMax": 95826,
-        "requests": 186513,
+        "reqPerSec": 32811.86638430064,
+        "latencyAvg": 3047.9317858299273,
+        "latencyMax": 50333,
+        "requests": 327366,
         "errors": 0
       },
       "/json": {
-        "reqPerSec": 23721.75271317148,
-        "latencyAvg": 4207.574017910549,
-        "latencyMax": 50187,
-        "requests": 237402,
+        "reqPerSec": 29992.047657828192,
+        "latencyAvg": 3331.309020089107,
+        "latencyMax": 29982,
+        "requests": 299864,
         "errors": 0
       },
       "/id/123": {
-        "reqPerSec": 25714.832454405267,
-        "latencyAvg": 3888.0394960141994,
-        "latencyMax": 32773,
-        "requests": 256912,
+        "reqPerSec": 30731.283679084932,
+        "latencyAvg": 3250.4538088205636,
+        "latencyMax": 17018,
+        "requests": 307418,
         "errors": 0
       }
     }
@@ -132,34 +132,34 @@
   "timeSeries": {
     "express": [
       {
-        "reqPerSec": 12636
+        "reqPerSec": 13257
       },
       {
-        "reqPerSec": 13658
+        "reqPerSec": 15834
       },
       {
-        "reqPerSec": 14385
+        "reqPerSec": 17426
       },
       {
-        "reqPerSec": 7128
+        "reqPerSec": 14954
       },
       {
-        "reqPerSec": 12968
+        "reqPerSec": 15787
       },
       {
-        "reqPerSec": 14243
+        "reqPerSec": 16465
       },
       {
-        "reqPerSec": 14804
+        "reqPerSec": 16870
       },
       {
-        "reqPerSec": 14304
+        "reqPerSec": 16416
       },
       {
-        "reqPerSec": 11102
+        "reqPerSec": 6480
       },
       {
-        "reqPerSec": 13913
+        "reqPerSec": 0
       },
       {
         "reqPerSec": 0
@@ -202,34 +202,34 @@
     ],
     "hono": [
       {
-        "reqPerSec": 22435
+        "reqPerSec": 26893
       },
       {
-        "reqPerSec": 22512
+        "reqPerSec": 27566
       },
       {
-        "reqPerSec": 26027
+        "reqPerSec": 30472
       },
       {
-        "reqPerSec": 25047
+        "reqPerSec": 28366
       },
       {
-        "reqPerSec": 24122
+        "reqPerSec": 29876
       },
       {
-        "reqPerSec": 16401
+        "reqPerSec": 30776
       },
       {
-        "reqPerSec": 22197
+        "reqPerSec": 30011
       },
       {
-        "reqPerSec": 25202
+        "reqPerSec": 30018
       },
       {
-        "reqPerSec": 24763
+        "reqPerSec": 29292
       },
       {
-        "reqPerSec": 26038
+        "reqPerSec": 30062
       },
       {
         "reqPerSec": 0
@@ -237,34 +237,34 @@
     ],
     "elysia": [
       {
-        "reqPerSec": 21615
+        "reqPerSec": 25830
       },
       {
-        "reqPerSec": 24836
+        "reqPerSec": 28159
       },
       {
-        "reqPerSec": 23744
+        "reqPerSec": 27448
       },
       {
-        "reqPerSec": 23017
+        "reqPerSec": 27681
       },
       {
-        "reqPerSec": 23311
+        "reqPerSec": 25887
       },
       {
-        "reqPerSec": 23092
+        "reqPerSec": 27238
       },
       {
-        "reqPerSec": 13485
+        "reqPerSec": 27425
       },
       {
-        "reqPerSec": 24433
+        "reqPerSec": 29933
       },
       {
-        "reqPerSec": 24039
+        "reqPerSec": 28683
       },
       {
-        "reqPerSec": 24218
+        "reqPerSec": 27209
       },
       {
         "reqPerSec": 0
@@ -272,34 +272,34 @@
     ],
     "buntok": [
       {
-        "reqPerSec": 23301
+        "reqPerSec": 28276
       },
       {
-        "reqPerSec": 20391
+        "reqPerSec": 29375
       },
       {
-        "reqPerSec": 22965
+        "reqPerSec": 29859
       },
       {
-        "reqPerSec": 25148
+        "reqPerSec": 29816
       },
       {
-        "reqPerSec": 24172
+        "reqPerSec": 30056
       },
       {
-        "reqPerSec": 16018
+        "reqPerSec": 29487
       },
       {
-        "reqPerSec": 25001
+        "reqPerSec": 28689
       },
       {
-        "reqPerSec": 23931
+        "reqPerSec": 30014
       },
       {
-        "reqPerSec": 25905
+        "reqPerSec": 28702
       },
       {
-        "reqPerSec": 22611
+        "reqPerSec": 29495
       },
       {
         "reqPerSec": 0
