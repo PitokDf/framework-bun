@@ -10,7 +10,7 @@ export default function App() {
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/dashboard-data.json')
+    fetch(`${import.meta.env.BASE_URL}dashboard-data.json`)
       .then(res => res.json())
       .then(setData)
       .catch(console.error);
