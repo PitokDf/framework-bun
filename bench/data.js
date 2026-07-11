@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783658096868,
+  "lastUpdate": 1783775368729,
   "repoUrl": "https://github.com/PitokDf/framework-bun",
   "entries": {
     "Buntok Benchmark": [
@@ -89,6 +89,105 @@ window.BENCHMARK_DATA = {
             "name": "Static File 100KB",
             "value": 9410,
             "range": "±10%",
+            "unit": "req/sec"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "committer": {
+            "email": "108637369+PitokDf@users.noreply.github.com",
+            "name": "Pito Desri Pauzi",
+            "username": "PitokDf"
+          },
+          "distinct": true,
+          "id": "8d8eb4f22d444a443826226eaf17e767ba290066",
+          "message": "feat: AOT Router compiler & All-framework benchmark suite CI",
+          "timestamp": "2026-07-11T20:07:44+07:00",
+          "tree_id": "10babe100fea1ea4505fe6ebfb4f073c75bed596",
+          "url": "https://github.com/PitokDf/framework-bun/commit/8d8eb4f22d444a443826226eaf17e767ba290066"
+        },
+        "date": 1783775368279,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "express /plaintext",
+            "value": 41363,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /json",
+            "value": 41990,
+            "unit": "req/sec"
+          },
+          {
+            "name": "express /id/123",
+            "value": 41569,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /plaintext",
+            "value": 68657,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /json",
+            "value": 67583,
+            "unit": "req/sec"
+          },
+          {
+            "name": "fastify /id/123",
+            "value": 68089,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /plaintext",
+            "value": 104513,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /json",
+            "value": 90099,
+            "unit": "req/sec"
+          },
+          {
+            "name": "hono /id/123",
+            "value": 98403,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /plaintext",
+            "value": 138116,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /json",
+            "value": 129933,
+            "unit": "req/sec"
+          },
+          {
+            "name": "elysia /id/123",
+            "value": 135852,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /plaintext",
+            "value": 59170,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /json",
+            "value": 59495,
+            "unit": "req/sec"
+          },
+          {
+            "name": "buntok /id/123",
+            "value": 59273,
             "unit": "req/sec"
           }
         ]
