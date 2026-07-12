@@ -17,7 +17,7 @@ const app = new App();
 
 // 2. Register Cache and Queue into DI
 app.set("cache", new Cache(new MemoryCacheDriver()));
-app.set("queue", new Queue(new MemoryQueueDriver("main")));
+app.set("queue", new Queue("main", new MemoryQueueDriver("main")));
 
 // 3. Register Controllers
 app.registerController(HomeController);
