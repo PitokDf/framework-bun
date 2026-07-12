@@ -22,8 +22,6 @@
 		"skipLibCheck": true,
 
 		/* Buntok Decorator Config */
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true,
 		"paths": {
 			"@/*": ["./src/*"]
 		}
