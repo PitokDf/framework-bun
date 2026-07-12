@@ -60,7 +60,7 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 	// ===== TechEmpower Standard Tests =====
 
 	// 1. Plaintext - Simple text response (tests raw throughput)
-	app.get("/bench/plaintext", async (_ctx) => {
+	app.get("/bench/plaintext", (_ctx) => {
 		return new Response("Hello, World!", {
 			headers: { "Content-Type": "text/plain" },
 		});
@@ -83,9 +83,8 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 
 	// 4. Multiple Queries - Fetch N rows from "database"
 	app.get("/bench/db/queries", (ctx) => {
-		const url = new URL(ctx.request.url);
 		const queries = Math.min(
-			Math.max(Number(url.searchParams.get("queries")) || 1, 1),
+			Math.max(Number(ctx.query.queries) || 1, 1),
 			500,
 		);
 		const results = Array.from(
@@ -107,9 +106,8 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 
 	// 6. Data Updates - Update random row in "database"
 	app.get("/bench/db/updates", (ctx) => {
-		const url = new URL(ctx.request.url);
 		const queries = Math.min(
-			Math.max(Number(url.searchParams.get("queries")) || 1, 1),
+			Math.max(Number(ctx.query.queries) || 1, 1),
 			500,
 		);
 		const results = Array.from({ length: queries }, () => {
@@ -133,9 +131,8 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 
 	// 8. Query string parsing
 	app.get("/bench/query", (ctx) => {
-		const url = new URL(ctx.request.url);
-		const name = url.searchParams.get("name") || "unknown";
-		const age = url.searchParams.get("age") || "0";
+		const name = ctx.query.name || "unknown";
+		const age = ctx.query.age || "0";
 		return ctx.json({ name, age: Number(age) });
 	});
 

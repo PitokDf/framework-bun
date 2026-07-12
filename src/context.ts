@@ -110,37 +110,43 @@ export class Context<
 	}
 
 	/**
-	 * Parsed query string parameters, cached after first access.
+	 * Parsed query string parameters — accessed as a plain property.
+	 * Parsed lazily and cached after first access.
+	 *
+	 * @example
+	 * // GET /search?q=buntok&limit=10
+	 * const { q, limit } = ctx.query;
 	 */
-	public query(): Record<string, string> {
-		if (!this._query) {
-			this._query = {};
-			const url = this.request.url;
-			const queryIdx = url.indexOf("?");
-			if (queryIdx !== -1) {
-				const queryStr = url.substring(queryIdx + 1);
-				if (queryStr) {
-					const pairs = queryStr.split("&");
-					for (let i = 0; i < pairs.length; i++) {
-						const pair = pairs[i] as string;
-						if (!pair) continue;
-						const eqIdx = pair.indexOf("=");
-						if (eqIdx !== -1) {
-							const key = decodeURIComponent(
-								pair.substring(0, eqIdx).replace(/\+/g, " "),
-							);
-							const value = decodeURIComponent(
-								pair.substring(eqIdx + 1).replace(/\+/g, " "),
-							);
-							this._query[key] = value;
-						} else {
-							const key = decodeURIComponent(pair.replace(/\+/g, " "));
-							this._query[key] = "";
-						}
+	public get query(): Record<string, string> {
+		if (this._query) return this._query;
+
+		this._query = {};
+		const url = this.request.url;
+		const queryIdx = url.indexOf("?");
+		if (queryIdx !== -1) {
+			const queryStr = url.substring(queryIdx + 1);
+			if (queryStr) {
+				const pairs = queryStr.split("&");
+				for (let i = 0; i < pairs.length; i++) {
+					const pair = pairs[i] as string;
+					if (!pair) continue;
+					const eqIdx = pair.indexOf("=");
+					if (eqIdx !== -1) {
+						const key = decodeURIComponent(
+							pair.substring(0, eqIdx).replace(/\+/g, " "),
+						);
+						const value = decodeURIComponent(
+							pair.substring(eqIdx + 1).replace(/\+/g, " "),
+						);
+						this._query[key] = value;
+					} else {
+						const key = decodeURIComponent(pair.replace(/\+/g, " "));
+						this._query[key] = "";
 					}
 				}
 			}
 		}
+
 		return this._query;
 	}
 

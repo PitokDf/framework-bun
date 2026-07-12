@@ -100,7 +100,7 @@ export function zValidator(
 				return ctx.error("Validation Failed", 400, ["body: invalid JSON"]);
 			}
 		} else if (target === "query") {
-			raw = ctx.query();
+			raw = ctx.query;
 		} else {
 			raw = ctx.params;
 		}

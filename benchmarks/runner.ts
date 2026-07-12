@@ -14,7 +14,7 @@ async function runBombardier(target: string) {
 	return new Promise<any>((resolve) => {
 		const child = spawn(
 			"./bombardier",
-			["-c", "100", "-d", "10s", "-o", "json", target],
+			["-c", "100", "-d", "10s", "-l", "-o", "json", target],
 			{ stdio: "pipe" },
 		);
 
@@ -112,8 +112,10 @@ async function main() {
 					reqPerSec: rps,
 					latencyAvg: data.result.latency.mean,
 					latencyMax: data.result.latency.max,
-					latencyP95: data.result.latency.p95,
-					latencyP99: data.result.latency.p99,
+					latencyP50: data.result.latency.percentiles ? data.result.latency.percentiles["50"] : null,
+					latencyP90: data.result.latency.percentiles ? data.result.latency.percentiles["90"] : null,
+					latencyP95: data.result.latency.percentiles ? data.result.latency.percentiles["95"] : null,
+					latencyP99: data.result.latency.percentiles ? data.result.latency.percentiles["99"] : null,
 					throughput: data.result.bytesRead.mean,
 					requests: data.result.req1xx + data.result.req2xx + data.result.req3xx + data.result.req4xx + data.result.req5xx,
 					errors: data.result.req4xx + data.result.req5xx
@@ -159,7 +161,13 @@ async function main() {
 		timeSeries: timeSeriesData
 	};
 
-	await fs.writeFile("dashboard-data.json", JSON.stringify(finalReport, null, 2));
+	const jsonString = JSON.stringify(finalReport, null, 2);
+	await fs.writeFile("dashboard-data.json", jsonString);
+	try {
+		await fs.writeFile("benchmarks/dashboard/public/dashboard-data.json", jsonString);
+	} catch (e) {
+		console.warn("Could not write to dashboard public folder", e);
+	}
 	console.log("\n✅ Generated comprehensive dashboard-data.json with Time Series!");
 }
 

@@ -1,15 +1,9 @@
 #!/usr/bin/env bun
 
 import {
-	cpSync,
 	existsSync,
-	mkdirSync,
-	readFileSync,
-	readdirSync,
-	statSync,
-	unlinkSync,
-	writeFileSync,
 } from "node:fs";
+import fs from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 
@@ -47,22 +41,6 @@ function validateProjectName(name: string): boolean {
 	}
 
 	return true;
-}
-
-function copyDirSync(src: string, dest: string) {
-	mkdirSync(dest, { recursive: true });
-	const entries = readdirSync(src);
-
-	for (const entry of entries) {
-		const srcPath = join(src, entry);
-		const destPath = join(dest, entry);
-
-		if (statSync(srcPath).isDirectory()) {
-			copyDirSync(srcPath, destPath);
-		} else {
-			cpSync(srcPath, destPath);
-		}
-	}
 }
 
 function replaceTemplate(content: string, projectName: string): string {
@@ -115,12 +93,12 @@ async function main() {
 		"\x1b[36mDo you want to include Docker support? (Y/n): \x1b[0m",
 	);
 
-	// Create project directory
-	mkdirSync(projectPath, { recursive: true });
-
-	// Copy templates
+	// Create project directory and copy templates asynchronously
 	console.log("\n\x1b[90m  Copying template files...\x1b[0m");
-	copyDirSync(TEMPLATES_DIR, projectPath);
+	await fs.mkdir(projectPath, { recursive: true });
+	
+	// Use native recursive copy for maximum performance
+	await fs.cp(TEMPLATES_DIR, projectPath, { recursive: true });
 
 	// Handle Docker files based on user choice
 	const dockerFiles = ["Dockerfile", ".dockerignore", "docker-compose.yml"];
@@ -129,7 +107,7 @@ async function main() {
 		for (const file of dockerFiles) {
 			const filePath = join(projectPath, file);
 			if (existsSync(filePath)) {
-				unlinkSync(filePath);
+				await fs.unlink(filePath);
 			}
 		}
 		console.log("\x1b[90m  Skipped Docker files\x1b[0m");
@@ -137,18 +115,18 @@ async function main() {
 		console.log("\x1b[90m  Included Docker support\x1b[0m");
 	}
 
-	// Process template files (replace placeholders)
-	const packageJsonPath = join(projectPath, "package.json");
-	if (existsSync(packageJsonPath)) {
-		const content = readFileSync(packageJsonPath, "utf-8");
-		writeFileSync(packageJsonPath, replaceTemplate(content, projectName));
-	}
-
-	const tsConfigPath = join(projectPath, "tsconfig.json");
-	if (existsSync(tsConfigPath)) {
-		const content = readFileSync(tsConfigPath, "utf-8");
-		writeFileSync(tsConfigPath, replaceTemplate(content, projectName));
-	}
+	// Process template files (replace placeholders) concurrently
+	const filesToProcess = ["package.json", "tsconfig.json"];
+	
+	await Promise.all(
+		filesToProcess.map(async (file) => {
+			const filePath = join(projectPath, file);
+			if (existsSync(filePath)) {
+				const content = await fs.readFile(filePath, "utf-8");
+				await fs.writeFile(filePath, replaceTemplate(content, projectName));
+			}
+		})
+	);
 
 	// Run bun install
 	console.log("\n\x1b[90m  Installing dependencies...\x1b[0m\n");
@@ -161,6 +139,18 @@ async function main() {
 	if (proc.exitCode !== 0) {
 		console.error("\x1b[31mFailed to install dependencies\x1b[0m");
 		process.exit(1);
+	}
+
+	// Initialize Git repository
+	console.log("\n\x1b[90m  Initializing git repository...\x1b[0m");
+	const gitProc = Bun.spawnSync(["git", "init"], {
+		cwd: projectPath,
+		stdio: ["ignore", "ignore", "ignore"], // Hide git output for cleaner terminal
+	});
+	
+	if (gitProc.exitCode === 0) {
+		// Add all files to initial commit staging to be ready
+		Bun.spawnSync(["git", "add", "."], { cwd: projectPath, stdio: ["ignore", "ignore", "ignore"] });
 	}
 
 	// Success message

@@ -1,0 +1,22 @@
+{
+  "name": "example-project",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/pg": "^8.20.0",
+    "buntok": "../",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.22.0"
+  }
+}

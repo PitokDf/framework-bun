@@ -61,8 +61,29 @@ export class Scheduler {
 }
 
 /**
- * Decorator to easily schedule methods in a Controller or Service.
- * Uses the defaultSchedulerDriver which can be overridden via setDefaultSchedulerDriver().
+ * Decorator to schedule a controller/service method as a cron job.
+ *
+ * Uses `context.addInitializer` so the job is bound to the **class instance**
+ * rather than being scheduled at class-definition time. This means:
+ *   - `this` inside the method works correctly (can access injected services).
+ *   - The job is only scheduled when the class is instantiated (e.g. via
+ *     `app.registerController(new MyController())`).
+ *
+ * @param pattern - Standard cron expression (e.g. `"0 0 * * *"` for daily at midnight)
+ *
+ * @example
+ * ```ts
+ * @Controller("/tasks")
+ * export class TaskController {
+ *   constructor(private readonly cache: Cache) {}
+ *
+ *   @CronJob("0 0 * * *")
+ *   async dailyCleanup() {
+ *     // `this` is the TaskController instance — fully works!
+ *     await this.cache.deletePattern("tmp:*");
+ *   }
+ * }
+ * ```
  */
 export function CronJob(pattern: string, options?: unknown) {
 	return (
@@ -74,16 +95,22 @@ export function CronJob(pattern: string, options?: unknown) {
 			throw new Error("@CronJob can only decorate methods");
 		}
 
-		defaultSchedulerDriver.schedule(
-			pattern,
-			async () => {
-				try {
-					await originalMethod();
-				} catch (err) {
-					console.error(`[Cron:${String(context.name)}] Job failed:`, err);
-				}
-			},
-			options,
-		);
+		// addInitializer runs after the class instance is constructed,
+		// giving us `this` bound to the actual instance.
+		// biome-ignore lint/suspicious/noExplicitAny: Required for 'this' binding
+		context.addInitializer(function (this: any) {
+			const instance = this;
+			defaultSchedulerDriver.schedule(
+				pattern,
+				async () => {
+					try {
+						await originalMethod.call(instance);
+					} catch (err) {
+						console.error(`[Cron:${String(context.name)}] Job failed:`, err);
+					}
+				},
+				options,
+			);
+		});
 	};
 }

@@ -2,6 +2,9 @@
 
 import { createCommand } from "./commands/create.js";
 import { makeDocsCommand } from "./commands/make-docs.js";
+import { makeMiddlewareCommand } from "./commands/make-middleware.js";
+import { makeTestCommand } from "./commands/make-test.js";
+import { makeTestE2ECommand } from "./commands/make-test-e2e.js";
 
 function printBanner() {
   console.log(`
@@ -12,13 +15,16 @@ function printBanner() {
 function printUsage() {
   console.log(`
 \x1b[36mUsage:\x1b[0m
-  buntok create <entity> [options]
+  buntok <command> [arguments] [options]
 
 \x1b[36mCommands:\x1b[0m
   create <entity>        Generate all files for entity (schema, repo, service, controller)
+  make:middleware <name> Generate a new middleware template
+  make:test <name>       Generate a unit test suite for an entity's service
+  make:test-e2e <name>   Generate an E2E test suite for an entity's API endpoints
   make:docs              Generate OpenAPI documentation automatically
 
-\x1b[36mOptions:\x1b[0m
+\x1b[36mOptions (for create command):\x1b[0m
   --schema               Generate only Drizzle schema
   --repo                 Generate only repository
   --service              Generate only service
@@ -26,8 +32,9 @@ function printUsage() {
 
 \x1b[36mExamples:\x1b[0m
   buntok create user                    # Generate all files for user entity
-  buntok create user --schema           # Generate only Drizzle schema
-  buntok create user --repo --service   # Generate repository and service only
+  buntok make:middleware auth           # Generate auth.middleware.ts
+  buntok make:test user                 # Generate user.spec.ts test suite
+  buntok make:test-e2e user             # Generate user.e2e.spec.ts test suite
   buntok make:docs                      # Generate OpenAPI documentation
 `);
 }
@@ -35,7 +42,7 @@ function printUsage() {
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
-  const entityName = args[1];
+  const arg1 = args[1];
 
   if (!command) {
     printBanner();
@@ -45,11 +52,32 @@ async function main() {
 
   switch (command) {
     case "create":
-      if (!entityName) {
+      if (!arg1) {
         console.error("\x1b[31mError: entity name is required for create command\x1b[0m");
         process.exit(1);
       }
-      await createCommand(entityName, args.slice(2));
+      await createCommand(arg1, args.slice(2));
+      break;
+    case "make:middleware":
+      if (!arg1) {
+        console.error("\x1b[31mError: middleware name is required\x1b[0m");
+        process.exit(1);
+      }
+      await makeMiddlewareCommand(arg1);
+      break;
+    case "make:test":
+      if (!arg1) {
+        console.error("\x1b[31mError: entity name is required for make:test command\x1b[0m");
+        process.exit(1);
+      }
+      await makeTestCommand(arg1);
+      break;
+    case "make:test-e2e":
+      if (!arg1) {
+        console.error("\x1b[31mError: entity name is required for make:test-e2e command\x1b[0m");
+        process.exit(1);
+      }
+      await makeTestE2ECommand(arg1);
       break;
     case "make:docs":
       await makeDocsCommand();

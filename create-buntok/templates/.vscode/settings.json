@@ -2,6 +2,7 @@
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "biomejs.biome",
 	"editor.codeActionsOnSave": {
+		"source.removeUnusedImports": "explicit",
 		"source.organizeImports.biome": "explicit",
 		"quickfix.biome": "explicit"
 	},

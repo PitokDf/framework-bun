@@ -1,187 +1,347 @@
-import { Activity, Cpu, Server, Zap, Clock, Route, CheckCircle, Database } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, Legend, CartesianGrid, LineChart, Line } from 'recharts';
+import {
+  Activity, Cpu, Server, Zap, Clock, CheckCircle, Database, TrendingUp
+} from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
+  ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar,
+  Legend, CartesianGrid, LineChart, Line
+} from 'recharts';
 
-export function BenchmarkSection({ data, isDark }: { data: any, isDark: boolean }) {
-  if (!data) return <div className="text-text-secondary">Loading Benchmark Data...</div>;
+const ACCENT = '#f97316';
+const COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'];
+const FW_COLOR = (fw: string, idx: number) => fw === 'buntok' ? ACCENT : COLORS[idx % COLORS.length];
+
+export function BenchmarkSection({ data, isDark }: { data: any; isDark: boolean }) {
+  if (!data) return (
+    <div className="pt-16 flex flex-col items-center justify-center gap-4 text-text-secondary">
+      <Zap className="w-8 h-8 animate-pulse text-[#f97316]" />
+      <span className="text-sm">Loading benchmark data…</span>
+    </div>
+  );
+
   const { machine, frameworks } = data;
   const fwNames = Object.keys(frameworks);
-  const overallData = fwNames.map(fw => {
+
+  const overallData = fwNames.map((fw, i) => {
     const routes = Object.keys(frameworks[fw]).filter(k => k !== 'startupTime');
-    const totalRps = routes.reduce((acc, route) => acc + (frameworks[fw][route]?.reqPerSec || 0), 0);
-    const avgLatency = routes.reduce((acc, route) => acc + (frameworks[fw][route]?.latencyAvg || 0), 0) / routes.length;
-    return { name: fw, score: totalRps, avgRps: Math.round(totalRps / routes.length), avgLatency: avgLatency / 1000, startupTime: Math.round(frameworks[fw].startupTime) };
+    const totalRps = routes.reduce((acc, r) => acc + (frameworks[fw][r]?.reqPerSec || 0), 0);
+    const avgLatency = routes.reduce((acc, r) => acc + (frameworks[fw][r]?.latencyAvg || 0), 0) / routes.length;
+    
+    const p50Latency = routes.reduce((acc, r) => acc + (frameworks[fw][r]?.latencyP50 || frameworks[fw][r]?.latencyAvg || 0), 0) / routes.length;
+    const p90Latency = routes.reduce((acc, r) => acc + (frameworks[fw][r]?.latencyP90 || frameworks[fw][r]?.latencyAvg || 0), 0) / routes.length;
+    const p95Latency = routes.reduce((acc, r) => acc + (frameworks[fw][r]?.latencyP95 || frameworks[fw][r]?.latencyAvg || 0), 0) / routes.length;
+    const p99Latency = routes.reduce((acc, r) => acc + (frameworks[fw][r]?.latencyP99 || frameworks[fw][r]?.latencyAvg || 0), 0) / routes.length;
+
+    return {
+      name: fw,
+      score: totalRps,
+      avgRps: Math.round(totalRps / routes.length),
+      avgLatency: avgLatency / 1000,
+      p50Latency: p50Latency / 1000,
+      p90Latency: p90Latency / 1000,
+      p95Latency: p95Latency / 1000,
+      p99Latency: p99Latency / 1000,
+      startupTime: Math.round(frameworks[fw].startupTime),
+      color: FW_COLOR(fw, i),
+    };
   }).sort((a, b) => b.score - a.score);
-  const targetFrameworkIndex = overallData.findIndex(f => f.name === 'buntok');
+
+  const buntok = overallData.find(f => f.name === 'buntok')!;
+  
+
+  const gridColor  = isDark ? '#1f1f1f' : '#e4e4e7';
+  const tickColor  = isDark ? '#52525b' : '#a1a1aa';
 
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-bg-secondary border border-border-primary p-3 rounded-lg shadow-xl text-sm transition-colors text-text-primary">
-          <p className="font-semibold mb-2">{label}</p>
-          {payload.map((entry: any, i: number) => (
-            <div key={i} className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-text-secondary">{entry.name}:</span>
-              <span className="font-mono">{entry.value.toLocaleString()} {entry.dataKey.includes('latency') ? 'ms' : 'req/s'}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-bg-secondary border border-border-primary rounded-lg p-3 text-xs shadow-lg">
+        <p className="font-semibold text-text-primary mb-2">{label}</p>
+        {payload.map((e: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 text-text-secondary">
+            <span className="w-2 h-2 rounded-full" style={{ background: e.color }} />
+            <span className="capitalize">{e.name}:</span>
+            <span className="font-mono text-text-primary">
+              {e.value.toLocaleString()} {e.dataKey?.includes?.('latency') ? 'ms' : 'req/s'}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
-    <div className="w-full">
-      <header className="mb-10">
-        <div>
-          <h2 className="text-4xl font-bold tracking-tight text-text-primary mb-2 transition-colors">Performance Benchmarks</h2>
-          <p className="text-text-secondary text-lg transition-colors">Real-world load testing on typical endpoints.</p>
-        </div>
-        <div className="bg-bg-secondary border border-border-primary rounded-md p-5 mt-6 flex flex-wrap gap-6 text-sm text-text-secondary transition-colors">
-          <div className="flex flex-col gap-1">
-            <span className="uppercase text-xs font-semibold tracking-wider">Machine</span>
-            <div className="flex items-center gap-2 text-text-primary"><Cpu className="w-4 h-4" /> {machine.cpu}</div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="uppercase text-xs font-semibold tracking-wider">Memory</span>
-            <div className="flex items-center gap-2 text-text-primary"><Database className="w-4 h-4" /> {machine.memory}</div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="uppercase text-xs font-semibold tracking-wider">Runtime</span>
-            <div className="flex items-center gap-2 text-text-primary"><Server className="w-4 h-4" /> {machine.runtime}</div>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-6">
 
-      <section className="bg-gradient-to-br from-bg-secondary to-bg-primary border border-border-primary rounded-md p-8 mb-6 relative overflow-hidden transition-colors">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex flex-col md:flex-row gap-8">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-3 flex items-center gap-2 text-text-primary transition-colors">
-              <span className="bg-emerald-500 text-white px-2 py-1 rounded text-sm uppercase tracking-bold">Philosophy</span>
-              What is Buntok?
-            </h2>
-            <p className="text-text-secondary leading-relaxed mb-4 transition-colors">
-              Buntok is a decorator-first, high-performance web framework designed for the Bun runtime. It aims to bridge the gap between elegant Developer Experience (DX) heavily inspired by structured architectural patterns like NestJS and extreme raw throughput.
-            </p>
-          </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold mb-3 text-text-primary transition-colors">The Performance Context</h2>
-            <p className="text-text-secondary leading-relaxed text-sm transition-colors">
-              While <strong className="text-purple-500 dark:text-purple-400">Elysia</strong> achieves its top-tier speed by leveraging complex Ahead-Of-Time (AOT) type-string evaluation and stripping out standard object-oriented abstractions, <strong className="text-emerald-500 dark:text-emerald-400">Buntok</strong> uses a hybrid approach. We utilize an AOT-compiled router mapped via native <code>switch-case</code> alongside static context allocation and standard class-based decorators.
-            </p>
-            <div className="mt-4 p-3 bg-bg-tertiary border border-border-hover rounded-lg transition-colors">
-              <p className="text-sm text-text-primary transition-colors">
-                Buntok trades a tiny, microscopic margin of raw string-execution speed (compared to Elysia) in exchange for a beautifully structured, class-based developer experience. This is why Buntok sits comfortably <strong>ahead of Hono and Fastify</strong>, while remaining a formidable challenger to Elysia.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── Header ── */}
+      <div className="border-b border-border-primary pb-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#f97316] mb-2">Benchmarks</p>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Performance Report</h1>
+        <p className="text-text-secondary text-sm">Real-world load testing on <code>/plaintext</code>, <code>/json</code>, and <code>/id/:id</code> endpoints.</p>
+      </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-bg-secondary border border-border-primary rounded-md p-6 relative overflow-hidden group hover:border-emerald-500/50 transition-colors shadow-sm">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Zap className="w-24 h-24 text-emerald-500" /></div>
-          <h3 className="text-text-secondary text-sm font-medium mb-1 transition-colors">Buntok Avg Throughput</h3>
-          <div className="text-4xl font-bold text-text-primary tracking-tight transition-colors">{overallData[targetFrameworkIndex]?.avgRps.toLocaleString()}</div>
-          <div className="text-emerald-500 dark:text-emerald-400 text-sm mt-2 font-medium flex items-center gap-1">
-             <span className="text-text-secondary line-through mr-1">{overallData.find(f => f.name === 'hono')?.avgRps.toLocaleString()} (Hono)</span> vs Buntok
+      {/* ── Machine info ── */}
+      <div className="flex flex-wrap gap-6 p-4 rounded-lg bg-bg-secondary border border-border-primary text-sm">
+        {[
+          { icon: <Cpu className="w-4 h-4" />, label: 'CPU', val: machine.cpu },
+          { icon: <Database className="w-4 h-4" />, label: 'Memory', val: machine.memory },
+          { icon: <Server className="w-4 h-4" />, label: 'Runtime', val: machine.runtime },
+        ].map(s => (
+          <div key={s.label} className="flex items-center gap-2 text-text-secondary">
+            <span className="text-text-secondary">{s.icon}</span>
+            <span className="text-text-secondary">{s.label}:</span>
+            <span className="font-medium text-text-primary">{s.val}</span>
           </div>
-        </div>
-        <div className="bg-bg-secondary border border-border-primary rounded-md p-6 relative overflow-hidden group hover:border-blue-500/50 transition-colors shadow-sm">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Clock className="w-24 h-24 text-blue-500" /></div>
-          <h3 className="text-text-secondary text-sm font-medium mb-1 transition-colors">Buntok Avg Latency</h3>
-          <div className="text-4xl font-bold text-text-primary tracking-tight transition-colors">{overallData[targetFrameworkIndex]?.avgLatency.toFixed(2)}ms</div>
-          <div className="text-blue-500 dark:text-blue-400 text-sm mt-2 font-medium">Blazing Fast Object-Oriented</div>
-        </div>
-        <div className="bg-bg-secondary border border-border-primary rounded-md p-6 relative overflow-hidden group hover:border-orange-500/50 transition-colors shadow-sm">
-           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Activity className="w-24 h-24 text-orange-500" /></div>
-          <h3 className="text-text-secondary text-sm font-medium mb-1 transition-colors">Buntok Startup Time</h3>
-          <div className="text-4xl font-bold text-text-primary tracking-tight transition-colors">{overallData[targetFrameworkIndex]?.startupTime}ms</div>
-          <div className="text-orange-500 dark:text-orange-400 text-sm mt-2 font-medium">Near-Instant Cold Start</div>
-        </div>
-        <div className="bg-bg-secondary border border-border-primary rounded-md p-6 relative overflow-hidden group hover:border-purple-500/50 transition-colors shadow-sm">
-           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Route className="w-24 h-24 text-purple-500" /></div>
-          <h3 className="text-text-secondary text-sm font-medium mb-1 transition-colors">Endpoints Tested</h3>
-          <div className="text-4xl font-bold text-text-primary tracking-tight transition-colors">3</div>
-          <div className="text-purple-500 dark:text-purple-400 text-sm mt-2 font-medium">Plaintext, JSON, Dynamic</div>
-        </div>
-      </section>
+        ))}
+      </div>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-bg-secondary border border-border-primary rounded-md p-6 flex flex-col transition-colors shadow-sm">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-text-primary transition-colors"><CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400"/> Framework Ranking</h2>
-          <div className="flex-1 flex flex-col justify-center gap-4">
-            {overallData.map((fw, idx) => (
-              <div key={fw.name} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${fw.name === 'buntok' ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-bg-tertiary border-border-hover'}`}>
-                <div className="flex items-center gap-4">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${idx === 0 ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-500' : idx === 1 ? 'bg-gray-400/20 text-gray-500 dark:text-gray-300' : idx === 2 ? 'bg-orange-700/20 text-orange-600 dark:text-orange-500' : 'bg-bg-primary text-text-secondary'}`}>{idx + 1}</div>
-                  <div>
-                    <div className="font-semibold text-text-primary capitalize transition-colors">{fw.name}</div>
-                    <div className="text-xs text-text-secondary transition-colors">{fw.startupTime}ms startup</div>
-                  </div>
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* RPS Card */}
+        <div className="bg-bg-secondary border border-border-primary rounded-2xl p-6 hover:border-[#f97316]/30 hover:bg-bg-tertiary transition-all duration-300 group">
+          <h3 className="text-sm text-text-secondary font-medium mb-1 group-hover:text-text-primary transition-colors flex items-center justify-between">
+            Requests Per Sec (Avg) <Zap className="w-4 h-4 text-[#f97316]" />
+          </h3>
+          <div className="text-3xl font-bold text-text-primary mb-6">{buntok?.avgRps.toLocaleString()} <span className="text-sm font-normal text-text-secondary">req/s</span></div>
+          
+          <div className="space-y-4">
+            {overallData.slice(0, 3).map((fw) => (
+              <div key={fw.name}>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className={`font-medium ${fw.name === 'buntok' ? 'text-[#f97316]' : 'text-text-secondary capitalize'}`}>{fw.name}</span>
+                  <span className={fw.name === 'buntok' ? 'text-[#f97316] font-bold' : 'text-text-secondary'}>
+                    {(fw.avgRps / 1000).toFixed(1)}k
+                  </span>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold text-lg text-text-primary transition-colors">{fw.avgRps.toLocaleString()} <span className="text-sm font-normal text-text-secondary">req/s</span></div>
-                  <div className="text-xs text-text-secondary transition-colors">{fw.avgLatency.toFixed(2)}ms avg</div>
+                <div className="h-2 w-full bg-border-primary rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full ${fw.name === 'buntok' ? 'bg-gradient-to-r from-[#f97316]/50 to-[#f97316]' : 'bg-text-secondary/50'}`} 
+                    style={{ width: `${(fw.avgRps / overallData[0].avgRps) * 100}%` }} 
+                  />
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div className="bg-bg-secondary border border-border-primary rounded-md p-6 transition-colors shadow-sm">
-          <h2 className="text-xl font-bold mb-6 text-text-primary transition-colors">Performance Radar</h2>
-          <div className="h-[350px] w-full">
+
+        {/* Latency Table Card */}
+        <div className="bg-bg-secondary border border-border-primary rounded-2xl p-6 hover:border-[#27c93f]/30 hover:bg-bg-tertiary transition-all duration-300 group">
+          <h3 className="text-sm text-text-secondary font-medium mb-1 group-hover:text-text-primary transition-colors flex items-center justify-between">
+            Tail Latency (p99) <Clock className="w-4 h-4 text-[#27c93f]" />
+          </h3>
+          <div className="text-3xl font-bold text-text-primary mb-4">{buntok?.p99Latency.toFixed(2)} <span className="text-sm font-normal text-text-secondary">ms</span></div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-text-secondary whitespace-nowrap">
+              <thead>
+                <tr className="border-b border-border-primary">
+                  <th className="pb-1.5 font-medium text-text-primary">FW</th>
+                  <th className="pb-1.5 font-medium text-right">p50</th>
+                  <th className="pb-1.5 font-medium text-right">p90</th>
+                  <th className="pb-1.5 font-medium text-right">p95</th>
+                  <th className="pb-1.5 font-medium text-right text-[#27c93f]">p99</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-primary/50">
+                {[...overallData].sort((a,b) => a.p99Latency - b.p99Latency).slice(0, 4).map((fw) => (
+                  <tr key={fw.name} className="group/row hover:bg-bg-tertiary/50 transition-colors">
+                    <td className={`py-2 font-medium capitalize ${fw.name === 'buntok' ? 'text-[#27c93f]' : 'text-text-primary'}`}>
+                      {fw.name}
+                    </td>
+                    <td className={`py-2 text-right ${fw.name === 'buntok' ? 'text-text-primary font-medium' : ''}`}>
+                      {fw.p50Latency.toFixed(1)}
+                    </td>
+                    <td className={`py-2 text-right ${fw.name === 'buntok' ? 'text-text-primary font-medium' : ''}`}>
+                      {fw.p90Latency.toFixed(1)}
+                    </td>
+                    <td className={`py-2 text-right ${fw.name === 'buntok' ? 'text-text-primary font-medium' : ''}`}>
+                      {fw.p95Latency.toFixed(1)}
+                    </td>
+                    <td className={`py-2 text-right ${fw.name === 'buntok' ? 'text-[#27c93f] font-bold' : 'font-medium text-text-primary'}`}>
+                      {fw.p99Latency.toFixed(1)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Startup Time Card */}
+        <div className="bg-bg-secondary border border-border-primary rounded-2xl p-6 hover:border-[#3b82f6]/30 hover:bg-bg-tertiary transition-all duration-300 group">
+          <h3 className="text-sm text-text-secondary font-medium mb-1 group-hover:text-text-primary transition-colors flex items-center justify-between">
+            Cold Startup Time <Activity className="w-4 h-4 text-[#3b82f6]" />
+          </h3>
+          <div className="text-3xl font-bold text-text-primary mb-6">{buntok?.startupTime} <span className="text-sm font-normal text-text-secondary">ms</span></div>
+          
+          <div className="space-y-4">
+            {[...overallData].sort((a,b) => a.startupTime - b.startupTime).slice(0, 3).map((fw) => (
+              <div key={fw.name}>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className={`font-medium ${fw.name === 'buntok' ? 'text-[#3b82f6]' : 'text-text-secondary capitalize'}`}>{fw.name}</span>
+                  <span className={fw.name === 'buntok' ? 'text-[#3b82f6] font-bold' : 'text-text-secondary'}>
+                    {fw.startupTime} ms
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-border-primary rounded-full overflow-hidden flex justify-start">
+                  <div 
+                    className={`h-full rounded-full ${fw.name === 'buntok' ? 'bg-gradient-to-r from-[#3b82f6]/50 to-[#3b82f6]' : 'bg-text-secondary/50'}`} 
+                    style={{ width: `${(fw.startupTime / Math.max(...overallData.map(f => f.startupTime))) * 100}%` }} 
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── About Buntok ── */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="border border-border-primary rounded-lg p-5 bg-bg-secondary">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-bg-tertiary text-[#f97316] border border-border-primary">Philosophy</span>
+            <h2 className="font-semibold text-text-primary">What is Buntok?</h2>
+          </div>
+          <p className="text-sm text-text-secondary leading-relaxed">
+            Buntok is a decorator-first, high-performance web framework designed for Bun. It bridges elegant
+            NestJS-like OOP developer experience with extreme raw throughput — no compromise.
+          </p>
+        </div>
+        <div className="border border-border-primary rounded-lg p-5 bg-bg-secondary">
+          <h2 className="font-semibold text-text-primary mb-3">Performance Context</h2>
+          <p className="text-sm text-text-secondary leading-relaxed">
+            Buntok uses an AOT-compiled switch-case router with static context allocation — the same
+            approach as Elysia but wrapped in a clean class-based API.
+            This places Buntok <strong className="text-text-primary">ahead of Hono and Fastify</strong> while remaining a formidable challenger to Elysia.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Ranking + Radar ── */}
+      <div className="grid lg:grid-cols-2 gap-4">
+
+        {/* Ranking */}
+        <div className="border border-border-primary rounded-lg p-5 bg-bg-secondary">
+          <div className="flex items-center gap-2 mb-4">
+            <CheckCircle className="w-4 h-4 text-[#f97316]" />
+            <h2 className="font-semibold text-text-primary">Framework Ranking</h2>
+          </div>
+          <div className="space-y-2">
+            {overallData.map((fw, idx) => {
+              const pct = (fw.avgRps / overallData[0].avgRps) * 100;
+              return (
+                <div
+                  key={fw.name}
+                  className={`rounded-lg p-3 flex items-center gap-3 border transition-colors ${
+                    fw.name === 'buntok'
+                      ? 'border-[#f97316]/40 bg-[#f97316]/5'
+                      : 'border-border-primary bg-bg-primary hover:border-border-hover'
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 ${
+                    idx === 0 ? 'bg-yellow-500/20 text-yellow-500' :
+                    idx === 1 ? 'bg-zinc-400/20 text-zinc-400' :
+                    idx === 2 ? 'bg-orange-700/20 text-orange-600' :
+                    'bg-bg-tertiary text-text-secondary'
+                  }`}>
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-sm capitalize text-text-primary">{fw.name}</span>
+                      <span className="text-xs font-mono text-text-secondary">{fw.avgRps.toLocaleString()} req/s</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-bg-tertiary overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%`, background: fw.color }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Radar */}
+        <div className="border border-border-primary rounded-lg p-5 bg-bg-secondary">
+          <h2 className="font-semibold text-text-primary mb-4">Performance Radar</h2>
+          <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={overallData}>
-                <PolarGrid stroke={isDark ? "#27272a" : "#e4e4e7"} />
-                <PolarAngleAxis dataKey="name" tick={{ fill: isDark ? '#a1a1aa' : '#52525b', fontSize: 12 }} />
-                <Radar name="Requests/Sec" dataKey="avgRps" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={overallData}>
+                <PolarGrid stroke={gridColor} />
+                <PolarAngleAxis dataKey="name" tick={{ fill: tickColor, fontSize: 11 }} />
+                <Radar name="Avg req/s" dataKey="avgRps" stroke={ACCENT} fill={ACCENT} fillOpacity={0.2} strokeWidth={2} />
                 <RechartsTooltip content={<CustomTooltip />} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="bg-bg-secondary border border-border-primary rounded-md p-6 mb-6 transition-colors shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-text-primary transition-colors">Route Performance Breakdown (Req/Sec)</h2>
-        <div className="h-96 w-full">
+      {/* ── Bar chart ── */}
+      <div className="border border-border-primary rounded-lg p-5 bg-bg-secondary">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-4 h-4 text-[#f97316]" />
+          <h2 className="font-semibold text-text-primary">Route Performance Breakdown (req/s)</h2>
+        </div>
+        <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={['/plaintext', '/json', '/id/123'].map(route => ({ name: route, ...Object.fromEntries(fwNames.map(fw => [fw, frameworks[fw][route]?.reqPerSec || 0])) }))} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#27272a" : "#e4e4e7"} vertical={false} />
-              <XAxis dataKey="name" stroke={isDark ? "#71717a" : "#52525b"} tickLine={false} axisLine={false} />
-              <YAxis stroke={isDark ? "#71717a" : "#52525b"} tickLine={false} axisLine={false} tickFormatter={val => `${val / 1000}k`} />
-              <RechartsTooltip content={<CustomTooltip />} cursor={{fill: isDark ? '#27272a' : '#e4e4e7', opacity: 0.4}} />
-              <Legend wrapperStyle={{ paddingTop: '20px' }}/>
-              {fwNames.map((fw, i) => <Bar key={fw} dataKey={fw} fill={fw === 'buntok' ? '#10b981' : `hsl(${i * 60}, 70%, 50%)`} radius={[4, 4, 0, 0]} />)}
+            <BarChart
+              data={['/plaintext', '/json', '/id/123'].map(route => ({
+                name: route,
+                ...Object.fromEntries(fwNames.map(fw => [fw, frameworks[fw][route]?.reqPerSec || 0])),
+              }))}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+              <XAxis dataKey="name" stroke={tickColor} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+              <YAxis stroke={tickColor} tickLine={false} axisLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+              <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: isDark ? '#1f1f1f' : '#f4f4f5', opacity: 0.6 }} />
+              <Legend wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
+              {fwNames.map((fw, i) => (
+                <Bar key={fw} dataKey={fw} fill={FW_COLOR(fw, i)} radius={[3, 3, 0, 0]} maxBarSize={32} />
+              ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </section>
+      </div>
 
-      {data.timeSeries && data.timeSeries['buntok'] && data.timeSeries['buntok'].length > 0 && (
-        <section className="bg-bg-secondary border border-border-primary rounded-md p-6 transition-colors shadow-sm">
-          <h2 className="text-xl font-bold mb-6 text-text-primary transition-colors">Throughput Over Time (/plaintext)</h2>
-          <div className="h-96 w-full">
+      {/* ── Line chart (time series) ── */}
+      {data.timeSeries?.['buntok']?.length > 0 && (
+        <div className="border border-border-primary rounded-lg p-5 bg-bg-secondary">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-4 h-4 text-[#f97316]" />
+            <h2 className="font-semibold text-text-primary">Throughput Over Time — /plaintext</h2>
+          </div>
+          <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.timeSeries['buntok'].map((_: any, idx: number) => {
-                const row: any = { second: idx + 1 };
-                fwNames.forEach(fw => { row[fw] = data.timeSeries[fw]?.[idx]?.reqPerSec || 0; });
-                return row;
-              })} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#27272a" : "#e4e4e7"} vertical={false} />
-                <XAxis dataKey="second" stroke={isDark ? "#71717a" : "#52525b"} tickLine={false} axisLine={false} tickFormatter={val => `${val}s`} />
-                <YAxis stroke={isDark ? "#71717a" : "#52525b"} tickLine={false} axisLine={false} tickFormatter={val => `${val / 1000}k`} />
+              <LineChart
+                data={data.timeSeries['buntok'].map((_: any, idx: number) => {
+                  const row: any = { second: idx + 1 };
+                  fwNames.forEach(fw => { row[fw] = data.timeSeries[fw]?.[idx]?.reqPerSec || 0; });
+                  return row;
+                })}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                <XAxis dataKey="second" stroke={tickColor} tickLine={false} axisLine={false} tickFormatter={v => `${v}s`} tick={{ fontSize: 11 }} />
+                <YAxis stroke={tickColor} tickLine={false} axisLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                 <RechartsTooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ paddingTop: '20px' }}/>
-                {fwNames.map((fw, i) => <Line type="monotone" key={fw} dataKey={fw} stroke={fw === 'buntok' ? '#10b981' : `hsl(${i * 60}, 70%, 50%)`} strokeWidth={fw === 'buntok' ? 3 : 2} dot={false} />)}
+                <Legend wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
+                {fwNames.map((fw, i) => (
+                  <Line
+                    key={fw} type="monotone" dataKey={fw}
+                    stroke={FW_COLOR(fw, i)}
+                    strokeWidth={fw === 'buntok' ? 2.5 : 1.5}
+                    dot={false}
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </section>
+        </div>
       )}
     </div>
   );

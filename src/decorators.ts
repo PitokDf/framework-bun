@@ -81,9 +81,18 @@ function createRouteDecorator(method: string) {
 export const Get = createRouteDecorator("GET");
 export const Post = createRouteDecorator("POST");
 export const Put = createRouteDecorator("PUT");
+export const Patch = createRouteDecorator("PATCH");
 export const Delete = createRouteDecorator("DELETE");
 export const Options = createRouteDecorator("OPTIONS");
+export const Head = createRouteDecorator("HEAD");
 export const Query = createRouteDecorator("QUERY");
+
+/**
+ * Matches ALL HTTP methods. Useful for catch-all handlers or proxies.
+ * Note: more specific method decorators (@Get, @Post, etc.) registered on the
+ * same path will take precedence in the AOT-compiled router.
+ */
+export const All = createRouteDecorator("ALL");
 
 /**
  * Attach middleware to a single decorated route. Stack multiple `@Use()`

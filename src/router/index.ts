@@ -8,11 +8,41 @@ export interface LookupResult {
 
 const EMPTY_PARAMS: Record<string, string> = Object.freeze({});
 
+// Simple fixed-size LRU cache for trie lookup results on dynamic routes.
+// Avoids re-walking the trie for the same (method, pathname) pair —
+// common in real apps where the same resource is hit repeatedly.
+const CACHE_MAX = 2048;
+
+class LookupCache {
+	private map = new Map<string, LookupResult>();
+
+	get(key: string): LookupResult | undefined {
+		const val = this.map.get(key);
+		if (val === undefined) return undefined;
+		// Move to end (most-recently-used)
+		this.map.delete(key);
+		this.map.set(key, val);
+		return val;
+	}
+
+	set(key: string, val: LookupResult): void {
+		if (this.map.has(key)) this.map.delete(key);
+		else if (this.map.size >= CACHE_MAX) {
+			// Evict the oldest entry (first in insertion order)
+			this.map.delete(this.map.keys().next().value as string);
+		}
+		this.map.set(key, val);
+	}
+}
+
 export class Router {
 	private root: RouterNode = new RouterNode("/", NodeType.STATIC);
 	// biome-ignore lint/suspicious/noExplicitAny: generic
 	public staticRoutes: Map<string, Map<string, (...args: any[]) => any>> =
 		new Map();
+
+	// LRU cache for dynamic (param/catchall) route lookups
+	private readonly lookupCache = new LookupCache();
 
 	private static splitPath(path: string): string[] {
 		const segments: string[] = [];
@@ -113,7 +143,7 @@ export class Router {
 	}
 
 	public find(method: string, path: string): LookupResult {
-		// Fast path: try flat static route cache first
+		// Fast path: try flat static route cache first (O(1))
 		const methodMap = this.staticRoutes.get(path);
 		if (methodMap) {
 			const handler = methodMap.get(method); // method is already uppercase
@@ -121,6 +151,12 @@ export class Router {
 				return { handler, params: EMPTY_PARAMS };
 			}
 		}
+
+		// LRU cache for dynamic routes — avoids re-walking the trie for
+		// repeated (method, pathname) pairs (e.g. same user ID hit often)
+		const cacheKey = `${method}\0${path}`;
+		const cached = this.lookupCache.get(cacheKey);
+		if (cached) return cached;
 
 		// Slow path: trie traversal for param/catchall routes
 		const result: LookupResult = {
@@ -168,6 +204,11 @@ export class Router {
 
 		result.handler = currentNode.handlers.get(method) || null;
 		if (!result.params) result.params = EMPTY_PARAMS;
+
+		// Cache the result for future identical lookups
+		if (result.handler) {
+			this.lookupCache.set(cacheKey, result);
+		}
 
 		return result;
 	}

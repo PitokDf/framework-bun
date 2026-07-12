@@ -1,23 +1,28 @@
 // Core
-
 export { z } from "zod";
-export type { Handler, Middleware, WSData, WSHandler } from "./app";
+export type { Handler, Middleware, WSData, WSHandler, RouteContext } from "./app";
 export { App } from "./app";
 export { Cache, type CacheDriver, MemoryCacheDriver } from "./cache";
 export { Context } from "./context";
+
 // Decorators
 export {
+	All,
 	Controller,
 	Delete,
 	Get,
 	type GuardFn,
+	Head,
 	Options,
+	Patch,
 	Post,
 	Put,
 	Query,
 	Use,
 	UseGuard,
 } from "./decorators";
+
+// Error helpers
 export {
 	asyncHandler,
 	BadRequestError,
@@ -26,8 +31,10 @@ export {
 	NotFoundError,
 	UnauthorizedError,
 } from "./helpers/async-handler";
+
 export type { CookieOptions } from "./helpers/cookie";
-// Helpers
+
+// Cookie helpers
 export {
 	deleteCookie,
 	getCookie,
@@ -36,9 +43,12 @@ export {
 	serializeCookie,
 	setCookie,
 } from "./helpers/cookie";
+
 // Logger
 export { Logger, LogLevel, logger } from "./logger";
+
 export type { CompressOptions } from "./middlewares/compress";
+
 // Middlewares
 export { compress } from "./middlewares/compress";
 export { cors } from "./middlewares/cors";
@@ -68,14 +78,21 @@ export {
 	zResponse,
 	zValidator,
 } from "./middlewares/validator";
+
+// Queue
 export {
+	type Job,
 	type JobHandler,
 	MemoryQueueDriver,
 	Queue,
 	type QueueDriver,
+	type QueueOptions,
 } from "./queue";
+
 // Router
 export { Router } from "./router";
+
+// Scheduler / CronJob
 export {
 	CronJob,
 	MemorySchedulerDriver,
@@ -83,6 +100,27 @@ export {
 	type SchedulerDriver,
 	setDefaultSchedulerDriver,
 } from "./schedule";
+
 export type { SSEMessage, SSEOptions } from "./sse";
+
 // SSE
 export { createSSE, SSE } from "./sse";
+
+// Uploads
+export {
+	LocalDiskStorage,
+	MemoryStorage,
+	type ParseUploadResult,
+	type StorageDriver,
+	type UploadOptions,
+	type UploadedFile,
+	parseUploads,
+	uploader,
+} from "./upload";
+
+// AI
+export {
+	streamAI,
+	injectSystemPrompt,
+	AICache,
+} from "./ai";

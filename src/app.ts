@@ -30,6 +30,16 @@ export type ExtractParams<Path extends string> =
 				? { [K in Catchall]: string } & { "*": string }
 				: Record<string, never>;
 
+export type RouteContext<
+	Path extends string = string,
+	BodyType = unknown,
+	DI = Record<string, unknown>
+> = Omit<Context<DI, ExtractParams<Path>>, "body" | "valid"> & {
+	body(): Promise<BodyType>;
+	valid(target: "body"): BodyType;
+	valid<T>(target: "query" | "params"): T;
+};
+
 export type Handler<
 	DI = Record<string, unknown>,
 	Path extends string = string,
@@ -231,7 +241,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	}
 
 	private getBuiltInIconPath(): string {
-		return join(import.meta.dir, "..", "public", "favicon.ico");
+		return join(__dirname, "..", "public", "favicon.ico");
 	}
 
 	public get<Path extends string>(path: Path, handler: Handler<DI, Path>): this;

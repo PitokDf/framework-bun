@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/logo.svg" alt="Buntok" width="140">
+  <img src="https://github.com/PitokDf/framework-bun/blob/master/public/logo.svg" alt="Buntok" width="140">
 </p>
 
 <h1 align="center">Buntok</h1>
@@ -43,6 +43,8 @@
 | 🔄 **Queue System** | Built-in driver-based background Queues |
 | ⏱️ **Task Scheduler** | Native CRON job support via `@CronJob` |
 | 🛡️ **Auth Guards** | Granular access control via `@UseGuard` |
+| 📁 **File Uploads** | Configurable multipart parser with storage drivers |
+| 🤖 **AI Ready** | Native Vercel AI SDK Support (Data Stream Protocol) & Semantic Caching |
 
 ## Requirements
 
@@ -182,6 +184,38 @@ app.get("/example", (ctx) => {
   ctx.di       // Dependencies (DI)
 });
 ```
+
+#### Strongly-Typed Context for Decorators (`RouteContext`)
+
+When using class controllers and decorators, TypeScript cannot automatically infer `ctx.params` from the `@Get("/:id")` string due to language limitations. To fix this DX issue, you can use the `RouteContext` helper:
+
+```typescript
+import { Controller, Get, Post, RouteContext, Use, zValidator } from "buntok";
+import { z } from "zod";
+
+const createUserSchema = z.object({ name: z.string(), age: z.number() });
+type CreateUserBody = z.infer<typeof createUserSchema>;
+
+@Controller("/users")
+export class UserController {
+  // 1. Path Parameters Inference
+  @Get("/:id/posts/:postId")
+  async getPost(ctx: RouteContext<"/:id/posts/:postId">) {
+    // TypeScript knows these exist and are strings!
+    const { id, postId } = ctx.params;
+  }
+
+  // 2. Body Inference from zValidator
+  @Post("/")
+  @Use(zValidator("body", createUserSchema))
+  async create(ctx: RouteContext<"/", CreateUserBody>) {
+    // ctx.body() and ctx.valid("body") now return { name: string, age: number }
+    const body = await ctx.body();
+  }
+}
+```
+
+> **Note:** If you use the functional chaining API (e.g., `app.get("/:id", (ctx) => {})`), path parameters are inferred 100% automatically without needing `RouteContext`!
 
 ### Middleware
 
@@ -1828,13 +1862,108 @@ app.get("/cookies", (ctx) => {
 
 ---
 
+### File Uploads
+
+Parse and validate `multipart/form-data` uploads using customizable storage drivers. Features automatic size and MIME-type validation.
+
+**Import:**
+
+```typescript
+import { uploader, LocalDiskStorage, parseUploads } from "buntok";
+```
+
+**As a Middleware:**
+
+Automatically parses files and places them in `ctx.store.files`, and standard form fields in `ctx.store.fields`.
+
+```typescript
+app.post("/avatar", 
+  uploader({
+    storage: new LocalDiskStorage("./uploads"),
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+    allowedMimeTypes: ["image/jpeg", "image/png"]
+  }),
+  (ctx) => {
+    // Access uploaded files
+    const file = ctx.store.files[0];
+    return ctx.json({ 
+      success: true, 
+      file: file.filename 
+    });
+  }
+);
+```
+
+**Manual Parsing (Helper Method):**
+
+Parse uploads directly inside your handler for maximum flexibility.
+
+```typescript
+app.post("/documents", async (ctx) => {
+  const result = await parseUploads(ctx, {
+    storage: new LocalDiskStorage("./storage/docs"),
+    maxFileSize: 10 * 1024 * 1024
+  });
+
+  if (!result.success) {
+    return ctx.error(result.error);
+  }
+
+  // Text inputs from the same form are separated in fields
+  const { title } = result.fields;
+
+  return ctx.json({ title, files: result.files });
+});
+```
+
+**Custom Storage Drivers (Cloudinary, AWS S3, etc):**
+
+Buntok uses a plugin-based architecture for storage. You can easily build your own driver for third-party providers (like Cloudinary or S3) by implementing the `StorageDriver` interface.
+
+Here is a ready-to-use example for **Cloudinary**:
+
+```typescript
+import { StorageDriver, UploadedFile, uploader } from "buntok";
+import { v2 as cloudinary } from "cloudinary";
+
+export class CloudinaryStorage implements StorageDriver {
+  async handleFile(file: File, filename: string): Promise<UploadedFile> {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        { public_id: filename }, 
+        (error, result) => {
+          if (error) return reject(error);
+          resolve({
+            originalName: file.name,
+            filename: result!.public_id,
+            size: file.size,
+            type: file.type,
+            path: result!.secure_url, // Direct image URL
+          });
+        }
+      ).end(buffer);
+    });
+  }
+}
+
+// Usage:
+app.post("/avatar", uploader({ storage: new CloudinaryStorage() }), (ctx) => {
+  return ctx.json({ url: ctx.store.files[0].path });
+});
+```
+
+---
+
 ## Enterprise Features
 
 Buntok is built to scale. It comes with built-in modules for common enterprise requirements.
 
 ### Caching
 
-Buntok includes a robust caching system using a Driver pattern. By default, it uses `MemoryCacheDriver`.
+Buntok includes a robust caching system using a Driver pattern. By default, it uses `MemoryCacheDriver`. It supports atomic operations and advanced key retrieval.
 
 ```typescript
 import { Cache, MemoryCacheDriver } from "buntok";
@@ -1845,43 +1974,61 @@ const cache = new Cache(new MemoryCacheDriver());
 // Set a value with a 60-second TTL
 await cache.set("user:1", { name: "John" }, 60);
 
-// Retrieve a value
-const user = await cache.get("user:1");
+// getOrSet: fetch from DB if not in cache, then cache it for 5 mins
+const user = await cache.getOrSet("user:2", () => db.findUser(2), 300);
+
+// Atomic counters
+const views = await cache.increment("post:1:views");
+
+// Pattern deletion (e.g. clear all session keys)
+await cache.deletePattern("session:*");
 ```
 
 ### Background Queues
 
-Handle long-running tasks asynchronously using the Queue system.
+Handle long-running tasks asynchronously using the Queue system. Features automatic retries, backoff strategies, delays, and priority queuing.
 
 ```typescript
-import { Queue, MemoryQueueDriver } from "buntok";
+import { Queue } from "buntok";
 
-// Initialize the Queue
-const emailQueue = new Queue(new MemoryQueueDriver());
+// Initialize the Queue with options
+const emailQueue = new Queue("email", { 
+  maxRetries: 3, 
+  retryDelay: 1000, 
+  backoff: "exponential" 
+});
 
 // Define a worker
 emailQueue.process(async (job) => {
-	console.log("Sending email to:", job.data.to);
+	console.log(`[Attempt ${job.attempt + 1}] Sending email to:`, job.data.to);
 });
 
-// Add jobs to the queue
-await emailQueue.add({ to: "admin@example.com", subject: "Hello" });
+// Add jobs to the queue with options
+await emailQueue.add(
+  { to: "admin@example.com", subject: "Hello" }, 
+  { delay: 5000, priority: 10 } // Wait 5 seconds, high priority
+);
 ```
 
 ### Task Scheduling
 
-Run recurring background jobs using standard cron syntax and the `@CronJob()` decorator.
+Run recurring background jobs using standard cron syntax and the `@CronJob()` decorator. 
+
+Unlike other frameworks, `@CronJob` safely binds to the class instance, allowing you to access injected services via `this`.
 
 ```typescript
 import { Controller, CronJob } from "buntok";
 
 @Controller("/tasks")
 export class TaskController {
+	constructor(private readonly cache: Cache) {}
 	
-	// Runs every minute
-	@CronJob("* * * * *")
+	// Runs every day at midnight
+	@CronJob("0 0 * * *")
 	async performCleanup() {
-		console.log("Cleaning up expired sessions...");
+    // \`this\` works perfectly!
+		await this.cache.deletePattern("tmp:*");
+		console.log("Cleanup complete!");
 	}
 }
 ```
@@ -1907,6 +2054,42 @@ export class AdminController {
 		return ctx.json({ message: "Welcome Admin" });
 	}
 }
+```
+
+### AI & LLM Integration (AI Ready)
+
+Buntok natively supports the **Vercel AI SDK Data Stream Protocol**, making it the perfect backend for Generative UI, chatbots, and autonomous agents.
+
+```typescript
+import { Router, streamAI, injectSystemPrompt, AICache, MemoryCacheDriver } from "buntok";
+import { OpenAI } from "openai";
+
+const app = new Router();
+const openai = new OpenAI();
+const aiCache = new AICache(new MemoryCacheDriver());
+
+app.post("/api/chat", async (ctx) => {
+  const { messages } = await ctx.body();
+  
+  // 1. Semantic Cache: Check if we've seen this exact conversation
+  const cached = await aiCache.get(messages);
+  if (cached) return ctx.json({ role: "assistant", content: cached });
+  
+  // 2. Guardrails: force system prompt & prevent injection
+  const securedMessages = injectSystemPrompt(messages, "You are a helpful assistant.");
+  
+  // 3. Fetch from OpenAI (Stream mode)
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    stream: true,
+    messages: securedMessages,
+  });
+
+  // 4. Automatically stream via Vercel AI Protocol (0:"text")
+  return streamAI(ctx, response, {
+    onCompletion: async (fullText) => await aiCache.set(messages, fullText)
+  }); 
+});
 ```
 
 ## Examples

@@ -2,11 +2,11 @@
 	"name": "buntok",
 	"module": "dist/exports.js",
 	"type": "module",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"main": "dist/exports.cjs",
 	"types": "dist/exports.d.ts",
 	"bin": {
-		"buntok": "./dist/cli.js"
+		"buntok": "./dist/cli/index.js"
 	},
 	"exports": {
 		".": {
@@ -23,7 +23,6 @@
 		"./helpers/*": "./src/helpers/*"
 	},
 	"files": [
-		"src",
 		"dist",
 		"README.md"
 	],
