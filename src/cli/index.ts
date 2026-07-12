@@ -113,9 +113,13 @@ export async function main() {
 	}
 }
 
-// Only execute automatically if this is the entry script (when running locally from ts)
-// tsup might bundle this and run it, or we export it.
-// If imported by src/cli.ts, we don't need to auto-run if src/cli.ts runs it, but currently src/cli.ts just imports it.
-if (import.meta.main || process.argv[1]?.endsWith("cli/index.js")) {
+// Only execute automatically if this is the entry script
+const isEntryFile = typeof process !== "undefined" && (
+  process.argv[1]?.endsWith("cli/index.js") || 
+  process.argv[1]?.endsWith("cli/index.ts") ||
+  process.argv[1]?.endsWith("buntok")
+);
+
+if (isEntryFile) {
 	main();
 }
