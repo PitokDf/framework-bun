@@ -12,12 +12,16 @@ async function wait(ms: number) {
 
 async function runBombardier(target: string) {
 	return new Promise<any>((resolve) => {
-		// Advanced Optimization: Pin load generator to Core 1 if available
-		const hasMultipleCores = os.cpus().length >= 2 && os.platform() === 'linux';
+		const numCores = os.cpus().length;
+		const hasMultipleCores = numCores >= 2 && os.platform() === 'linux';
 		const cmd = hasMultipleCores ? "taskset" : "./bombardier";
+		
+		const midCore = Math.floor(numCores / 2);
+		const bombardierCores = numCores === 2 ? "1" : `${midCore}-${numCores - 1}`;
+		
 		const args = hasMultipleCores 
-			? ["-c", "1", "./bombardier", "-c", "100", "-d", "10s", "-l", "-o", "json", target]
-			: ["-c", "100", "-d", "10s", "-l", "-o", "json", target];
+			? ["-c", bombardierCores, "./bombardier", "-c", "125", "-d", "10s", "-l", "-o", "json", target]
+			: ["-c", "125", "-d", "10s", "-l", "-o", "json", target];
 
 		const child = spawn(cmd, args, { stdio: "pipe" });
 
@@ -82,10 +86,15 @@ async function main() {
 
 		const env = { ...process.env, NODE_ENV: "production" };
 		const startMs = performance.now();
-		const hasMultipleCores = os.cpus().length >= 2 && os.platform() === 'linux';
+		const numCores = os.cpus().length;
+		const hasMultipleCores = numCores >= 2 && os.platform() === 'linux';
 		const cmd = hasMultipleCores ? "taskset" : "bun";
+		
+		const midCore = Math.floor(numCores / 2);
+		const serverCores = numCores === 2 ? "0" : `0-${midCore - 1}`;
+		
 		const args = hasMultipleCores 
-			? ["-c", "0", "bun", "run", `benchmarks/${fw}.ts`]
+			? ["-c", serverCores, "bun", "run", `benchmarks/${fw}.ts`]
 			: ["run", `benchmarks/${fw}.ts`];
 			
 		const server = spawn(cmd, args, { env, stdio: "pipe" });
