@@ -99,12 +99,11 @@ export function CronJob(pattern: string, options?: unknown) {
 		// giving us `this` bound to the actual instance.
 		// biome-ignore lint/suspicious/noExplicitAny: Required for 'this' binding
 		context.addInitializer(function (this: any) {
-			const instance = this;
 			defaultSchedulerDriver.schedule(
 				pattern,
 				async () => {
 					try {
-						await originalMethod.call(instance);
+						await originalMethod.call(this);
 					} catch (err) {
 						console.error(`[Cron:${String(context.name)}] Job failed:`, err);
 					}

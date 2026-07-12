@@ -1,16 +1,16 @@
-import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
 import { join } from "node:path";
 
 function toPascalCase(str: string): string {
-  return str
-    .split(/[-_]/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join("");
+	return str
+		.split(/[-_]/)
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+		.join("");
 }
 
 function generateTest(name: string, pascalName: string): string {
-  return `import { describe, it, expect, beforeEach, mock } from "bun:test";
+	return `import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { ${pascalName}Service } from "../src/services/${name}.service";
 import { ${pascalName}Repository } from "../src/repositories/${name}.repository";
 
@@ -55,37 +55,44 @@ describe("${pascalName}Service", () => {
 }
 
 export async function makeTestCommand(name: string) {
-  const pascalName = toPascalCase(name);
-  console.log(`\n\x1b[36mScaffolding Unit Test for ${pascalName}...\x1b[0m\n`);
+	const pascalName = toPascalCase(name);
+	console.log(`\n\x1b[36mScaffolding Unit Test for ${pascalName}...\x1b[0m\n`);
 
-  const testsDir = "tests";
-  
-  if (!existsSync(testsDir)) {
-    await fs.mkdir(testsDir, { recursive: true });
-  }
+	const testsDir = "tests";
 
-  const filePath = join(testsDir, `${name}.spec.ts`);
-  
-  if (existsSync(filePath)) {
-    console.error(`\x1b[31mError: Test file already exists at ${filePath}\x1b[0m`);
-    process.exit(1);
-  }
+	if (!existsSync(testsDir)) {
+		await fs.mkdir(testsDir, { recursive: true });
+	}
 
-  const content = generateTest(name, pascalName);
-  await fs.writeFile(filePath, content);
+	const filePath = join(testsDir, `${name}.spec.ts`);
 
-  // Auto-format generated file with Biome if available
-  const biomeProc = Bun.spawnSync(["bunx", "biome", "format", "--write", filePath], {
-    stdio: ["ignore", "ignore", "ignore"]
-  });
-  
-  if (biomeProc.exitCode === 0) {
-    console.log("\x1b[90m✨ Auto-formatted generated test file with Biome\x1b[0m");
-  }
+	if (existsSync(filePath)) {
+		console.error(
+			`\x1b[31mError: Test file already exists at ${filePath}\x1b[0m`,
+		);
+		process.exit(1);
+	}
 
-  console.log(`\x1b[32m✓ Generated test suite:\x1b[0m ${filePath}`);
-  
-  console.log(`
+	const content = generateTest(name, pascalName);
+	await fs.writeFile(filePath, content);
+
+	// Auto-format generated file with Biome if available
+	const biomeProc = Bun.spawnSync(
+		["bunx", "biome", "format", "--write", filePath],
+		{
+			stdio: ["ignore", "ignore", "ignore"],
+		},
+	);
+
+	if (biomeProc.exitCode === 0) {
+		console.log(
+			"\x1b[90m✨ Auto-formatted generated test file with Biome\x1b[0m",
+		);
+	}
+
+	console.log(`\x1b[32m✓ Generated test suite:\x1b[0m ${filePath}`);
+
+	console.log(`
 \x1b[36mNext steps:\x1b[0m
   Run your test suite instantly using Bun's native test runner:
      \x1b[33mbun test\x1b[0m

@@ -1,6 +1,10 @@
-export function generateService(entityName: string, pascalName: string, withRepo: boolean = true): string {
-  if (withRepo) {
-    return `import { ${pascalName}Repository } from "../repositories/${entityName}.repository";
+export function generateService(
+	entityName: string,
+	pascalName: string,
+	withRepo: boolean = true,
+): string {
+	if (withRepo) {
+		return `import { ${pascalName}Repository } from "../repositories/${entityName}.repository";
 import type { ${pascalName}, New${pascalName} } from "../db/schemas/${entityName}";
 
 export class ${pascalName}Service {
@@ -43,9 +47,9 @@ export class ${pascalName}Service {
   }
 }
 `;
-  }
+	}
 
-  return `export class ${pascalName}Service {
+	return `export class ${pascalName}Service {
   async getAll(): Promise<any[]> {
     return [];
   }

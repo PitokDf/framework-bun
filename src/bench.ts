@@ -83,10 +83,7 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 
 	// 4. Multiple Queries - Fetch N rows from "database"
 	app.get("/bench/db/queries", (ctx) => {
-		const queries = Math.min(
-			Math.max(Number(ctx.query.queries) || 1, 1),
-			500,
-		);
+		const queries = Math.min(Math.max(Number(ctx.query.queries) || 1, 1), 500);
 		const results = Array.from(
 			{ length: queries },
 			() => worlds[randomWorldId() - 1],
@@ -106,10 +103,7 @@ export function registerBenchRoutes<DI extends Record<string, unknown>>(
 
 	// 6. Data Updates - Update random row in "database"
 	app.get("/bench/db/updates", (ctx) => {
-		const queries = Math.min(
-			Math.max(Number(ctx.query.queries) || 1, 1),
-			500,
-		);
+		const queries = Math.min(Math.max(Number(ctx.query.queries) || 1, 1), 500);
 		const results = Array.from({ length: queries }, () => {
 			const id = randomWorldId();
 			const world = worlds[id - 1] as { id: number; randomNumber: number };

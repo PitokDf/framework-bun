@@ -1,10 +1,10 @@
 import { toSnakeCase } from "../utils.js";
 
 export function generateSchema(entityName: string): string {
-  const tableName = toSnakeCase(entityName);
-  const pascalName = entityName.charAt(0).toUpperCase() + entityName.slice(1);
-  
-  return `import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+	const tableName = toSnakeCase(entityName);
+	const pascalName = entityName.charAt(0).toUpperCase() + entityName.slice(1);
+
+	return `import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
 
 export const ${tableName} = pgTable("${tableName}", {
   id: uuid("id").defaultRandom().primaryKey(),

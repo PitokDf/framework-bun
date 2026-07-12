@@ -1,10 +1,14 @@
 import { toSnakeCase } from "../utils.js";
 
-export function generateRepository(entityName: string, pascalName: string, withSchema: boolean = true): string {
-  const tableName = toSnakeCase(entityName);
-  
-  if (withSchema) {
-    return `import { db } from "../db";
+export function generateRepository(
+	entityName: string,
+	pascalName: string,
+	withSchema: boolean = true,
+): string {
+	const tableName = toSnakeCase(entityName);
+
+	if (withSchema) {
+		return `import { db } from "../db";
 import { ${tableName}, type ${pascalName}, type New${pascalName} } from "../db/schemas/${entityName}";
 import { eq } from "drizzle-orm";
 
@@ -45,9 +49,9 @@ export class ${pascalName}Repository {
   }
 }
 `;
-  }
+	}
 
-  return `export class ${pascalName}Repository {
+	return `export class ${pascalName}Repository {
   private data: any[] = [];
 
   async findAll(): Promise<any[]> {

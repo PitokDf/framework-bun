@@ -1,40 +1,48 @@
-import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 export async function dbSeedCommand() {
-  console.log("\x1b[36mRunning Database Seeders...\x1b[0m\n");
+	console.log("\x1b[36mRunning Database Seeders...\x1b[0m\n");
 
-  const seederDir = resolve(process.cwd(), "src/db/seeders");
-  
-  if (!existsSync(seederDir)) {
-    console.warn(`\x1b[33mWarning: No seeders directory found at ${seederDir}\x1b[0m`);
-    return;
-  }
+	const seederDir = resolve(process.cwd(), "src/db/seeders");
 
-  const files = await fs.readdir(seederDir);
-  const seederFiles = files.filter(f => f.endsWith(".ts") && !f.endsWith(".d.ts"));
+	if (!existsSync(seederDir)) {
+		console.warn(
+			`\x1b[33mWarning: No seeders directory found at ${seederDir}\x1b[0m`,
+		);
+		return;
+	}
 
-  if (seederFiles.length === 0) {
-    console.log("\x1b[90mNo seeders to run.\x1b[0m");
-    return;
-  }
+	const files = await fs.readdir(seederDir);
+	const seederFiles = files.filter(
+		(f) => f.endsWith(".ts") && !f.endsWith(".d.ts"),
+	);
 
-  // Create a temporary runner script to execute all seeders in the user's app context
-  const runnerContent = `
+	if (seederFiles.length === 0) {
+		console.log("\x1b[90mNo seeders to run.\x1b[0m");
+		return;
+	}
+
+	// Create a temporary runner script to execute all seeders in the user's app context
+	const runnerContent = `
 import { db } from "@/db"; // Ensure DB connection is loaded
-${seederFiles.map((file, i) => `import * as seeder${i} from "./${file.replace('.ts', '')}";`).join("\n")}
+${seederFiles.map((file, i) => `import * as seeder${i} from "./${file.replace(".ts", "")}";`).join("\n")}
 
 async function runSeeders() {
   console.log("🌱 Starting database seeding...");
   
   try {
-    ${seederFiles.map((file, i) => `
+    ${seederFiles
+			.map(
+				(_file, i) => `
     for (const key of Object.keys(seeder${i})) {
       if (typeof (seeder${i} as any)[key] === 'function') {
         await (seeder${i} as any)[key]();
       }
-    }`).join("\n    ")}
+    }`,
+			)
+			.join("\n    ")}
     
     console.log("✅ All seeders executed successfully!");
     process.exit(0);
@@ -47,22 +55,22 @@ async function runSeeders() {
 runSeeders();
 `;
 
-  const runnerPath = join(seederDir, ".runner.ts");
-  await fs.writeFile(runnerPath, runnerContent);
+	const runnerPath = join(seederDir, ".runner.ts");
+	await fs.writeFile(runnerPath, runnerContent);
 
-  try {
-    const proc = Bun.spawnSync(["bun", "run", runnerPath], {
-      cwd: process.cwd(),
-      stdio: ["inherit", "inherit", "inherit"]
-    });
+	try {
+		const proc = Bun.spawnSync(["bun", "run", runnerPath], {
+			cwd: process.cwd(),
+			stdio: ["inherit", "inherit", "inherit"],
+		});
 
-    if (proc.exitCode !== 0) {
-      console.error("\x1b[31mSeeding process failed.\x1b[0m");
-    }
-  } finally {
-    // Cleanup temporary runner
-    if (existsSync(runnerPath)) {
-      await fs.unlink(runnerPath);
-    }
-  }
+		if (proc.exitCode !== 0) {
+			console.error("\x1b[31mSeeding process failed.\x1b[0m");
+		}
+	} finally {
+		// Cleanup temporary runner
+		if (existsSync(runnerPath)) {
+			await fs.unlink(runnerPath);
+		}
+	}
 }

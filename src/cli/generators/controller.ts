@@ -1,6 +1,10 @@
-export function generateController(entityName: string, pascalName: string, withService: boolean = true): string {
-  if (withService) {
-    return `import { Controller, Get, Post, Put, Delete } from "buntok";
+export function generateController(
+	entityName: string,
+	pascalName: string,
+	withService: boolean = true,
+): string {
+	if (withService) {
+		return `import { Controller, Get, Post, Put, Delete } from "buntok";
 import type { Context } from "buntok";
 import { ${pascalName}Service } from "../services/${entityName}.service";
 
@@ -57,9 +61,9 @@ export class ${pascalName}Controller {
   }
 }
 `;
-  }
+	}
 
-  return `import { Controller, Get, Post, Put, Delete } from "buntok";
+	return `import { Controller, Get, Post, Put, Delete } from "buntok";
 import type { Context } from "buntok";
 
 @Controller("/${entityName}s")

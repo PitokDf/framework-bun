@@ -136,10 +136,7 @@ export class Cache {
 	 * @example
 	 * await cache.mset([["user:1", userData], ["user:2", user2Data]], 300);
 	 */
-	async mset<T>(
-		entries: [string, T][],
-		ttlSeconds?: number,
-	): Promise<void> {
+	async mset<T>(entries: [string, T][], ttlSeconds?: number): Promise<void> {
 		await Promise.all(
 			entries.map(([key, value]) => this.set(key, value, ttlSeconds)),
 		);
@@ -189,8 +186,8 @@ export class Cache {
 	private globToRegex(pattern: string): RegExp {
 		const escaped = pattern
 			.replace(/[.+^${}()|[\]\\]/g, "\\$&") // escape regex specials
-			.replace(/\*/g, ".*")                   // * → .*
-			.replace(/\?/g, ".");                   // ? → .
+			.replace(/\*/g, ".*") // * → .*
+			.replace(/\?/g, "."); // ? → .
 		return new RegExp(`^${escaped}$`);
 	}
 }

@@ -47,9 +47,12 @@ export interface ParseUploadResult {
 }
 
 export class LocalDiskStorage implements StorageDriver {
-	constructor(private destination: string) { }
+	constructor(private destination: string) {}
 
-	async handleFile(file: File, generatedFilename: string): Promise<UploadedFile> {
+	async handleFile(
+		file: File,
+		generatedFilename: string,
+	): Promise<UploadedFile> {
 		// Ensure directory exists
 		try {
 			await stat(this.destination);
@@ -71,7 +74,10 @@ export class LocalDiskStorage implements StorageDriver {
 }
 
 export class MemoryStorage implements StorageDriver {
-	async handleFile(file: File, generatedFilename: string): Promise<UploadedFile> {
+	async handleFile(
+		file: File,
+		generatedFilename: string,
+	): Promise<UploadedFile> {
 		const buffer = await file.arrayBuffer();
 		return {
 			originalName: file.name,
@@ -124,7 +130,7 @@ export async function parseUploads(
 	let formData: any;
 	try {
 		formData = await ctx.request.formData();
-	} catch (err) {
+	} catch (_err) {
 		return {
 			success: false,
 			error: "Failed to parse form data",
@@ -151,7 +157,10 @@ export async function parseUploads(
 			}
 
 			// Validation: MIME Type
-			if (options.allowedMimeTypes && !options.allowedMimeTypes.includes(value.type)) {
+			if (
+				options.allowedMimeTypes &&
+				!options.allowedMimeTypes.includes(value.type)
+			) {
 				return {
 					success: false,
 					error: `File type ${value.type} is not allowed for file ${value.name}`,

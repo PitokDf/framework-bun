@@ -8,7 +8,7 @@ export default defineConfig({
 	sourcemap: true,
 	clean: true,
 	target: "node18",
-    outDir: "dist",
+	outDir: "dist",
 	external: [/^bun:.*/],
 	shims: true,
 });

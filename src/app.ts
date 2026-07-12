@@ -33,7 +33,7 @@ export type ExtractParams<Path extends string> =
 export type RouteContext<
 	Path extends string = string,
 	BodyType = unknown,
-	DI = Record<string, unknown>
+	DI = Record<string, unknown>,
 > = Omit<Context<DI, ExtractParams<Path>>, "body" | "valid"> & {
 	body(): Promise<BodyType>;
 	valid(target: "body"): BodyType;
