@@ -188,6 +188,9 @@ export class Context<
 	}
 
 	public json(data: unknown, status = 200): Response {
+		if (status === 200) {
+			return Response.json(data);
+		}
 		return Response.json(data, { status });
 	}
 
