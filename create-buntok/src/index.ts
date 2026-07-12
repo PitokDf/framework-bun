@@ -128,6 +128,15 @@ async function main() {
 		})
 	);
 
+	// Create .gitignore
+	const gitignoreContent = `node_modules
+dist
+.env
+.DS_Store
+coverage
+*.log`;
+	await fs.writeFile(join(projectPath, ".gitignore"), gitignoreContent);
+
 	// Run bun install
 	console.log("\n\x1b[90m  Installing dependencies...\x1b[0m\n");
 
