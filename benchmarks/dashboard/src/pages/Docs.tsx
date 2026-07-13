@@ -41,7 +41,17 @@ export function DocsPage({ isDark }: { isDark: boolean }) {
         { id: 'cookies', label: 'Cookie Helpers' },
         { id: 'uploads', label: 'File Uploads' },
         { id: 'health', label: 'Health Check' },
-        { id: 'enterprise', label: 'Enterprise Features' },
+      ],
+    },
+    {
+      label: 'Enterprise',
+      items: [
+        { id: 'enterprise', label: 'Cache & Queue' },
+        { id: 'jwt-auth', label: 'JWT & Auth' },
+        { id: 'env-validator', label: 'Env Validator' },
+        { id: 'testing', label: 'Testing Client' },
+        { id: 'mailer', label: 'Built-in Mailer' },
+        { id: 'devtools', label: 'DevTools Dashboard' },
         { id: 'ai', label: 'AI & LLM Integration' },
         { id: 'cli', label: 'Code Generation' },
         { id: 'api-docs', label: 'OpenAPI / Swagger' },
@@ -153,7 +163,7 @@ app.listen(1212, () => {
           </p>
           <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">Why RouteContext?</h3>
           <p className="text-text-secondary leading-relaxed mb-4">
-            TypeScript decorators cannot mutate method parameter types at the type level. <code>RouteContext&lt;Path, Body, DI&gt;</code> solves this — it gives you automatic type inference for path params, request body, and DI container without any extra boilerplate.
+            TypeScript decorators cannot mutate method parameter types at the type level. <code>RouteContext&lt;Path, Body, DI, Query, Params&gt;</code> solves this — it gives you automatic type inference for path params, request body, DI container, and query validations without any extra boilerplate.
           </p>
           <CodeBlock language="typescript" isDark={isDark}>{`import { Controller, Get, Post, RouteContext } from 'buntok';
 
@@ -313,7 +323,30 @@ export class UserController {
     const data = ctx.valid("body"); // UserDTO ✓
     return ctx.json({ created: true, data });
   }
-}`}</CodeBlock>
+
+  @Get("/")
+  @Use(zValidator("query", z.object({ search: z.string() })))
+  // Generics order: <Path, Body, DI, Query, Params>
+  async search(ctx: RouteContext<"/", unknown, any, { search: string }>) {
+    const query = ctx.valid("query"); // { search: string } ✓
+    return ctx.json(query);
+  }
+}
+
+// ── File Validation (multipart/form-data) ───────────────
+const uploadSchema = z.object({
+  title: z.string(),
+  file: z.file().max(5 * 1024 * 1024) // natively validate files!
+});
+
+app.post(
+  "/upload",
+  zValidator("body", uploadSchema, { contentType: "multipart/form-data" }),
+  (ctx) => {
+    const { title, file } = ctx.valid("body"); // file is a standard Web File object
+    return ctx.json({ title, filename: file.name, size: file.size });
+  }
+);`}</CodeBlock>
 
           <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">CORS & Rate Limiter</h3>
           <CodeBlock language="typescript" isDark={isDark}>{`import { cors } from "buntok/middlewares/cors";
@@ -600,17 +633,232 @@ export class AdminController {
 }`}</CodeBlock>
         </DocSection>
 
+        <DocSection id="jwt-auth" title="JWT & Auth Manager">
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Buntok features a zero-dependency, incredibly fast JWT engine built directly on the <strong>WebCrypto API</strong>. 
+            Because it uses native C++ bindings under the hood in Bun (instead of JavaScript polyfills like <code>jsonwebtoken</code>), 
+            signing and verifying tokens is blazingly fast. It completely eliminates the need for bulky external dependencies while providing military-grade HMAC SHA-256 security.
+          </p>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            The module consists of two main parts: the <code>JwtService</code> for manual token generation/verification, and the <code>requireAuth</code> middleware for protecting your endpoints globally or on a per-route basis.
+          </p>
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-[#f97316] mt-6 mb-3">1. Generating Tokens</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            You can instantiate the <code>JwtService</code> anywhere in your app. Pass your secret key to the constructor. The <code>sign</code> method accepts a payload and an optional expiration time in seconds.
+          </p>
+          <CodeBlock language="typescript" isDark={isDark}>{`import { JwtService } from "buntok";
+
+// It is highly recommended to load this from your .env file
+const jwt = new JwtService(process.env.JWT_SECRET || "SUPER_SECRET");
+
+app.post("/login", async (ctx) => {
+  // 1. Verify user credentials against the database...
+  
+  // 2. Sign a JWT valid for 24 hours (86400 seconds)
+  const token = await jwt.sign({ 
+    userId: 1, 
+    role: "admin",
+    email: "admin@buntok.dev"
+  }, 86400);
+
+  return ctx.success({ token });
+});`}</CodeBlock>
+
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-[#f97316] mt-6 mb-3">2. Protecting Routes & Accessing Payload</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            To protect a route, drop the <code>requireAuth(secret)</code> middleware into your route handler array. Buntok will automatically intercept the request, look for a standard <code>Authorization: Bearer &lt;token&gt;</code> header, and verify it.
+            If the token is missing, malformed, or expired, the request is immediately rejected with a <code>401 Unauthorized</code> response. If valid, the decoded payload is securely attached to <code>ctx.user</code>.
+          </p>
+          <CodeBlock language="typescript" isDark={isDark}>{`import { requireAuth } from "buntok";
+
+// Protect a single route
+app.get("/profile", [
+  requireAuth("SUPER_SECRET"), 
+  async (ctx) => {
+    // ctx.user is guaranteed to be populated here!
+    return ctx.success({ 
+      message: "Welcome back!",
+      userId: ctx.user.userId,
+      role: ctx.user.role 
+    }); 
+  }
+]);
+
+// Or protect an entire group of routes:
+const protectedApi = app.group("/dashboard");
+protectedApi.use(requireAuth("SUPER_SECRET"));
+protectedApi.get("/stats", (ctx) => ctx.json({ data: "Top Secret" }));`}</CodeBlock>
+        </DocSection>
+
+        <DocSection id="env-validator" title="T3 Env Validator">
+          <p className="text-text-secondary leading-relaxed mb-4">
+            One of the most common causes of production outages is a missing or misspelled environment variable in the <code>.env</code> file. Buntok solves this at the framework level with a built-in <strong>Zod-powered Environment Validator</strong> (inspired by the famous T3 Stack).
+          </p>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            By validating your environment variables immediately at boot time, you guarantee that your application will <em>never</em> start in a broken state. It also provides 100% Type-Safety across your entire codebase, meaning no more <code>process.env.FOO as string</code> hacks.
+          </p>
+          <CodeBlock language="typescript" isDark={isDark}>{`import { z } from "zod";
+import { App } from "buntok";
+
+const app = new App();
+
+// 1. Define your strict schema
+export const env = app.validateEnv({
+  DATABASE_URL: z.string().url("Must be a valid Postgres/MySQL URL"),
+  PORT: z.coerce.number().default(1212),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  SMTP_KEY: z.string().min(10, "SMTP key is too short"),
+});
+
+// 2. Use it anywhere with absolute type confidence!
+console.log(env.DATABASE_URL); // TypeScript knows this is definitely a string
+console.log(env.PORT);         // TypeScript knows this is definitely a number
+
+app.listen(env.PORT);`}</CodeBlock>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-6">
+            <h4 className="text-red-500 font-semibold mb-2">What happens if it fails?</h4>
+            <p className="text-text-secondary text-sm">
+              If a variable is missing (e.g., you forgot <code>DATABASE_URL</code>), Buntok completely aborts the boot process (<code>process.exit(1)</code>) and prints a beautiful, color-coded error stack in the terminal showing exactly which variables failed validation and why.
+            </p>
+          </div>
+        </DocSection>
+
+        <DocSection id="testing" title="Built-in Testing Client">
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Testing HTTP endpoints usually requires spinning up a mock server, assigning a random open port, and dealing with flaky network requests using bulky libraries like <code>SuperTest</code>. Buntok eliminates this entirely.
+          </p>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Buntok apps expose a native <code>app.request()</code> method. This method takes a standard Web <code>Request</code> and routes it directly through Buntok's internal memory pipeline. <strong>No ports are opened, and no network sockets are used.</strong> This makes your unit tests and integration tests unbelievably fast and completely isolated.
+          </p>
+          <CodeBlock language="typescript" isDark={isDark}>{`import { describe, it, expect } from "bun:test";
+import { app } from "../src/app"; // Import your configured Buntok App
+
+describe("Authentication API", () => {
+  it("should reject invalid login attempts", async () => {
+    
+    // Call the endpoint entirely in-memory!
+    const res = await app.request("/api/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "invalid-user@test.com" }),
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    // Assert against standard Web Response objects
+    expect(res.status).toBe(400);
+    
+    const data = await res.json();
+    expect(data.error).toBe("Invalid credentials");
+  });
+
+  it("should return a 404 for unknown routes", async () => {
+    const res = await app.request("/does-not-exist");
+    expect(res.status).toBe(404);
+  });
+});`}</CodeBlock>
+        </DocSection>
+
+        <DocSection id="mailer" title="Built-in Mailer">
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Sending transactional emails (Welcome Emails, OTPs, Password Resets) is a core requirement for almost every modern web application. Traditionally, this requires installing bloated packages like <code>nodemailer</code> and dealing with legacy SMTP configurations.
+          </p>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Buntok provides a native, zero-dependency <code>Mailer</code> module designed around modern REST APIs. Out of the box, it supports <strong>Resend</strong>, <strong>SendGrid</strong>, and <strong>Mailgun</strong> using Bun's ultra-fast native HTTP <code>fetch</code> client to dispatch emails without holding up your event loop. 
+            It also supports classic <strong>SMTP</strong> (via dynamic import of <code>nodemailer</code>).
+          </p>
+          
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-[#f97316] mt-6 mb-3">1. HTTP Providers (Zero-Dependency)</h3>
+          <CodeBlock language="typescript" isDark={isDark}>{`import { Mailer } from "buntok";
+
+// 1. Resend
+const resendMailer = new Mailer({ provider: "resend", apiKey: "re_123456" });
+
+// 2. SendGrid
+const sgMailer = new Mailer({ provider: "sendgrid", apiKey: "SG.123456" });
+
+// 3. Mailgun (requires domain)
+const mgMailer = new Mailer({ provider: "mailgun", apiKey: "key-123", domain: "sandbox.mailgun.org" });
+
+// Sending works identically for all providers:
+app.post("/register", async (ctx) => {
+  // Fire and forget! (runs in background)
+  resendMailer.send({
+    from: "Buntok <hello@buntok.dev>",
+    to: "user@example.com",
+    subject: "Welcome to Buntok!",
+    html: "<h1>The fastest framework</h1>"
+  });
+  return ctx.success("Registered!");
+});`}</CodeBlock>
+
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-[#f97316] mt-6 mb-3">2. Classic SMTP Integration</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            If you need to connect to Gmail, Mailtrap, or a custom mail server, you can use the <code>smtp</code> provider. Note: Buntok dynamically imports <code>nodemailer</code> under the hood to preserve its zero-dependency philosophy. You must run <code>bun add nodemailer</code> in your project first.
+          </p>
+          <CodeBlock language="typescript" isDark={isDark}>{`const smtpMailer = new Mailer({
+  provider: "smtp",
+  smtp: {
+    host: "smtp.mailtrap.io",
+    port: 2525,
+    auth: {
+      user: "username",
+      pass: "password"
+    }
+  }
+});
+
+await smtpMailer.send({
+  from: "admin@server.local",
+  to: ["user1@gmail.com", "user2@gmail.com"],
+  subject: "Server Alert",
+  text: "Disk space is running low."
+});`}</CodeBlock>
+        </DocSection>
+
+        <DocSection id="devtools" title="Buntok Telescope (DevTools)">
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Debugging backend applications usually involves staring at a chaotic terminal window trying to decipher JSON strings. To solve this, Buntok ships with an integrated Developer Tools GUI—affectionately known as <strong>Telescope</strong>.
+          </p>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            When enabled, Buntok intercepts all incoming HTTP requests, API Route maps, and even terminal <code>console.log()</code> events, streaming them via WebSockets directly to a beautiful, real-time web dashboard running alongside your app.
+          </p>
+          
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-[#f97316] mt-6 mb-3">Enabling DevTools</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Simply call <code>app.enableDevTools()</code> before starting your server. Ensure this is only enabled in development environments to prevent performance degradation and memory leaks in production.
+          </p>
+          <CodeBlock language="typescript" isDark={isDark}>{`import { App } from "buntok";
+
+const app = new App();
+
+// Enable the real-time DevTools UI
+if (process.env.NODE_ENV !== "production") {
+  app.enableDevTools();
+}
+
+app.listen(1212);
+// 🚀 Visit: http://localhost:1212/__buntok/ to open the GUI
+`}</CodeBlock>
+          <ul className="list-disc pl-5 mt-4 text-text-secondary space-y-2">
+            <li><strong>Request Inspector:</strong> View HTTP Method, URL, Body, Headers, and Response times in real-time.</li>
+            <li><strong>API Explorer:</strong> Instantly view a generated tree of all registered endpoints and controllers in your application.</li>
+            <li><strong>Console Interceptor:</strong> See <code>console.log</code>, <code>warn</code>, and <code>error</code> outputs directly in the browser UI, perfectly color-coded.</li>
+          </ul>
+        </DocSection>
+
         <DocSection id="ai" title="AI & LLM Integration">
           <p className="text-text-secondary leading-relaxed mb-4">
-            Buntok natively supports the <strong>Vercel AI SDK Data Stream Protocol</strong>, making it the perfect backend for Generative UI, modern chatbots, and autonomous agents. Instead of dealing with raw <code>ReadableStreams</code> and parsing SSE formats manually, Buntok provides high-level utilities that let you focus entirely on your AI logic.
+            Buntok natively supports the <strong>Vercel AI SDK Data Stream Protocol</strong>. Even though Vercel AI is famous in the Next.js ecosystem, it is actually <strong>framework-agnostic</strong>! This means Buntok is the perfect backend for Generative UI or chatbots regardless of whether your frontend is built in React (Vite), Vue, Svelte, Solid, or Next.js.
+          </p>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Instead of dealing with raw <code>ReadableStreams</code> and parsing SSE formats manually, Buntok provides high-level utilities that let you focus entirely on your AI logic.
           </p>
 
-          <h3 className="font-semibold text-sm uppercase tracking-widest text-[#f97316] mt-0 mb-3">AI Streaming & Guardrails (System Prompts)</h3>
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-[#f97316] mt-0 mb-3">AI Streaming & Guardrails</h3>
           <p className="text-text-secondary leading-relaxed mb-4">
             When building AI applications, securing your AI from "prompt injection attacks" is critical. You must ensure the user cannot override your AI's core instructions. Buntok provides <code>injectSystemPrompt()</code> which safely scrubs rogue system prompts sent by the user and enforces your official system instruction at the very top.
           </p>
           <p className="text-text-secondary leading-relaxed mb-4">
-            Combined with <code>streamAI()</code>, Buntok automatically transforms OpenAI's raw output into the strict <code>0:"text"</code> chunk format required by Vercel AI SDK's frontend hooks (<code>useChat</code>, <code>useCompletion</code>).
+            Combined with <code>streamAI()</code>, Buntok automatically transforms OpenAI's raw output into the strict <code>0:"text"</code> chunk format required by Vercel AI SDK's frontend hooks (like <code>useChat</code> in <code>@ai-sdk/react</code> or <code>@ai-sdk/vue</code>).
           </p>
           <CodeBlock language="typescript" isDark={isDark}>{`import { Router, streamAI, injectSystemPrompt } from "buntok";
 import { OpenAI } from "openai";

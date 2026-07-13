@@ -28,7 +28,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary text-text-primary transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen bg-bg-primary text-text-primary transition-colors duration-200">
 
       {/* ── NAV ── */}
       <nav className="fixed top-0 inset-x-0 z-50 h-14 border-b border-border-primary bg-bg-primary/80 backdrop-blur-md transition-colors">

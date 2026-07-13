@@ -2,7 +2,7 @@
 	"name": "buntok",
 	"module": "dist/exports.js",
 	"type": "module",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"main": "dist/exports.cjs",
 	"types": "dist/exports.d.ts",
 	"bin": {
@@ -24,6 +24,7 @@
 	},
 	"files": [
 		"dist",
+		"devtools-ui/dist",
 		"README.md"
 	],
 	"description": "High performance, batteries-included Bun backend framework",

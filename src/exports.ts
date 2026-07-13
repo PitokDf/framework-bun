@@ -14,6 +14,8 @@ export type {
 	WSHandler,
 } from "./app";
 export { App } from "./app";
+// Auth
+export { JwtService, requireAuth } from "./auth";
 export { Cache, type CacheDriver, MemoryCacheDriver } from "./cache";
 export { Context } from "./context";
 // Decorators
@@ -32,6 +34,7 @@ export {
 	Use,
 	UseGuard,
 } from "./decorators";
+export { type DevToolsRequestEntry, enableDevTools } from "./devtools";
 // Error helpers
 export {
 	asyncHandler,
@@ -53,6 +56,8 @@ export {
 } from "./helpers/cookie";
 // Logger
 export { Logger, LogLevel, logger } from "./logger";
+// Mailer
+export { Mailer, type MailerConfig, type MailOptions } from "./mailer";
 export type { CompressOptions } from "./middlewares/compress";
 // Middlewares
 export { compress } from "./middlewares/compress";
@@ -75,7 +80,11 @@ export type { RequestIdOptions } from "./middlewares/request-id";
 export { requestId, shortId, uuid } from "./middlewares/request-id";
 export type { ResponseTimeOptions } from "./middlewares/response-time";
 export { responseTime } from "./middlewares/response-time";
-export type { ValidationTarget } from "./middlewares/validator";
+export type {
+	BodyContentType,
+	ValidationTarget,
+	ZValidatorOptions,
+} from "./middlewares/validator";
 export {
 	validate,
 	validateBody,
@@ -113,6 +122,7 @@ export {
 	parseUploads,
 	type StorageDriver,
 	type UploadedFile,
+	type UploadFieldConfig,
 	type UploadOptions,
 	uploader,
 } from "./upload";

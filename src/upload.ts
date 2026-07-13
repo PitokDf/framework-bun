@@ -26,6 +26,15 @@ export interface StorageDriver {
 	): Promise<UploadedFile> | UploadedFile;
 }
 
+export interface UploadFieldConfig {
+	/** Whether this file field is required. Defaults to false. */
+	required?: boolean;
+	/** Max file size in bytes specific to this field (overrides global maxFileSize) */
+	maxFileSize?: number;
+	/** Allowed MIME types specific to this field (overrides global allowedMimeTypes) */
+	allowedMimeTypes?: string[];
+}
+
 export interface UploadOptions {
 	/** Destination storage driver (e.g., LocalDiskStorage or MemoryStorage) */
 	storage: StorageDriver;
@@ -35,6 +44,18 @@ export interface UploadOptions {
 	allowedMimeTypes?: string[];
 	/** Custom filename generator */
 	filename?: (originalName: string, file: File) => string;
+	/**
+	 * Whitelist of accepted file field names.
+	 * Files with a field name not listed here will be silently ignored.
+	 * If a field is marked `required: true` and absent, the request will be rejected with 400.
+	 *
+	 * @example
+	 * fields: {
+	 *   avatar: { required: true, maxFileSize: 2 * 1024 * 1024 },
+	 *   banner: { required: false, allowedMimeTypes: ['image/png', 'image/jpeg'] },
+	 * }
+	 */
+	fields?: Record<string, UploadFieldConfig>;
 }
 
 export interface ParseUploadResult {
@@ -42,7 +63,9 @@ export interface ParseUploadResult {
 	error?: string;
 	/** Standard text fields parsed from FormData */
 	fields: Record<string, string>;
-	/** Array of files that were successfully uploaded/processed */
+	/** Uploaded files keyed by field name */
+	fileMap: Record<string, UploadedFile | UploadedFile[]>;
+	/** Array of files that were successfully uploaded/processed (all files, flattened) */
 	files: UploadedFile[];
 }
 
@@ -122,6 +145,7 @@ export async function parseUploads(
 			success: false,
 			error: "Invalid content-type. Must be multipart/form-data",
 			fields: {},
+			fileMap: {},
 			files: [],
 		};
 	}
@@ -129,42 +153,55 @@ export async function parseUploads(
 	// biome-ignore lint/suspicious/noExplicitAny: Undici types conflict with lib.dom FormData
 	let formData: any;
 	try {
-		formData = await ctx.request.formData();
+		formData = await ctx.formData();
 	} catch (_err) {
 		return {
 			success: false,
 			error: "Failed to parse form data",
 			fields: {},
+			fileMap: {},
 			files: [],
 		};
 	}
 
-	const fields: Record<string, string> = {};
+	const textFields: Record<string, string> = {};
 	const files: UploadedFile[] = [];
+	const fileMap: Record<string, UploadedFile | UploadedFile[]> = {};
 
 	const generateName = options.filename ?? defaultFilenameGenerator;
+	const fieldWhitelist = options.fields;
 
 	for (const [key, value] of formData.entries()) {
 		if (value instanceof File) {
+			// If a fields whitelist is defined, ignore unknown file fields
+			if (fieldWhitelist && !(key in fieldWhitelist)) {
+				continue;
+			}
+
+			// Per-field config (falls back to global options)
+			const fieldConfig = fieldWhitelist?.[key];
+			const maxSize = fieldConfig?.maxFileSize ?? options.maxFileSize;
+			const allowedTypes =
+				fieldConfig?.allowedMimeTypes ?? options.allowedMimeTypes;
+
 			// Validation: Size
-			if (options.maxFileSize && value.size > options.maxFileSize) {
+			if (maxSize && value.size > maxSize) {
 				return {
 					success: false,
-					error: `File ${value.name} exceeds max size of ${options.maxFileSize} bytes`,
-					fields,
+					error: `File "${value.name}" in field "${key}" exceeds max size of ${maxSize} bytes`,
+					fields: textFields,
+					fileMap,
 					files,
 				};
 			}
 
 			// Validation: MIME Type
-			if (
-				options.allowedMimeTypes &&
-				!options.allowedMimeTypes.includes(value.type)
-			) {
+			if (allowedTypes && !allowedTypes.includes(value.type)) {
 				return {
 					success: false,
-					error: `File type ${value.type} is not allowed for file ${value.name}`,
-					fields,
+					error: `File type "${value.type}" is not allowed for field "${key}" (file: "${value.name}")`,
+					fields: textFields,
+					fileMap,
 					files,
 				};
 			}
@@ -173,12 +210,39 @@ export async function parseUploads(
 			const filename = generateName(value.name, value);
 			const uploaded = await options.storage.handleFile(value, filename);
 			files.push(uploaded);
+
+			// Build fileMap: if same key appears multiple times → array
+			if (key in fileMap) {
+				const existing = fileMap[key];
+				if (Array.isArray(existing)) {
+					existing.push(uploaded);
+				} else {
+					fileMap[key] = [existing as UploadedFile, uploaded];
+				}
+			} else {
+				fileMap[key] = uploaded;
+			}
 		} else {
-			fields[key] = value.toString();
+			textFields[key] = value.toString();
 		}
 	}
 
-	return { success: true, fields, files };
+	// Validate required fields
+	if (fieldWhitelist) {
+		for (const [fieldName, config] of Object.entries(fieldWhitelist)) {
+			if (config.required && !(fieldName in fileMap)) {
+				return {
+					success: false,
+					error: `Required file field "${fieldName}" is missing`,
+					fields: textFields,
+					fileMap,
+					files,
+				};
+			}
+		}
+	}
+
+	return { success: true, fields: textFields, fileMap, files };
 }
 
 /**
@@ -195,6 +259,7 @@ export function uploader(options: UploadOptions): Middleware {
 		}
 
 		ctx.store.files = result.files;
+		ctx.store.fileMap = result.fileMap;
 		ctx.store.fields = result.fields;
 
 		return next();

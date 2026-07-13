@@ -60,6 +60,90 @@ export const validateParams = (schema: ValidatorSchema): Middleware => {
 
 export type ValidationTarget = "body" | "query" | "params";
 
+/**
+ * Content types supported by `zValidator("body", schema, { contentType })`.
+ * Defaults to `application/json` when `contentType` is omitted.
+ */
+export type BodyContentType =
+	/**
+	 * Standard JSON body — default behavior when `contentType` is omitted.
+	 *
+	 * Parsed via `JSON.parse`. Zod schema receives the parsed JavaScript object.
+	 *
+	 * @example
+	 * zValidator("body", z.object({ name: z.string() }))
+	 * // equivalent to: { contentType: "application/json" }
+	 */
+	| "application/json"
+	/**
+	 * Parse fields from `multipart/form-data`.
+	 * Supports both text fields (as strings) and file fields (as File objects).
+	 * Validate file fields using `z.file()` (requires Zod v4+).
+	 *
+	 * Zod schema receives `Record<string, string | File>`. of all non-file fields.
+	 *
+	 * @example
+	 * zValidator("body", z.object({ name: z.string() }), { contentType: "multipart/form-data" })
+	 */
+	| "multipart/form-data"
+	/**
+	 * Parse fields from an `application/x-www-form-urlencoded` body.
+	 * All values are strings — use `z.coerce.number()`, `z.coerce.boolean()`, etc. for coercion.
+	 *
+	 * Zod schema receives `Record<string, string>`.
+	 *
+	 * @example
+	 * zValidator("body", z.object({ email: z.string().email(), age: z.coerce.number() }), {
+	 *   contentType: "application/x-www-form-urlencoded",
+	 * })
+	 */
+	| "application/x-www-form-urlencoded"
+	/**
+	 * Parse a plain text body.
+	 * Zod schema receives the raw body as a `string`.
+	 *
+	 * @example
+	 * zValidator("body", z.string().min(1), { contentType: "text/plain" })
+	 */
+	| "text/plain"
+	/**
+	 * Parse an XML body (W3C standard MIME type).
+	 * Zod schema receives the raw XML as a `string` — parse it further with your preferred XML library.
+	 *
+	 * @example
+	 * zValidator("body", z.string(), { contentType: "application/xml" })
+	 */
+	| "application/xml"
+	/**
+	 * Parse an XML body (legacy/vendor MIME type, functionally identical to `application/xml`).
+	 * Zod schema receives the raw XML as a `string`.
+	 *
+	 * @example
+	 * zValidator("body", z.string(), { contentType: "text/xml" })
+	 */
+	| "text/xml"
+	/**
+	 * Parse a raw binary body.
+	 * Zod schema receives an `ArrayBuffer` — use `z.instanceof(ArrayBuffer)` or process it manually.
+	 *
+	 * @example
+	 * zValidator("body", z.instanceof(ArrayBuffer), { contentType: "application/octet-stream" })
+	 */
+	| "application/octet-stream";
+
+export interface ZValidatorOptions {
+	/**
+	 * Override the expected request body content type.
+	 * Only applies when `target` is `"body"`. Defaults to `application/json`.
+	 *
+	 * - `"multipart/form-data"` — text and file fields from FormData; validate files with `z.file()`
+	 * - `"application/x-www-form-urlencoded"` — URL-encoded key=value body
+	 *
+	 * Omit this option (or the entire `options` argument) for standard JSON bodies.
+	 */
+	contentType?: BodyContentType;
+}
+
 export type SchemaType = z.ZodType | Record<string, z.ZodTypeAny>;
 
 function wrapSchema(schema: SchemaType): z.ZodType {
@@ -76,28 +160,117 @@ function wrapSchema(schema: SchemaType): z.ZodType {
  * ```ts
  * const schema = z.object({ name: z.string(), age: z.number() });
  *
+ * // JSON body (default)
  * app.post("/users", zValidator("body", schema), (ctx) => {
- *   const data = ctx.valid<z.infer<typeof schema>>("body"); // fully typed
+ *   const data = ctx.valid<z.infer<typeof schema>>("body");
  *   return ctx.json(data);
  * });
+ *
+ * // multipart/form-data text fields (pair with uploader() for files)
+ * app.post("/profile", zValidator("body", schema, { contentType: "multipart/form-data" }), ...);
+ *
+ * // application/x-www-form-urlencoded
+ * app.post("/login", zValidator("body", schema, { contentType: "application/x-www-form-urlencoded" }), ...);
  * ```
  *
- * On failure, responds with 400 and Zod's flattened error details — the
- * handler never runs, so no need to re-check inside it.
+ * On failure, responds with 400 and Zod's flattened error details.
  */
 export function zValidator(
 	target: ValidationTarget,
 	schema: SchemaType,
+	options?: ZValidatorOptions,
 ): Middleware {
 	const finalSchema = wrapSchema(schema);
+	const resolvedContentType: BodyContentType =
+		options?.contentType ?? "application/json";
+
 	const middleware: Middleware = async (ctx, next) => {
 		let raw: unknown;
 
 		if (target === "body") {
-			try {
-				raw = await ctx.body();
-			} catch {
-				return ctx.error("Validation Failed", 400, ["body: invalid JSON"]);
+			if (resolvedContentType === "multipart/form-data") {
+				// Parse both text and file fields from multipart/form-data
+				const ct = ctx.request.headers.get("content-type") || "";
+				if (!ct.includes("multipart/form-data")) {
+					return ctx.error("Validation Failed", 400, [
+						"body: expected multipart/form-data content-type",
+					]);
+				}
+				try {
+					const formData = await ctx.formData();
+					const fields: Record<string, string | File> = {};
+					for (const [key, value] of formData.entries()) {
+						if (value instanceof File) {
+							fields[key] = value;
+						} else {
+							fields[key] = value.toString();
+						}
+					}
+					raw = fields;
+				} catch {
+					return ctx.error("Validation Failed", 400, [
+						"body: failed to parse multipart/form-data",
+					]);
+				}
+			} else if (resolvedContentType === "application/x-www-form-urlencoded") {
+				const ct = ctx.request.headers.get("content-type") || "";
+				if (!ct.includes("application/x-www-form-urlencoded")) {
+					return ctx.error("Validation Failed", 400, [
+						"body: expected application/x-www-form-urlencoded content-type",
+					]);
+				}
+				try {
+					const text = await ctx.request.text();
+					const params = new URLSearchParams(text);
+					const fields: Record<string, string> = {};
+					for (const [key, value] of params.entries()) {
+						fields[key] = value;
+					}
+					raw = fields;
+				} catch {
+					return ctx.error("Validation Failed", 400, [
+						"body: failed to parse application/x-www-form-urlencoded",
+					]);
+				}
+			} else if (
+				resolvedContentType === "text/plain" ||
+				resolvedContentType === "application/xml" ||
+				resolvedContentType === "text/xml"
+			) {
+				const ct = ctx.request.headers.get("content-type") || "";
+				if (!ct.includes(resolvedContentType)) {
+					return ctx.error("Validation Failed", 400, [
+						`body: expected ${resolvedContentType} content-type`,
+					]);
+				}
+				try {
+					raw = await ctx.request.text();
+				} catch {
+					return ctx.error("Validation Failed", 400, [
+						`body: failed to read ${resolvedContentType} body`,
+					]);
+				}
+			} else if (resolvedContentType === "application/octet-stream") {
+				const ct = ctx.request.headers.get("content-type") || "";
+				if (!ct.includes("application/octet-stream")) {
+					return ctx.error("Validation Failed", 400, [
+						"body: expected application/octet-stream content-type",
+					]);
+				}
+				try {
+					raw = await ctx.request.arrayBuffer();
+				} catch {
+					return ctx.error("Validation Failed", 400, [
+						"body: failed to read application/octet-stream body",
+					]);
+				}
+			} else {
+				// Default: application/json
+				try {
+					raw = await ctx.body();
+				} catch {
+					return ctx.error("Validation Failed", 400, ["body: invalid JSON"]);
+				}
 			}
 		} else if (target === "query") {
 			raw = ctx.query;
@@ -126,6 +299,7 @@ export function zValidator(
 	mwMeta._isBuntokValidator = true;
 	mwMeta._target = target;
 	mwMeta._schema = finalSchema;
+	mwMeta._contentType = target === "body" ? resolvedContentType : "";
 
 	return middleware;
 }

@@ -209,10 +209,54 @@ export class UserController {
   @Post("/")
   @Use(zValidator("body", createUserSchema))
   async create(ctx: RouteContext<"/", CreateUserBody>) {
-    // ctx.body() and ctx.valid("body") now return { name: string, age: number }
-    const body = await ctx.body();
+    // ALWAYS use ctx.valid() when a validator is used to avoid stream locks
+    const body = ctx.valid("body");
+  }
+
+  // 3. Query Inference (Order: Path, Body, DI, Query, Params)
+  @Get("/search")
+  @Use(zValidator("query", z.object({ q: z.string() })))
+  async search(ctx: RouteContext<"/search", unknown, any, { q: string }>) {
+    const query = ctx.valid("query"); // Fully typed!
   }
 }
+
+### Validation (`zValidator`)
+
+Buntok provides a built-in `zValidator` middleware to cleanly validate incoming requests against Zod schemas.
+
+```typescript
+import { zValidator } from "buntok";
+import { z } from "zod";
+
+// Validating JSON Body (Default)
+app.post("/users", zValidator("body", z.object({ name: z.string() })), (ctx) => {
+  const data = ctx.valid("body"); // Type inferred safely!
+  return ctx.json(data);
+});
+```
+
+#### Content-Type Support & File Uploads
+By default, `zValidator` expects `application/json`. You can validate different content types by passing a third argument. 
+With Zod v4, you can also natively validate `File` objects directly in `multipart/form-data`!
+
+```typescript
+const uploadSchema = z.object({
+  title: z.string(),
+  file: z.file().max(5 * 1024 * 1024) // 5MB max
+});
+
+app.post("/upload", zValidator("body", uploadSchema, { contentType: "multipart/form-data" }), (ctx) => {
+  const { title, file } = ctx.valid("body");
+  
+  return ctx.json({
+    message: "Valid upload!",
+    title: title,
+    fileName: file.name
+  });
+});
+```
+*Note: Always use `ctx.valid("body")` to read data parsed by `zValidator`. Using `await ctx.body()` will throw a `Body already used` error because the request stream is already consumed by the validator.*
 ```
 
 > **Note:** If you use the functional chaining API (e.g., `app.get("/:id", (ctx) => {})`), path parameters are inferred 100% automatically without needing `RouteContext`!

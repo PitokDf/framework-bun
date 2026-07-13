@@ -1,5 +1,6 @@
 import { join, sep } from "node:path";
 import type { Server, ServerWebSocket } from "bun";
+import { z } from "zod";
 import { Context } from "./context";
 import { getControllerMeta } from "./decorators";
 import { logger } from "./logger";
@@ -34,10 +35,19 @@ export type RouteContext<
 	Path extends string = string,
 	BodyType = unknown,
 	DI = Record<string, unknown>,
-> = Omit<Context<DI, ExtractParams<Path>>, "body" | "valid"> & {
+	QueryType = unknown,
+	ParamsType = ExtractParams<Path>,
+> = Omit<Context<DI, ParamsType>, "body" | "valid"> & {
 	body(): Promise<BodyType>;
-	valid(target: "body"): BodyType;
-	valid<T>(target: "query" | "params"): T;
+	valid<T extends "body" | "query" | "params">(
+		target: T,
+	): T extends "body"
+		? BodyType
+		: T extends "query"
+			? QueryType
+			: T extends "params"
+				? ParamsType
+				: unknown;
 };
 
 export type Handler<
@@ -151,6 +161,36 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	}
 
 	/**
+	 * Type-safe Environment Variables Validator.
+	 * Validates `process.env` against a Zod schema object and returns the typed result.
+	 * If validation fails, it prints a beautiful error to the console and exits the process (stops booting).
+	 */
+	public validateEnv<T extends z.ZodRawShape>(
+		schema: T,
+	): z.infer<z.ZodObject<T>> {
+		const envSchema = z.object(schema);
+		const result = envSchema.safeParse(process.env);
+
+		if (!result.success) {
+			console.error("\n\x1b[41m\x1b[37m 🚨 Buntok Environment Error \x1b[0m\n");
+			console.error(
+				"\x1b[31mMissing or invalid environment variables:\x1b[0m\n",
+			);
+
+			result.error.issues.forEach((err) => {
+				console.error(
+					`  \x1b[33m❯\x1b[0m \x1b[36m${err.path.join(".")}\x1b[0m: \x1b[90m${err.message}\x1b[0m`,
+				);
+			});
+
+			console.error("\n\x1b[31mServer boot aborted.\x1b[0m\n");
+			process.exit(1);
+		}
+
+		return result.data;
+	}
+
+	/**
 	 * Register all `@Get`/`@Post`/etc. routes declared on a `@Controller`
 	 * class. This is sugar over `registerRoute()` — it instantiates the
 	 * class once (at boot time, not per request) and wires each decorated
@@ -212,6 +252,17 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (feature === "x-powered-by") {
 			this.poweredByHeaderEnabled = false;
 		}
+		return this;
+	}
+
+	/**
+	 * Enable Buntok DevTools (Tracker & API).
+	 * Automatically bypasses activation in production unless forced.
+	 */
+	public enableDevTools(options?: { force?: boolean }): this {
+		// Lazy require to avoid importing devtools core if not needed
+		const { enableDevTools: setupDevTools } = require("./devtools");
+		setupDevTools(this, options);
 		return this;
 	}
 
@@ -577,6 +628,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				const target = h._target as string;
 				const schema = h._schema;
 				openApiDoc.request[target] = schema;
+				if (target === "body") {
+					openApiDoc.request.bodyContentType = h._contentType as string;
+				}
 			}
 			if (h._isBuntokResponse) {
 				openApiDoc.responses.push({
@@ -875,6 +929,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	}
 
 	public listen(port?: number, callback?: () => void): void {
+		// Skip server startup when running under make:docs
+		if (process.env.BUNTOK_DOCS_BUILD === "1") return;
 		if (this.isListening) return;
 		this.isListening = true;
 

@@ -1,12 +1,17 @@
 import { App } from "buntok";
 import { ProductController } from "./controllers/product.controller";
+import { PostController } from "./controllers/post.controller";
 
 // Create Buntok application instance
-export const app = new App();
+type Container = { db: null; mailer: { name: String } };
+export const app = new App<Container>();
+
 
 // Register controllers using decorators (Best Practice)
 app.registerController(ProductController);
+app.registerController(PostController)
 
+app.static("/docs", "./public/docs")
 // Basic routing fallback
 app.get("/", (ctx) => {
   return ctx.json({
@@ -26,3 +31,7 @@ app.post("/data", async (ctx) => {
   const body = await ctx.request.json();
   return ctx.json({ received: true, data: body }, 201);
 });
+
+app.enableDevTools()
+
+app.listen(3001);

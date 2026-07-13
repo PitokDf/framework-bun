@@ -392,6 +392,9 @@ async function createCommand(entityName: string, args: string[]) {
 async function makeDocsCommand() {
 	console.log("\x1b[36mGenerating OpenAPI documentation...\x1b[0m");
 
+	// Prevent the user's app from starting its HTTP server during import
+	process.env.BUNTOK_DOCS_BUILD = "1";
+
 	const entryPath = join(process.cwd(), "src/index.ts");
 
 	try {
@@ -407,15 +410,51 @@ async function makeDocsCommand() {
 		}
 
 		// Dynamically import to avoid dependency if not needed
-		const { OpenAPIRegistry, OpenApiGeneratorV3 } = await import(
-			"@asteasolutions/zod-to-openapi"
-		);
+		const { OpenAPIRegistry, OpenApiGeneratorV3, extendZodWithOpenApi } =
+			await import("@asteasolutions/zod-to-openapi");
+		const { z } = await import("zod");
+		extendZodWithOpenApi(z);
+
+		/**
+		 * Recursively replace unsupported Zod types (e.g. ZodFile) with safe
+		 * OpenAPI-compatible equivalents so docs generation never crashes.
+		 */
+		// biome-ignore lint/suspicious/noExplicitAny: schema introspection
+		function sanitizeSchema(schema: any): any {
+			if (!schema || typeof schema !== "object" || !schema._def) return schema;
+			const typeName: string = schema._def?.typeName ?? schema._def?.type ?? "";
+			if (typeName === "ZodFile" || typeName === "file") {
+				return z
+					.string()
+					.openapi({ format: "binary", description: "Binary file" });
+			}
+			if (typeName === "ZodObject" || typeName === "object") {
+				const shape =
+					typeof schema._def.shape === "function"
+						? schema._def.shape()
+						: (schema._def.shape ?? {});
+				const newShape: Record<string, unknown> = {};
+				for (const [key, value] of Object.entries(shape)) {
+					newShape[key] = sanitizeSchema(value);
+				}
+				return z.object(newShape as Record<string, import("zod").ZodTypeAny>);
+			}
+			if (typeName === "ZodArray" || typeName === "array")
+				return z.array(sanitizeSchema(schema._def.type));
+			if (typeName === "ZodOptional" || typeName === "optional")
+				return sanitizeSchema(schema._def.innerType).optional();
+			if (typeName === "ZodNullable" || typeName === "nullable")
+				return sanitizeSchema(schema._def.innerType).nullable();
+			return schema;
+		}
+
 		const registry = new OpenAPIRegistry();
+		let skipped = 0;
 
 		for (const doc of appInstance.openApiDocs) {
 			const openapiPath = doc.path.replace(/:([a-zA-Z0-9_]+)/g, "{$1}");
 
-			// biome-ignore lint/suspicious/noExplicitAny: RouteConfig missing fields dynamically populated
+			// biome-ignore lint/suspicious/noExplicitAny: RouteConfig populated dynamically
 			const routeConfig: any = {
 				method: doc.method,
 				path: openapiPath,
@@ -424,11 +463,16 @@ async function makeDocsCommand() {
 
 			if (doc.request.params || doc.request.query || doc.request.body) {
 				routeConfig.request = {};
-				if (doc.request.params) routeConfig.request.params = doc.request.params;
-				if (doc.request.query) routeConfig.request.query = doc.request.query;
+				if (doc.request.params)
+					routeConfig.request.params = sanitizeSchema(doc.request.params);
+				if (doc.request.query)
+					routeConfig.request.query = sanitizeSchema(doc.request.query);
 				if (doc.request.body) {
+					const contentType = doc.request.bodyContentType || "application/json";
 					routeConfig.request.body = {
-						content: { "application/json": { schema: doc.request.body } },
+						content: {
+							[contentType]: { schema: sanitizeSchema(doc.request.body) },
+						},
 					};
 				}
 			}
@@ -437,14 +481,27 @@ async function makeDocsCommand() {
 				for (const res of doc.responses) {
 					routeConfig.responses[res.status.toString()] = {
 						description: res.description,
-						content: { "application/json": { schema: res.schema } },
+						content: {
+							"application/json": { schema: sanitizeSchema(res.schema) },
+						},
 					};
 				}
 			} else {
 				routeConfig.responses["200"] = { description: "Success" };
 			}
 
-			registry.registerPath(routeConfig);
+			// Per-route error handling: one bad schema must not abort everything
+			try {
+				registry.registerPath(routeConfig);
+			} catch (err) {
+				skipped++;
+				const label = `${doc.method.toUpperCase()} ${doc.path}`;
+				console.warn(
+					`\x1b[33m  ⚠ Skipping ${label}: ${
+						err instanceof Error ? err.message : "unknown error"
+					}\x1b[0m`,
+				);
+			}
 		}
 
 		const generator = new OpenApiGeneratorV3(registry.definitions);
@@ -457,38 +514,48 @@ async function makeDocsCommand() {
 			},
 		});
 
-		mkdirSync(join(process.cwd(), "public"), { recursive: true });
-		const outPath = join(process.cwd(), "public/swagger.json");
-		writeFileSync(outPath, JSON.stringify(document, null, 2));
+		const docsDir = join(process.cwd(), "public/docs");
+		mkdirSync(docsDir, { recursive: true });
 
+		const swaggerPath = join(docsDir, "swagger.json");
+		writeFileSync(swaggerPath, JSON.stringify(document, null, 2));
 		console.log(
-			`\x1b[32m✔ OpenAPI JSON successfully generated at public/swagger.json!\x1b[0m`,
+			`\x1b[32m✔ OpenAPI JSON generated at public/docs/swagger.json\x1b[0m`,
 		);
 
-		const htmlPath = join(process.cwd(), "public/docs.html");
+		const htmlPath = join(docsDir, "index.html");
 		const html = `<!doctype html>
 <html>
   <head>
     <title>API Reference</title>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
   <body>
-    <!-- Point to the generated swagger.json -->
-    <script id="api-reference" data-url="/swagger.json"></script>
+    <script id="api-reference" data-url="/docs/swagger.json"></script>
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
   </body>
 </html>`;
 		writeFileSync(htmlPath, html);
 		console.log(
-			`\x1b[32m✔ Scalar UI HTML generated at public/docs.html!\x1b[0m`,
+			`\x1b[32m✔ Scalar UI generated at public/docs/index.html\x1b[0m`,
 		);
+
+		if (skipped > 0) {
+			console.log(
+				`\x1b[33m  ${skipped} route(s) skipped due to unsupported schema types.\x1b[0m`,
+			);
+			console.log(
+				`\x1b[33m  Tip: annotate unsupported types with .openapi({ ... }) from @asteasolutions/zod-to-openapi.\x1b[0m`,
+			);
+		}
 
 		console.log(`\n\x1b[36mNext steps:\x1b[0m`);
 		console.log(
-			`  1. Make sure static files are served: app.static("/", "./public")`,
+			`  1. Serve docs: \x1b[90mapp.static("/docs", "./public/docs")\x1b[0m`,
 		);
 		console.log(
-			`  2. Visit http://localhost:1212/docs.html to view your API documentation!`,
+			`  2. Visit \x1b[90mhttp://localhost:1212/docs\x1b[0m to view your API documentation`,
 		);
 	} catch (error) {
 		console.error("\x1b[31mFailed to generate docs:\x1b[0m");

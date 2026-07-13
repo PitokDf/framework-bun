@@ -187,6 +187,24 @@ export class Context<
 		return this._body as T;
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: Undici types conflict with lib.dom FormData
+	private _formData: any | undefined;
+
+	/**
+	 * Parse and cache the multipart/form-data body.
+	 * Safe to call multiple times — the parsed FormData is cached after the first read,
+	 * so `zValidator("form", ...)` and `uploader()` can both be used in the same route
+	 * without conflicting over the body stream.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Undici types conflict with lib.dom FormData
+	public async formData(): Promise<any> {
+		if (this._formData !== undefined) {
+			return this._formData;
+		}
+		this._formData = await this.request.formData();
+		return this._formData;
+	}
+
 	public json(data: unknown, status = 200): Response {
 		if (status === 200) {
 			return Response.json(data);
@@ -196,6 +214,57 @@ export class Context<
 
 	public success(data?: unknown, message = "Success", status = 200): Response {
 		return this.json({ success: true, message, data }, status);
+	}
+
+	/**
+	 * Standardize an offset-based pagination response.
+	 */
+	public paginate<T>(
+		data: T[],
+		total: number,
+		page: number,
+		limit: number,
+		message = "Success",
+		status = 200,
+	): Response {
+		return this.json(
+			{
+				success: true,
+				message,
+				data,
+				meta: {
+					currentPage: page,
+					perPage: limit,
+					total,
+					lastPage: Math.ceil(total / limit),
+					hasMore: page * limit < total,
+				},
+			},
+			status,
+		);
+	}
+
+	/**
+	 * Standardize a cursor-based pagination response (infinite scroll).
+	 */
+	public cursorPaginate<T>(
+		data: T[],
+		nextCursor: string | number | null,
+		message = "Success",
+		status = 200,
+	): Response {
+		return this.json(
+			{
+				success: true,
+				message,
+				data,
+				meta: {
+					nextCursor,
+					hasMore: nextCursor !== null,
+				},
+			},
+			status,
+		);
 	}
 
 	public error(message: string, status = 400, details?: unknown): Response {

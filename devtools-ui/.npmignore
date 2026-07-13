@@ -1,0 +1,5 @@
+node_modules
+*.local
+.vscode
+.idea
+.DS_Store
