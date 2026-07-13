@@ -106,7 +106,7 @@ export default function App() {
 
       {/* ── MAIN ── */}
       <main className="max-w-6xl mx-auto px-5 pt-14 pb-20 min-h-screen">
-        {activeTab === 'home'       && <HomePage setActiveTab={setActiveTab} isDark={isDark} />}
+        {activeTab === 'home'       && <HomePage setActiveTab={setActiveTab} isDark={isDark} data={data} />}
         {activeTab === 'docs'       && <DocsPage isDark={isDark} />}
         {activeTab === 'benchmarks' && (
           <div className="animate-fade-up pt-10">

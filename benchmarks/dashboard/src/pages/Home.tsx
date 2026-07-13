@@ -3,7 +3,7 @@ import { Terminal, ArrowRight } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-export function HomePage({ setActiveTab, isDark }: { setActiveTab: (t: any) => void; isDark: boolean }) {
+export function HomePage({ setActiveTab, isDark, data }: { setActiveTab: (t: any) => void; isDark: boolean; data?: any }) {
   const [copied, setCopied] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -123,7 +123,7 @@ export function HomePage({ setActiveTab, isDark }: { setActiveTab: (t: any) => v
         {/* Divider stats bar */}
         <div className="mt-16 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-text-secondary">
           {[
-            { val: '300k+', label: 'req/s on Bun' },
+            { val: data?.frameworks?.buntok ? `${Math.round(data.frameworks.buntok['/plaintext'].reqPerSec / 1000)}k+` : '30k+', label: 'req/s on Bun' },
             { val: 'AOT', label: 'Compiled Router' },
             { val: '100%', label: 'TypeScript' },
             { val: 'MIT', label: 'Open Source' },
@@ -230,12 +230,16 @@ export class UserController {
           
           <div className="grid sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <div className="bg-bg-primary rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors shadow-lg shadow-black/5">
-              <h3 className="text-2xl font-black text-text-primary mb-1">300k+</h3>
+              <h3 className="text-2xl font-black text-text-primary mb-1">
+                {data?.frameworks?.buntok ? `${Math.round(data.frameworks.buntok['/plaintext'].reqPerSec).toLocaleString()}` : '30k+'}
+              </h3>
               <p className="text-sm text-text-secondary">Requests per second</p>
             </div>
             <div className="bg-bg-primary rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors shadow-lg shadow-black/5">
-              <h3 className="text-2xl font-black text-text-primary mb-1">&lt; 0.1ms</h3>
-              <p className="text-sm text-text-secondary">Routing overhead</p>
+              <h3 className="text-2xl font-black text-text-primary mb-1">
+                {data?.frameworks?.buntok ? `< ${(data.frameworks.buntok['/plaintext'].latencyP50 / 1000).toFixed(1)}ms` : '< 0.1ms'}
+              </h3>
+              <p className="text-sm text-text-secondary">P50 Latency</p>
             </div>
             <div className="bg-bg-primary rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors shadow-lg shadow-black/5">
               <h3 className="text-2xl font-black text-text-primary mb-1">Zero</h3>
