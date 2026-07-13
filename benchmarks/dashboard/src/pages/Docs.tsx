@@ -8,6 +8,12 @@ export function DocsPage({ isDark }: { isDark: boolean }) {
 
   const groups: { label: string; items: { id: string; label: string }[] }[] = [
     {
+      label: 'Core Concepts',
+      items: [
+        { id: 'philosophy', label: 'Architecture & Philosophy' },
+      ],
+    },
+    {
       label: 'Getting Started',
       items: [
         { id: 'quick-start', label: 'Quick Start' },
@@ -136,6 +142,34 @@ export function DocsPage({ isDark }: { isDark: boolean }) {
             Complete reference for Buntok — the decorator-first Bun framework.
           </p>
         </div>
+
+        <DocSection id="philosophy" title="Architecture & Philosophy">
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Buntok wasn't built to just be another Express clone. We wanted the <strong>structural elegance of NestJS</strong> with the <strong>raw, unadulterated speed of the Bun runtime</strong>.
+          </p>
+
+          <h3 className="text-lg font-semibold mt-8 mb-3">Ahead-of-Time (AOT) Routing</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            <strong>What makes Buntok faster?</strong> Most frameworks resolve routes dynamically on every request. They iterate through arrays of regexes to find a match, which costs valuable milliseconds. 
+            Buntok uses an <strong>AOT compiler</strong>. At startup, it reads all your decorators, paths, and middlewares, then flattens them into a single, highly optimized mapping function passed directly into <code>Bun.serve()</code>. The routing overhead is effectively zero.
+          </p>
+
+          <h3 className="text-lg font-semibold mt-8 mb-3">Enterprise-Ready by Default</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Modern applications require more than just a router. Buntok includes zero-dependency enterprise features built directly into the core framework, including:
+          </p>
+          <ul className="list-disc list-inside text-text-secondary space-y-2 mb-6 ml-2">
+            <li><strong>Telescope DevTools:</strong> Real-time network and error monitoring dashboard.</li>
+            <li><strong>WebCrypto JWT:</strong> Native, high-performance JWT authentication.</li>
+            <li><strong>Built-in Mailer:</strong> Zero-dependency HTTP email clients for Resend, SendGrid, and Mailgun.</li>
+            <li><strong>Zod Validation:</strong> Compile-time safety for environment variables and request payloads.</li>
+          </ul>
+
+          <h3 className="text-lg font-semibold mt-8 mb-3">Generative AI Protocol Support</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">
+            Buntok natively supports the <strong>Vercel AI SDK Data Stream Protocol</strong> out of the box. By using our built-in <code>streamAI()</code> utility, you can effortlessly pipe OpenAI or Anthropic responses directly into React, Vue, or Svelte frontends without dealing with raw SSE buffers or ReadableStreams.
+          </p>
+        </DocSection>
 
         <DocSection id="quick-start" title="Quick Start">
           <p className="text-text-secondary leading-relaxed mb-4">Scaffold a Buntok project in seconds with the official CLI. It sets up TypeScript, Biome linting, and all standard configs.</p>

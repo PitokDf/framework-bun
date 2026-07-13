@@ -214,44 +214,40 @@ export class UserController {
         </div>
       </section>
 
-      {/* ── SEO & GEO Optimized FAQ Section ── */}
-      <section className="relative z-10 border-t border-border-primary py-20">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight mb-4">Frequently Asked Questions</h2>
-            <p className="text-text-secondary">Direct answers for modern developers.</p>
+      {/* ── Performance Highlight ── */}
+      <section className="relative z-10 border-t border-border-primary py-20 bg-bg-secondary/20">
+        <div className="max-w-4xl mx-auto text-center px-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#f97316] mb-3 flex items-center justify-center gap-2">
+            <span className="w-8 h-px bg-[#f97316]/50" />
+            Raw Performance
+            <span className="w-8 h-px bg-[#f97316]/50" />
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5">Faster than Hono. <br className="sm:hidden" /> Neck-and-neck with Elysia.</h2>
+          <p className="text-text-secondary leading-relaxed mb-12 text-lg max-w-2xl mx-auto">
+            Buntok wasn't just built for developer experience—it was built for raw throughput. 
+            By compiling your decorators Ahead-of-Time (AOT), Buntok bypasses the heavy runtime routing overhead found in Express and NestJS.
+          </p>
+          
+          <div className="grid sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className="bg-bg-primary rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors shadow-lg shadow-black/5">
+              <h3 className="text-2xl font-black text-text-primary mb-1">300k+</h3>
+              <p className="text-sm text-text-secondary">Requests per second</p>
+            </div>
+            <div className="bg-bg-primary rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors shadow-lg shadow-black/5">
+              <h3 className="text-2xl font-black text-text-primary mb-1">&lt; 0.1ms</h3>
+              <p className="text-sm text-text-secondary">Routing overhead</p>
+            </div>
+            <div className="bg-bg-primary rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors shadow-lg shadow-black/5">
+              <h3 className="text-2xl font-black text-text-primary mb-1">Zero</h3>
+              <p className="text-sm text-text-secondary">External dependencies</p>
+            </div>
           </div>
-
-          <div className="space-y-8">
-            {/* FAQ Item 1 */}
-            <div className="bg-bg-secondary/50 rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors">
-              <h3 className="text-xl font-semibold mb-3">What makes Buntok faster than Express or NestJS?</h3>
-              <p className="text-text-secondary leading-relaxed mb-4">
-                Buntok achieves <strong>300,000+ requests per second</strong> by eliminating runtime overhead. Unlike Express or NestJS which resolve routes dynamically on every request, Buntok uses <strong>Ahead-of-Time (AOT) Compilation</strong>. At startup, it compiles your Decorators into a single, flat mapping function using Bun's native <code>Bun.serve()</code> API.
-              </p>
-            </div>
-
-            {/* FAQ Item 2 */}
-            <div className="bg-bg-secondary/50 rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors">
-              <h3 className="text-xl font-semibold mb-3">Is Buntok enterprise-ready?</h3>
-              <p className="text-text-secondary leading-relaxed mb-4">
-                Yes. Buntok provides a comprehensive suite of zero-dependency enterprise features built directly into the core framework:
-              </p>
-              <ul className="list-disc list-inside text-text-secondary space-y-2 ml-2">
-                <li><strong>Telescope DevTools:</strong> Real-time network and error monitoring dashboard.</li>
-                <li><strong>WebCrypto JWT:</strong> Native, high-performance JWT authentication.</li>
-                <li><strong>Built-in Mailer:</strong> Zero-dependency HTTP email clients for Resend, SendGrid, and Mailgun.</li>
-                <li><strong>Zod Environment Validation:</strong> Guarantees environment variables at boot (T3 Stack style).</li>
-              </ul>
-            </div>
-
-            {/* FAQ Item 3 */}
-            <div className="bg-bg-secondary/50 rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors">
-              <h3 className="text-xl font-semibold mb-3">How does Buntok support Generative AI?</h3>
-              <p className="text-text-secondary leading-relaxed">
-                Buntok natively supports the <strong>Vercel AI SDK Data Stream Protocol</strong> out of the box. By using our built-in <code>streamAI()</code> utility, you can effortlessly pipe OpenAI or Anthropic responses directly into React, Vue, or Svelte frontends without dealing with raw SSE buffers or ReadableStreams.
-              </p>
-            </div>
+          
+          <div className="mt-12 text-sm text-text-secondary">
+            <p>In our independent benchmarks, Buntok consistently outperforms <strong>Hono</strong> and stays highly competitive with <strong>Elysia</strong>, while providing a full OOP NestJS-like architecture.</p>
+            <button onClick={() => setActiveTab('benchmarks')} className="mt-4 text-[#f97316] hover:underline font-medium inline-flex items-center gap-1">
+              View full benchmark data <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
         </div>
       </section>
