@@ -213,6 +213,48 @@ export class UserController {
           </div>
         </div>
       </section>
+
+      {/* ── SEO & GEO Optimized FAQ Section ── */}
+      <section className="relative z-10 border-t border-border-primary py-20">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Frequently Asked Questions</h2>
+            <p className="text-text-secondary">Direct answers for modern developers.</p>
+          </div>
+
+          <div className="space-y-8">
+            {/* FAQ Item 1 */}
+            <div className="bg-bg-secondary/50 rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors">
+              <h3 className="text-xl font-semibold mb-3">What makes Buntok faster than Express or NestJS?</h3>
+              <p className="text-text-secondary leading-relaxed mb-4">
+                Buntok achieves <strong>300,000+ requests per second</strong> by eliminating runtime overhead. Unlike Express or NestJS which resolve routes dynamically on every request, Buntok uses <strong>Ahead-of-Time (AOT) Compilation</strong>. At startup, it compiles your Decorators into a single, flat mapping function using Bun's native <code>Bun.serve()</code> API.
+              </p>
+            </div>
+
+            {/* FAQ Item 2 */}
+            <div className="bg-bg-secondary/50 rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors">
+              <h3 className="text-xl font-semibold mb-3">Is Buntok enterprise-ready?</h3>
+              <p className="text-text-secondary leading-relaxed mb-4">
+                Yes. Buntok provides a comprehensive suite of zero-dependency enterprise features built directly into the core framework:
+              </p>
+              <ul className="list-disc list-inside text-text-secondary space-y-2 ml-2">
+                <li><strong>Telescope DevTools:</strong> Real-time network and error monitoring dashboard.</li>
+                <li><strong>WebCrypto JWT:</strong> Native, high-performance JWT authentication.</li>
+                <li><strong>Built-in Mailer:</strong> Zero-dependency HTTP email clients for Resend, SendGrid, and Mailgun.</li>
+                <li><strong>Zod Environment Validation:</strong> Guarantees environment variables at boot (T3 Stack style).</li>
+              </ul>
+            </div>
+
+            {/* FAQ Item 3 */}
+            <div className="bg-bg-secondary/50 rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors">
+              <h3 className="text-xl font-semibold mb-3">How does Buntok support Generative AI?</h3>
+              <p className="text-text-secondary leading-relaxed">
+                Buntok natively supports the <strong>Vercel AI SDK Data Stream Protocol</strong> out of the box. By using our built-in <code>streamAI()</code> utility, you can effortlessly pipe OpenAI or Anthropic responses directly into React, Vue, or Svelte frontends without dealing with raw SSE buffers or ReadableStreams.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
