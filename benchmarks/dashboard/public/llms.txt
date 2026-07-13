@@ -1,0 +1,75 @@
+# Buntok Framework - AI Agent Development Guide
+
+> **System Prompt / Instruction for AI Agents:**
+> You are an expert developer building applications with **Buntok**, a high-performance, AOT-compiled, decorator-first web framework for Bun. Always follow these strict guidelines when generating or refactoring Buntok code.
+
+## 1. Core Principles
+Buntok uses Object-Oriented Programming (OOP) with TypeScript decorators (like NestJS) but runs on Bun with zero runtime routing overhead.
+- **DO THIS:** Use TypeScript classes and decorators (`@Controller`, `@Get`, `@Post`) to define routes.
+- **DON'T DO THIS:** Do not use Express/Hono/Fastify chained routing syntax (e.g., `app.get('/path', handler)`).
+
+## 2. Controllers & Routing
+- **DO THIS:** Export your controller as a class and register it via `app.registerController()`.
+- **DO THIS:** Use `RouteContext` to get strict type inference for paths and payloads.
+- **DON'T DO THIS:** Do not use raw `Request` and `Response` objects unless absolutely necessary. Rely on `RouteContext` wrapper methods like `ctx.json()`, `ctx.text()`, `ctx.body()`.
+
+### Example: Good Controller
+```typescript
+import { Controller, Get, Post, Use, RouteContext } from 'buntok';
+import { zValidator, z } from 'buntok';
+
+const UserSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email()
+});
+
+@Controller('/users')
+export class UserController {
+  
+  @Get('/:id')
+  async getById(ctx: RouteContext<'/:id'>) {
+    const { id } = ctx.params;
+    return ctx.json({ id, name: 'Alice' });
+  }
+
+  @Post('/')
+  @Use(zValidator('body', UserSchema))
+  async create(ctx: RouteContext<'/', typeof UserSchema>) {
+    const data = ctx.valid('body'); // Fully typed payload!
+    return ctx.json({ success: true, data }, 201);
+  }
+}
+```
+
+### Example: Bad Controller (DO NOT DO THIS)
+```typescript
+// ❌ WRONG: Do not use Express-like syntax
+app.post('/users', async (req, res) => { ... });
+
+// ❌ WRONG: Missing RouteContext generic types
+@Get('/:id')
+getById(ctx: any) { ... }
+```
+
+## 3. Validation
+Buntok relies exclusively on Zod for request validation.
+- **DO THIS:** Use the built-in `zValidator` as a middleware decorator (`@Use(zValidator(...))`).
+- **DO THIS:** Access validated data using `ctx.valid('body')` or `ctx.valid('query')`.
+- **DON'T DO THIS:** Do not parse `ctx.body()` manually and throw errors. Let `zValidator` handle the rejection automatically.
+
+## 4. Middlewares & Context
+- **DO THIS:** Use `@Use()` to attach middlewares at the method or class level.
+- **DO THIS:** Inject dependencies or metadata by appending to `ctx.set(key, value)` inside a middleware, and retrieve it using `ctx.get(key)`.
+
+## 5. Enterprise Features
+- **JWT:** Use Buntok's built-in WebCrypto JWT. No external libraries needed.
+- **Mailer:** Use Buntok's HTTP-based `Mailer` (supports Resend, SendGrid, Mailgun) instead of installing `nodemailer` which adds massive dependencies.
+- **LLM/AI Streaming:** Use Buntok's `streamAI()` utility for piping Vercel AI SDK streams directly to the client.
+
+## Summary Checklist for AI:
+1. Are you using `@Controller` and method decorators?
+2. Did you type `RouteContext<Path, Body>` correctly?
+3. Did you use `zValidator` instead of manual body parsing?
+4. Is the code zero-dependency (relying only on `buntok` core modules)?
+
+If yes, the code is ready for Buntok.
