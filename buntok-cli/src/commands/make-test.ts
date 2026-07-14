@@ -68,7 +68,8 @@ export async function makeTestCommand(name: string) {
   
   if (existsSync(filePath)) {
     console.error(`\x1b[31mError: Test file already exists at ${filePath}\x1b[0m`);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const content = generateTest(name, pascalName);

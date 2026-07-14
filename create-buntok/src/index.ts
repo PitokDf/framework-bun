@@ -150,17 +150,7 @@ coverage
 		process.exit(1);
 	}
 
-	// Initialize Git repository
-	console.log("\n\x1b[90m  Initializing git repository...\x1b[0m");
-	const gitProc = Bun.spawnSync(["git", "init"], {
-		cwd: projectPath,
-		stdio: ["ignore", "ignore", "ignore"], // Hide git output for cleaner terminal
-	});
-	
-	if (gitProc.exitCode === 0) {
-		// Add all files to initial commit staging to be ready
-		Bun.spawnSync(["git", "add", "."], { cwd: projectPath, stdio: ["ignore", "ignore", "ignore"] });
-	}
+
 
 	// Success message
 	console.log(`

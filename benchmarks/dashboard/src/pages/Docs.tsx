@@ -190,32 +190,45 @@ app.listen(1212, () => {
 });`}</CodeBlock>
         </DocSection>
 
-        <DocSection id="controllers" title="Controllers & RouteContext">
+        <DocSection id="controllers" title="Controllers & ZodCtx">
           <p className="text-text-secondary leading-relaxed mb-4">
             Controllers group route handlers using ES classes and decorators. At startup, Buntok's AOT compiler
             resolves all decorators into an optimized switch-case router — zero per-request overhead.
           </p>
-          <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">Why RouteContext?</h3>
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">Strongly-Typed Decorators with ZodCtx</h3>
           <p className="text-text-secondary leading-relaxed mb-4">
-            TypeScript decorators cannot mutate method parameter types at the type level. <code>RouteContext&lt;Path, Body, DI, Query, Params&gt;</code> solves this — it gives you automatic type inference for path params, request body, DI container, and query validations without any extra boilerplate.
+            TypeScript decorators cannot mutate method parameter types at the type level. <code>ZodCtx</code> solves this DX issue — it gives you automatic type inference for path params, request body, and query validations by simply passing your Zod schemas into an object!
           </p>
-          <CodeBlock language="typescript" isDark={isDark}>{`import { Controller, Get, Post, RouteContext } from 'buntok';
+          <CodeBlock language="typescript" isDark={isDark}>{`import { Controller, Get, Post, ZodCtx, Use, zValidator } from 'buntok';
+import { z } from 'zod';
+
+const userSchema = z.object({ name: z.string() });
+const paginationSchema = z.object({ page: z.number() });
 
 @Controller('/users')
 export class UserController {
 
-  // Path params are automatically extracted from the string literal
+  // 1. Path Params Inference
   @Get('/:id/posts/:postId')
-  getById(ctx: RouteContext<"/:id/posts/:postId">) {
+  getById(ctx: ZodCtx<{}, "/:id/posts/:postId">) {
     const { id, postId } = ctx.params; // fully typed strings ✓
     return ctx.json({ id, postId });
   }
 
-  // Pass BodyType as second generic for typed body parsing
+  // 2. Body Inference from zValidator
   @Post('/')
-  async create(ctx: RouteContext<"/", { name: string; age: number }>) {
-    const body = await ctx.body(); // { name: string; age: number } ✓
+  @Use(zValidator("body", userSchema))
+  create(ctx: ZodCtx<{ body: typeof userSchema }>) {
+    const body = ctx.valid("body"); // { name: string } ✓
     return ctx.json({ created: true, data: body }, 201);
+  }
+  
+  // 3. Combined Validation
+  @Get('/')
+  @Use(zValidator("query", paginationSchema))
+  getAll(ctx: ZodCtx<{ query: typeof paginationSchema }>) {
+    const query = ctx.valid("query"); // { page: number } ✓
+    return ctx.json({ page: query.page });
   }
 }`}</CodeBlock>
           <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">Registering Controllers</h3>

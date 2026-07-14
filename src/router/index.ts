@@ -14,30 +14,44 @@ const EMPTY_PARAMS: Record<string, string> = Object.freeze({});
 const CACHE_MAX = 2048;
 
 class LookupCache {
-	private map = new Map<string, LookupResult>();
+	private map = new Map<string, Map<string, LookupResult>>();
+	private queue: Array<{ method: string; path: string }> = [];
 
-	get(key: string): LookupResult | undefined {
-		const val = this.map.get(key);
-		if (val === undefined) return undefined;
-		// Move to end (most-recently-used)
-		this.map.delete(key);
-		this.map.set(key, val);
-		return val;
+	get(method: string, path: string): LookupResult | undefined {
+		const methodMap = this.map.get(method);
+		if (!methodMap) return undefined;
+		return methodMap.get(path);
 	}
 
-	set(key: string, val: LookupResult): void {
-		if (this.map.has(key)) this.map.delete(key);
-		else if (this.map.size >= CACHE_MAX) {
-			// Evict the oldest entry (first in insertion order)
-			this.map.delete(this.map.keys().next().value as string);
+	set(method: string, path: string, val: LookupResult): void {
+		let methodMap = this.map.get(method);
+		if (!methodMap) {
+			methodMap = new Map();
+			this.map.set(method, methodMap);
 		}
-		this.map.set(key, val);
+
+		if (methodMap.has(path)) {
+			methodMap.set(path, val);
+			return;
+		}
+
+		if (this.queue.length >= CACHE_MAX) {
+			// Evict the oldest entry
+			const oldest = this.queue.shift();
+			if (oldest) {
+				const oldMethodMap = this.map.get(oldest.method);
+				if (oldMethodMap) oldMethodMap.delete(oldest.path);
+			}
+		}
+
+		methodMap.set(path, val);
+		this.queue.push({ method, path });
 	}
 }
 
 export class Router {
 	private root: RouterNode = new RouterNode("/", NodeType.STATIC);
-	// biome-ignore lint/suspicious/noExplicitAny: generic
+	// biome-ignore lint/suspicious/noExplicitAny: generic router handler
 	public staticRoutes: Map<string, Map<string, (...args: any[]) => any>> =
 		new Map();
 
@@ -154,8 +168,7 @@ export class Router {
 
 		// LRU cache for dynamic routes — avoids re-walking the trie for
 		// repeated (method, pathname) pairs (e.g. same user ID hit often)
-		const cacheKey = `${method}\0${path}`;
-		const cached = this.lookupCache.get(cacheKey);
+		const cached = this.lookupCache.get(method, path);
 		if (cached) return cached;
 
 		// Slow path: trie traversal for param/catchall routes
@@ -207,7 +220,7 @@ export class Router {
 
 		// Cache the result for future identical lookups
 		if (result.handler) {
-			this.lookupCache.set(cacheKey, result);
+			this.lookupCache.set(method, path, result);
 		}
 
 		return result;

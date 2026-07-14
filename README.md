@@ -185,22 +185,23 @@ app.get("/example", (ctx) => {
 });
 ```
 
-#### Strongly-Typed Context for Decorators (`RouteContext`)
+#### Strongly-Typed Context for Decorators (`ZodCtx`)
 
-When using class controllers and decorators, TypeScript cannot automatically infer `ctx.params` from the `@Get("/:id")` string due to language limitations. To fix this DX issue, you can use the `RouteContext` helper:
+When using class controllers and decorators, TypeScript cannot automatically infer `ctx.params` or `ctx.valid()` types due to language limitations on Method Decorators. To fix this DX issue, Buntok provides a flexible `ZodCtx` helper:
 
 ```typescript
-import { Controller, Get, Post, RouteContext, Use, zValidator } from "buntok";
+import { Controller, Get, Post, ZodCtx, Use, zValidator } from "buntok";
 import { z } from "zod";
 
 const createUserSchema = z.object({ name: z.string(), age: z.number() });
-type CreateUserBody = z.infer<typeof createUserSchema>;
+const paramSchema = z.object({ id: z.string() });
+const paginationSchema = z.object({ page: z.number(), limit: z.number() });
 
 @Controller("/users")
 export class UserController {
   // 1. Path Parameters Inference
   @Get("/:id/posts/:postId")
-  async getPost(ctx: RouteContext<"/:id/posts/:postId">) {
+  async getPost(ctx: ZodCtx<{}, "/:id/posts/:postId">) {
     // TypeScript knows these exist and are strings!
     const { id, postId } = ctx.params;
   }
@@ -208,18 +209,21 @@ export class UserController {
   // 2. Body Inference from zValidator
   @Post("/")
   @Use(zValidator("body", createUserSchema))
-  async create(ctx: RouteContext<"/", CreateUserBody>) {
-    // ALWAYS use ctx.valid() when a validator is used to avoid stream locks
+  async create(ctx: ZodCtx<{ body: typeof createUserSchema }>) {
+    // ctx.valid("body") automatically infers { name: string, age: number }
     const body = ctx.valid("body");
   }
 
-  // 3. Query Inference (Order: Path, Body, DI, Query, Params)
-  @Get("/search")
-  @Use(zValidator("query", z.object({ q: z.string() })))
-  async search(ctx: RouteContext<"/search", unknown, any, { q: string }>) {
-    const query = ctx.valid("query"); // Fully typed!
+  // 3. Combined Validation (Query & Params)
+  @Get("/:id/search")
+  @Use(zValidator("params", paramSchema))
+  @Use(zValidator("query", paginationSchema))
+  async search(ctx: ZodCtx<{ params: typeof paramSchema; query: typeof paginationSchema }>) {
+    const p = ctx.valid("params"); // { id: string }
+    const q = ctx.valid("query");  // { page: number, limit: number }
   }
 }
+```
 
 ### Validation (`zValidator`)
 

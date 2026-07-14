@@ -40,7 +40,8 @@ export async function makeMiddlewareCommand(name: string) {
 		console.error(
 			`\x1b[31mError: Middleware file already exists at ${filePath}\x1b[0m`,
 		);
-		process.exit(1);
+		process.exitCode = 1;
+		return;
 	}
 
 	const content = generateMiddleware(name, pascalName);

@@ -68,7 +68,8 @@ export async function makeTestE2ECommand(name: string) {
 		console.error(
 			`\x1b[31mError: E2E Test file already exists at ${filePath}\x1b[0m`,
 		);
-		process.exit(1);
+		process.exitCode = 1;
+		return;
 	}
 
 	const content = generateE2ETest(name, pascalName);

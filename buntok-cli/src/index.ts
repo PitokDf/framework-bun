@@ -47,35 +47,40 @@ async function main() {
   if (!command) {
     printBanner();
     printUsage();
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   switch (command) {
     case "create":
       if (!arg1) {
         console.error("\x1b[31mError: entity name is required for create command\x1b[0m");
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       await createCommand(arg1, args.slice(2));
       break;
     case "make:middleware":
       if (!arg1) {
         console.error("\x1b[31mError: middleware name is required\x1b[0m");
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       await makeMiddlewareCommand(arg1);
       break;
     case "make:test":
       if (!arg1) {
         console.error("\x1b[31mError: entity name is required for make:test command\x1b[0m");
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       await makeTestCommand(arg1);
       break;
     case "make:test-e2e":
       if (!arg1) {
         console.error("\x1b[31mError: entity name is required for make:test-e2e command\x1b[0m");
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       await makeTestE2ECommand(arg1);
       break;
@@ -85,7 +90,8 @@ async function main() {
     default:
       console.error(`\x1b[31mUnknown command: ${command}\x1b[0m`);
       printUsage();
-      process.exit(1);
+      process.exitCode = 1;
+      return;
   }
 }
 

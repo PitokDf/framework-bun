@@ -37,7 +37,7 @@ export type RouteContext<
 	DI = Record<string, unknown>,
 	QueryType = unknown,
 	ParamsType = ExtractParams<Path>,
-> = Omit<Context<DI, ParamsType>, "body" | "valid"> & {
+> = {
 	body(): Promise<BodyType>;
 	valid<T extends "body" | "query" | "params">(
 		target: T,
@@ -48,7 +48,27 @@ export type RouteContext<
 			: T extends "params"
 				? ParamsType
 				: unknown;
-};
+} & Context<DI, ParamsType>;
+
+/**
+ * A helper type to easily infer Context generic types from Zod schemas.
+ *
+ * @example
+ * async getAll(ctx: ZodCtx<{ query: typeof paginationSchema, body: typeof myBodySchema }>) {
+ *    const query = ctx.valid("query"); // Fully typed!
+ * }
+ */
+export type ZodCtx<
+	// biome-ignore lint/suspicious/noExplicitAny: Requires accessing Zod types
+	T extends { query?: any; body?: any; params?: any },
+	Path extends string = string,
+> = RouteContext<
+	Path,
+	T["body"] extends { _type: infer U } ? U : unknown,
+	Record<string, unknown>,
+	T["query"] extends { _type: infer U } ? U : unknown,
+	T["params"] extends { _type: infer U } ? U : ExtractParams<Path>
+>;
 
 export type Handler<
 	DI = Record<string, unknown>,
@@ -694,10 +714,6 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		request: Request,
 		server?: Server<WSData<DI>>,
 	) => Response | Promise<Response> {
-		if (this.wsRoutes.size > 0) {
-			return this.fallbackHandleRequest.bind(this);
-		}
-
 		let code =
 			"return function(request, server) {\n" +
 			"  const url = request.url;\n" +
@@ -705,9 +721,21 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"  if (start === -1) start = url.length;\n" +
 			"  let end = url.indexOf('?', start);\n" +
 			"  if (end === -1) end = url.length;\n" +
-			"  const pathname = start === url.length ? '/' : url.substring(start, end);\n" +
-			"  const method = request.method;\n" +
-			"  switch(method) {\n";
+			"  const pathname = start === url.length ? '/' : url.substring(start, end);\n";
+
+		if (this.wsRoutes.size > 0) {
+			code +=
+				"  if (server && wsRoutes.has(pathname)) {\n" +
+				"    const wsHandler = wsRoutes.get(pathname);\n" +
+				"    const ctx = new Context(request, EMPTY_PARAMS, di);\n" +
+				"    const data = { ctx, handler: wsHandler };\n" +
+				"    const upgraded = server.upgrade(request, { data });\n" +
+				"    if (upgraded) return undefined;\n" +
+				"    return new Response('Upgrade Required', { status: 426, headers: { Connection: 'Upgrade', Upgrade: 'websocket' } });\n" +
+				"  }\n";
+		}
+
+		code += "  const method = request.method;\n" + "  switch(method) {\n";
 
 		// biome-ignore lint/suspicious/noExplicitAny: generic
 		const handlersList: any[] = [];
@@ -771,6 +799,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"logResponse",
 			"handleError",
 			"fallback",
+			"wsRoutes",
 			code,
 		);
 
@@ -784,6 +813,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			this.logResponse,
 			this.handleError,
 			this.fallbackHandleRequest.bind(this),
+			this.wsRoutes,
 		);
 	}
 
@@ -943,8 +973,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		// biome-ignore lint/suspicious/noExplicitAny: Required for bun serve signature compatibility
 		const serveOptions: any = {
 			port: finalPort,
-			fetch: (request: Request, server: Server<WSData<DI>>) =>
-				this.handleRequest(request, server),
+			fetch: this._compiledAOTRouter,
 		};
 
 		if (this.wsRoutes.size > 0) {
