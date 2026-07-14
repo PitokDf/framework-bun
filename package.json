@@ -2,7 +2,7 @@
 	"name": "buntok",
 	"module": "dist/exports.js",
 	"type": "module",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"main": "dist/exports.cjs",
 	"types": "dist/exports.d.ts",
 	"bin": {
