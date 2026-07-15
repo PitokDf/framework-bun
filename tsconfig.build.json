@@ -1,0 +1,21 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"emitDeclarationOnly": true,
+		"declaration": true,
+		"declarationMap": true,
+		"rootDir": "src",
+		"outDir": "dist",
+		"allowImportingTsExtensions": false
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": [
+		"src/index.ts",
+		"src/bench.ts",
+		"src/**/*.test.ts",
+		"src/controllers/**",
+		"benchmarks/**",
+		"devtools-ui/**"
+	]
+}

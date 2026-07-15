@@ -1,25 +1,35 @@
-node_modules
-out
-*.tgz
-coverage
-*.lcov
-bombardier
-logs
-_.log
-report.*.json
-.env*
-my-app
-.eslintcache
-.cache
-*.tsbuildinfo
-.idea
+# Development / test files
+bench.ts
+bench-native.ts
+bench-optimize.ts
+test-trie*.ts
+src/
+controllers/
+devtools-ui/
+benchmarks/
+node_modules/
+.git/
+.github/
+.vscode/
+
+# Build artifacts
+*.obj
+*.pdb
+*.lib
+*.exp
+*.iobj
+*.ipdb
+build.zig.zon
+
+# Zig cache
+.zig-cache/
+zig-cache/
+
+# IDE
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
-benchmark-output.json
-dashboard-data.json
-benchmarks
-examples
-tests
-devtools-ui/src
-devtools-ui/node_modules
-!dist
-!devtools-ui/dist
+Thumbs.db

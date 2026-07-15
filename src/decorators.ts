@@ -166,3 +166,7 @@ export function getControllerMeta(
 ): ControllerMeta | undefined {
 	return controllerRegistry.get(ControllerClass);
 }
+
+// Re-export DI decorators
+export { Inject } from "./decorators/inject";
+export { Injectable } from "./decorators/injectable";

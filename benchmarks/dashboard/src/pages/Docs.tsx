@@ -298,7 +298,9 @@ async create(ctx: RouteContext<"/", { name: string; email: string }>) {
         </DocSection>
 
         <DocSection id="di" title="Dependency Injection">
-          <p className="text-text-secondary leading-relaxed mb-4">Type-safe DI via generics. Register services once and access them with full autocomplete.</p>
+          <p className="text-text-secondary leading-relaxed mb-4">Buntok provides two DI approaches: lightweight <code>app.set()</code> for simple cases, and a full IoC Container with decorator-based injection for enterprise apps.</p>
+          
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">Approach 1: app.set() (Lightweight)</h3>
           <CodeBlock language="typescript" isDark={isDark}>{`type Container = {
   db: Database;
   logger: Logger;
@@ -314,6 +316,47 @@ app.get("/users", async (ctx) => {
   ctx.di.logger.info("Fetched users");
   return ctx.json({ data: users });
 });`}</CodeBlock>
+
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">Approach 2: IoC Container (Recommended)</h3>
+          <p className="text-text-secondary leading-relaxed mb-4">Full decorator-based DI inspired by NestJS. Services are resolved at boot time — zero per-request overhead.</p>
+          <CodeBlock language="typescript" isDark={isDark}>{`import { App, Container, Injectable, Inject, Controller, Get } from "buntok";
+
+@Injectable()
+class UserRepository {
+  findAll() { return [{ id: 1, name: "Budi" }]; }
+}
+
+@Injectable()
+class UserService {
+  @Inject(UserRepository) private repo!: UserRepository;
+  getAll() { return this.repo.findAll(); }
+}
+
+@Controller("/users")
+@Injectable()
+class UserController {
+  @Inject(UserService) private service!: UserService;
+
+  @Get("/")
+  getAll(ctx: Context) {
+    return ctx.success(this.service.getAll());
+  }
+}
+
+const container = new Container();
+container.registerClass(UserRepository);
+container.registerClass(UserService);
+container.registerClass(UserController);
+
+const app = new App();
+app.setContainer(container);
+app.registerController(UserController);
+app.listen(3000);`}</CodeBlock>
+
+          <h3 className="font-semibold text-sm uppercase tracking-widest text-text-secondary mt-6 mb-3">Provider Syntax</h3>
+          <CodeBlock language="typescript" isDark={isDark}>{`container.registerClass(UserService);
+container.register("config", { useValue: { port: 3000 } });
+container.register("factory", { useFactory: (c) => new Logger(c.get("config")) });`}</CodeBlock>
         </DocSection>
 
         <DocSection id="middlewares" title="Global Middlewares">

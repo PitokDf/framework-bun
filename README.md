@@ -914,14 +914,15 @@ app.notFound((ctx) => {
 
 ### Dependency Injection (DI)
 
-Buntok provides type-safe dependency injection via generics.
+Buntok provides two DI approaches: a lightweight `app.set()` pattern for simple cases, and a full **IoC Container** with decorator-based injection for enterprise applications.
 
-**Setup:**
+#### Approach 1: `app.set()` (Lightweight)
+
+Register dependencies manually and access them via `ctx.di`:
 
 ```typescript
 import { App } from "buntok";
 
-// 1. Define your container type
 class Database {
   getUsers() { return [{ id: 1, name: "Pito" }]; }
 }
@@ -937,22 +938,73 @@ type Container = {
   config: { dbName: string; port: number };
 };
 
-// 2. Pass Container to App
 const app = new App<Container>();
 
-// 3. Register dependencies (type-checked!)
 const db = new Database();
 app.set("db", db);
 app.set("userService", new UserService(db));
 app.set("config", { dbName: "buntok_db", port: 1212 });
 
-// 4. Access in routes via ctx.di
 app.get("/users", (ctx) => {
   const users = ctx.di.db.getUsers();       // Auto-complete works!
   const { config } = ctx.di;                // Destructuring works!
   return ctx.json({ data: users });
 });
 ```
+
+#### Approach 2: IoC Container (Recommended for OOP)
+
+Full decorator-based dependency injection inspired by NestJS. Services are resolved automatically at boot time — zero per-request overhead.
+
+```typescript
+import { App, Container, Injectable, Inject, Controller, Get } from "buntok";
+
+// 1. Mark services with @Injectable()
+@Injectable()
+class UserRepository {
+  findAll() { return [{ id: 1, name: "Budi" }, { id: 2, name: "Andi" }]; }
+}
+
+@Injectable()
+class UserService {
+  @Inject(UserRepository) private repo!: UserRepository;
+  getAll() { return this.repo.findAll(); }
+}
+
+// 2. Controller — dependencies auto-resolved
+@Controller("/users")
+@Injectable()
+class UserController {
+  @Inject(UserService) private service!: UserService;
+
+  @Get("/")
+  getAll(ctx: Context) {
+    return ctx.success(this.service.getAll());
+  }
+}
+
+// 3. Wire everything up
+const container = new Container();
+container.registerClass(UserRepository);
+container.registerClass(UserService);
+container.registerClass(UserController);
+
+const app = new App();
+app.setContainer(container);
+app.registerController(UserController);  // resolves @Inject properties
+app.listen(3000);
+```
+
+**Key Features:**
+
+| Feature | Description |
+|---------|-------------|
+| `@Injectable()` | Marks a class as container-managed |
+| `@Inject(Token)` | Property injection — resolves dependency by class or string token |
+| `container.registerClass()` | Register a class (singleton by default) |
+| `container.register()` | Register with provider syntax (`useClass`, `useValue`, `useFactory`) |
+| Singleton/Transient scope | Control instance lifecycle |
+| Circular dependency detection | Throws clear error on circular `@Inject` chains |
 
 ---
 

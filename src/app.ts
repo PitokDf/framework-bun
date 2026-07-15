@@ -1,6 +1,7 @@
 import { join, sep } from "node:path";
 import type { Server, ServerWebSocket } from "bun";
 import { z } from "zod";
+import { Container } from "./container";
 import { Context } from "./context";
 import { getControllerMeta } from "./decorators";
 import { logger } from "./logger";
@@ -105,6 +106,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private poweredByHeaderEnabled: boolean = true;
 	// biome-ignore lint/suspicious/noExplicitAny: Required for internal OpenAPI registry
 	public openApiDocs: any[] = [];
+	private container: Container | null = null;
 
 	/**
 	 * The underlying Bun Server instance. Only available after app.listen() is called.
@@ -157,6 +159,26 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	public set<K extends keyof DI>(key: K, value: DI[K]): this {
 		this.di[key] = value;
 		return this;
+	}
+
+	/**
+	 * Attach an IoC Container to the app. When set, `registerController()`
+	 * will auto-resolve `@Inject`-annotated properties from the container
+	 * before binding routes.
+	 */
+	public setContainer(container: Container): this {
+		this.container = container;
+		return this;
+	}
+
+	/**
+	 * Get the attached IoC Container, or create an empty one if none was set.
+	 */
+	public getContainer(): Container {
+		if (!this.container) {
+			this.container = new Container();
+		}
+		return this.container;
 	}
 
 	public group(prefix: string): RouterGroup<DI> {
@@ -216,12 +238,17 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 * class once (at boot time, not per request) and wires each decorated
 	 * method up exactly like a manual `app.get(path, handler)` call would.
 	 *
+	 * When a Container is attached via `app.setContainer()`, `@Inject`-
+	 * annotated properties on the controller are automatically resolved
+	 * from the container before routes are bound.
+	 *
 	 * ```ts
 	 * app.registerController(UserController);
 	 * ```
 	 */
 	public registerController<T extends object>(
-		ControllerClass: new () => T,
+		// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+		ControllerClass: new (...args: any[]) => T,
 	): this {
 		const meta = getControllerMeta(ControllerClass);
 		if (!meta) {
@@ -230,7 +257,15 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			);
 		}
 
-		const instance = new ControllerClass();
+		let instance: T;
+
+		if (this.container) {
+			const resolved = this.container.resolve<T>(ControllerClass);
+			instance = resolved;
+		} else {
+			instance = new ControllerClass();
+		}
+
 		const normalizedPrefix = meta.prefix.endsWith("/")
 			? meta.prefix.slice(0, -1)
 			: meta.prefix;

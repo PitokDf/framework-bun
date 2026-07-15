@@ -1,3 +1,4 @@
+import { getBackend, isNativeAvailable, Trie as NativeTrie } from "../ffi";
 import { NodeType, RouterNode } from "./node";
 
 export interface LookupResult {
@@ -58,6 +59,19 @@ export class Router {
 	// LRU cache for dynamic (param/catchall) route lookups
 	private readonly lookupCache = new LookupCache();
 
+	// Native trie for dynamic route lookup (when available)
+	private nativeTrie: NativeTrie | null = null;
+	// biome-ignore lint/suspicious/noExplicitAny: generic router handler
+	private handlerRegistry: Map<number, (...args: any[]) => any> = new Map();
+	private nextHandlerId = 0;
+
+	constructor() {
+		if (isNativeAvailable()) {
+			this.nativeTrie = new NativeTrie();
+			console.log(`[buntok] Native trie loaded (${getBackend()})`);
+		}
+	}
+
 	private static splitPath(path: string): string[] {
 		const segments: string[] = [];
 		let start = 0;
@@ -98,7 +112,16 @@ export class Router {
 			methodMap.set(upperMethod, handler);
 		}
 
-		// Also insert into trie for param/catchall routes
+		// Register in native trie for dynamic routes
+		if (hasParams && this.nativeTrie) {
+			const handlerId = this.nextHandlerId++;
+			this.handlerRegistry.set(handlerId, handler);
+			// Use composite key: "METHOD:/path/:param"
+			const compositeKey = `${upperMethod}:${path}`;
+			this.nativeTrie.insert(compositeKey, handlerId);
+		}
+
+		// Also insert into JS trie for fallback / non-native
 		let currentNode = this.root;
 
 		if (segments.length === 0) {
@@ -171,7 +194,25 @@ export class Router {
 		const cached = this.lookupCache.get(method, path);
 		if (cached) return cached;
 
-		// Slow path: trie traversal for param/catchall routes
+		// Native trie path for dynamic routes
+		if (this.nativeTrie) {
+			const compositeKey = `${method}:${path}`;
+			const nativeResult = this.nativeTrie.find(compositeKey);
+
+			if (nativeResult.handlerId !== -1) {
+				const handler = this.handlerRegistry.get(nativeResult.handlerId);
+				if (handler) {
+					const result: LookupResult = {
+						handler,
+						params: nativeResult.params,
+					};
+					this.lookupCache.set(method, path, result);
+					return result;
+				}
+			}
+		}
+
+		// Slow path: JS trie traversal for param/catchall routes
 		const result: LookupResult = {
 			handler: null,
 			params: null as unknown as Record<string, string>,

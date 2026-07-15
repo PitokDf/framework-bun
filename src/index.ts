@@ -24,7 +24,7 @@ type Container = {
 };
 
 // 3. Oper interface tersebut ke dalam App!
-const app = new App<Container>();
+export const app = new App<Container>();
 
 // Registrasi Dependency (Otomatis ditolak TypeScript jika salah nama/tipe!)
 const userRepo = new UserRepository();

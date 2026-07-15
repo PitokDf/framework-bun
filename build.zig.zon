@@ -1,0 +1,10 @@
+.{
+    .name = .buntok,
+    .fingerprint = 0x75c8ef49938334c9,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.14.0",
+    .paths = .{
+        "build.zig",
+        "native/",
+    },
+}

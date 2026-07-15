@@ -1,0 +1,140 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"version": "1.0.0",
+		"title": "Buntok API Documentation",
+		"description": "Auto-generated OpenAPI docs from Zod schemas"
+	},
+	"components": {
+		"schemas": {},
+		"parameters": {}
+	},
+	"paths": {
+		"/favicon.ico": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/plaintext": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/json": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/db/single": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/db/queries": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/fortunes": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/db/updates": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/user/{id}": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/query": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/post": {
+			"post": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/middleware": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/static": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/bench/query-method": {
+			"query": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		},
+		"/users": {
+			"get": {
+				"responses": {
+					"200": {
+						"description": "Success"
+					}
+				}
+			}
+		}
+	}
+}

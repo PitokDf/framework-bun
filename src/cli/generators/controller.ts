@@ -4,13 +4,14 @@ export function generateController(
 	withService: boolean = true,
 ): string {
 	if (withService) {
-		return `import { Controller, Get, Post, Put, Delete } from "buntok";
+		return `import { Controller, Get, Post, Put, Delete, Inject, Injectable } from "buntok";
 import type { Context } from "buntok";
 import { ${pascalName}Service } from "../services/${entityName}.service";
 
 @Controller("/${entityName}s")
+@Injectable()
 export class ${pascalName}Controller {
-  private service = new ${pascalName}Service();
+  @Inject(${pascalName}Service) private service!: ${pascalName}Service;
 
   @Get("/")
   async getAll(ctx: Context) {

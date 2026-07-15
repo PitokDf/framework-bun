@@ -120,13 +120,4 @@ export async function main() {
 	}
 }
 
-// Only execute automatically if this is the entry script
-const isEntryFile =
-	typeof process !== "undefined" &&
-	(process.argv[1]?.endsWith("cli/index.js") ||
-		process.argv[1]?.endsWith("cli/index.ts") ||
-		process.argv[1]?.endsWith("buntok"));
-
-if (isEntryFile) {
-	main();
-}
+main();

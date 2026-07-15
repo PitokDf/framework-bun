@@ -5,6 +5,8 @@ node_modules
 out
 dist
 *.tgz
+zig-out/
+bombardier.exe
 
 # code coverage
 coverage
@@ -27,6 +29,7 @@ my-app
 .eslintcache
 .cache
 *.tsbuildinfo
+.zig-cache
 
 # IntelliJ based IDEs
 .idea

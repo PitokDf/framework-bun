@@ -17,6 +17,15 @@ export { App } from "./app";
 // Auth
 export { JwtService, requireAuth } from "./auth";
 export { Cache, type CacheDriver, MemoryCacheDriver } from "./cache";
+// Container
+export {
+	type ClassProvider,
+	Container,
+	type FactoryProvider,
+	type Provider,
+	type Scope,
+	type ValueProvider,
+} from "./container";
 export { Context } from "./context";
 // Decorators
 export {
@@ -26,6 +35,8 @@ export {
 	Get,
 	type GuardFn,
 	Head,
+	Inject,
+	Injectable,
 	Options,
 	Patch,
 	Post,
@@ -35,6 +46,8 @@ export {
 	UseGuard,
 } from "./decorators";
 export { type DevToolsRequestEntry, enableDevTools } from "./devtools";
+// Native FFI
+export { getBackend, isNativeAvailable } from "./ffi";
 // Error helpers
 export {
 	asyncHandler,
