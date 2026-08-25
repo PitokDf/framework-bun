@@ -156,8 +156,8 @@ app.get("/users/:id", validateParams(idSchema), handler);`}
         Next Steps
       </Heading>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
-        <li><a href="/docs/upload" className="text-accent hover:underline">Upload</a> — Validate file uploads</li>
-        <li><a href="/docs/routing" className="text-accent hover:underline">Routing</a> — Route parameters and query strings</li>
+        <li><a href="/docs/upload" className="text-accent hover:underline">Upload</a> - Validate file uploads</li>
+        <li><a href="/docs/routing" className="text-accent hover:underline">Routing</a> - Route parameters and query strings</li>
       </ul>
     </div>
   );

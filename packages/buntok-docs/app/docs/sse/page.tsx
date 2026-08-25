@@ -19,7 +19,7 @@ export default function SSEPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Real-time streaming from server to client using SSE. One-way
-        communication from server to browser — ideal for live updates, progress
+        communication from server to browser - ideal for live updates, progress
         bars, and AI streaming.
       </p>
 
@@ -329,19 +329,19 @@ app.get("/live/metrics", (ctx) => {
           <a href="/docs/websocket" className="text-accent hover:underline">
             WebSocket
           </a>{" "}
-          — Bidirectional real-time communication
+          - Bidirectional real-time communication
         </li>
         <li>
           <a href="/docs/ai" className="text-accent hover:underline">
             AI Module
           </a>{" "}
-          — AI streaming with SSE
+          - AI streaming with SSE
         </li>
         <li>
           <a href="/docs/emitter" className="text-accent hover:underline">
             Event Emitter
           </a>{" "}
-          — Decouple code with events
+          - Decouple code with events
         </li>
       </ul>
     </div>

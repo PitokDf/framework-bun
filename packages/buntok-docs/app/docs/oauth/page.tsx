@@ -4,7 +4,7 @@ import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
 export const metadata: Metadata = {
-  title: "OAuth Social Login — Buntok Docs",
+  title: "OAuth Social Login - Buntok Docs",
   description:
     "OAuth 2.0 social login with Google, GitHub, Apple, and custom providers using PKCE and state management.",
 };
@@ -20,7 +20,7 @@ export default function OAuthPage() {
       </p>
 
       <Callout type="info">
-        All providers use the Authorization Code Flow with PKCE (RFC 7636) —
+        All providers use the Authorization Code Flow with PKCE (RFC 7636) -
         the recommended flow for 2026+.
       </Callout>
 
@@ -203,7 +203,7 @@ APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----`
 
       <Callout type="warning">
         Apple only sends the user&apos;s name on the <strong>first</strong>
-        authentication. Store it if you receive it — you won&apos;t get it
+        authentication. Store it if you receive it - you won&apos;t get it
         again unless the user revokes and re-authorizes.
       </Callout>
 
@@ -225,7 +225,7 @@ APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----`
           <tbody>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2"><code>OAuthStateError</code></td>
-              <td className="px-4 py-2">State mismatch — possible CSRF attack</td>
+              <td className="px-4 py-2">State mismatch - possible CSRF attack</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2"><code>OAuthTokenError</code></td>
@@ -269,7 +269,7 @@ try {
       <CodeBlock
         code={`import { createOAuth2AuthorizationURL, validateOAuth2AuthorizationCode } from "@buntok/core";
 
-// Discord (not OIDC — uses OAuth2)
+// Discord (not OIDC - uses OAuth2)
 const DISCORD_AUTH = "https://discord.com/api/oauth2/authorize";
 const DISCORD_TOKEN = "https://discord.com/api/oauth2/token";
 const DISCORD_USER = "https://discord.com/api/users/@me";
@@ -343,7 +343,7 @@ app.get("/auth/discord/callback", async (ctx) => {
 
       <p className="text-text-secondary mb-4">
         Always use <code>id</code> (the <code>sub</code> claim) as the primary
-        user identifier — not email, which can change.
+        user identifier - not email, which can change.
       </p>
 
       <Heading level={2} className="mt-8 mb-3">

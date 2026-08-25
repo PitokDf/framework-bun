@@ -82,7 +82,7 @@ Server boot aborted.`}
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Toggle built-in features. Currently supports <code>"x-powered-by"</code>{" "}
-        — the <code>X-Powered-By: buntok</code> response header.
+        - the <code>X-Powered-By: buntok</code> response header.
       </p>
       <CodeBlock
         code={`const app = new App();

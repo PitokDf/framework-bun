@@ -13,7 +13,7 @@ export default function EmitterPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Lightweight typed event emitter for decoupling modules. Emit events
-        from one part of your app, listen from another — no direct imports
+        from one part of your app, listen from another - no direct imports
         needed.
       </p>
 
@@ -121,15 +121,15 @@ interface AppEvents {
 
 const emitter = new EventEmitter<AppEvents>();
 
-// ✅ Typed — data is { id: number; name: string; email: string }
+// ✅ Typed - data is { id: number; name: string; email: string }
 emitter.on("user:created", async (data) => {
   console.log(data.name); // string
 });
 
-// ❌ Compile error — wrong event name
+// ❌ Compile error - wrong event name
 emitter.on("user:removed", handler);
 
-// ❌ Compile error — wrong data shape
+// ❌ Compile error - wrong data shape
 emitter.emit("user:created", { name: 123 });`}
       />
 
@@ -179,7 +179,7 @@ emitter.emit("custom:event", { anything: true });`}
         Decouple Auth from Notifications
       </Heading>
       <CodeBlock
-        code={`// auth.service.ts — emits events, knows nothing about notifications
+        code={`// auth.service.ts - emits events, knows nothing about notifications
 import { emitter } from "@buntok/core";
 
 async function createUser(data) {
@@ -188,7 +188,7 @@ async function createUser(data) {
   return user;
 }
 
-// notification.service.ts — listens, knows nothing about auth
+// notification.service.ts - listens, knows nothing about auth
 import { emitter } from "@buntok/core";
 
 export const metadata = {

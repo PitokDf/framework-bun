@@ -18,14 +18,14 @@ export default function DecoratorsPage() {
         Decorators
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Buntok uses Stage 3 TC39 decorators — the standard decorators natively
+        Buntok uses Stage 3 TC39 decorators - the standard decorators natively
         supported by Bun and TypeScript 5+ without the{" "}
         <code>experimentalDecorators</code> flag.
       </p>
 
       <Callout type="info">
         Decorators execute once at class-definition time (bootstrap), not per
-        request. This means zero runtime overhead — the router produces the same{" "}
+        request. This means zero runtime overhead - the router produces the same{" "}
         <code>registerRoute()</code> calls as manual{" "}
         <code>app.get()</code>/<code>app.post()</code> registrations.
       </Callout>
@@ -363,7 +363,7 @@ class AdminController {
         Marks a class as container-managed for dependency injection.
       </p>
       <CodeBlock
-        code={`// Singleton (default) — one instance shared across the app
+        code={`// Singleton (default) - one instance shared across the app
 @Injectable()
 class UserService {
   async findAll() {
@@ -371,7 +371,7 @@ class UserService {
   }
 }
 
-// Transient — new instance each time it's injected
+// Transient - new instance each time it's injected
 @Injectable({ scope: "transient" })
 class Logger {
   log(msg) { console.log(msg); }
@@ -581,25 +581,25 @@ app.listen(1212);`}
           <a href="/docs/controllers" className="text-accent hover:underline">
             Controllers
           </a>{" "}
-          — Class-based routing
+          - Class-based routing
         </li>
         <li>
           <a href="/docs/ioc" className="text-accent hover:underline">
             IoC Container
           </a>{" "}
-          — Dependency injection
+          - Dependency injection
         </li>
         <li>
           <a href="/docs/validation" className="text-accent hover:underline">
             Validation
           </a>{" "}
-          — Zod validation
+          - Zod validation
         </li>
         <li>
           <a href="/docs/middleware" className="text-accent hover:underline">
             Middleware
           </a>{" "}
-          — Middleware patterns
+          - Middleware patterns
         </li>
       </ul>
     </div>

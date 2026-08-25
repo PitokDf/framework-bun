@@ -19,7 +19,7 @@ export default function ErrorHandlingPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Built-in HTTP error classes and custom error handler. Throw errors in
-        route handlers — Buntok catches them and returns proper JSON responses.
+        route handlers - Buntok catches them and returns proper JSON responses.
       </p>
 
       {/* ──────────────── BUILT-IN ERRORS ──────────────── */}
@@ -234,19 +234,19 @@ app.post("/transfer", async (ctx) => {
           <a href="/docs/auth" className="text-accent hover:underline">
             Authentication
           </a>{" "}
-          — 401 Unauthorized errors
+          - 401 Unauthorized errors
         </li>
         <li>
           <a href="/docs/rbac" className="text-accent hover:underline">
             RBAC
           </a>{" "}
-          — 403 Forbidden errors
+          - 403 Forbidden errors
         </li>
         <li>
           <a href="/docs/validation" className="text-accent hover:underline">
             Validation
           </a>{" "}
-          — 422 Validation errors
+          - 422 Validation errors
         </li>
       </ul>
     </div>

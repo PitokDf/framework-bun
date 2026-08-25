@@ -619,25 +619,25 @@ app.listen(1212);`}
           <a href="/docs/validation" className="text-accent hover:underline">
             Validation
           </a>{" "}
-          — Validate and type request data
+          - Validate and type request data
         </li>
         <li>
           <a href="/docs/routing" className="text-accent hover:underline">
             Routing
           </a>{" "}
-          — Route parameters and query strings
+          - Route parameters and query strings
         </li>
         <li>
           <a href="/docs/middleware" className="text-accent hover:underline">
             Middleware
           </a>{" "}
-          — Access context in middleware
+          - Access context in middleware
         </li>
         <li>
           <a href="/docs/sse" className="text-accent hover:underline">
             SSE
           </a>{" "}
-          — Server-Sent Events
+          - Server-Sent Events
         </li>
       </ul>
     </div>

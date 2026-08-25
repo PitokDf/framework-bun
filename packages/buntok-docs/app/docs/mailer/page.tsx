@@ -225,10 +225,10 @@ await mailer.send({
         Fire-and-Forget
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Don't await for non-critical emails — they'll send in the background:
+        Don't await for non-critical emails - they'll send in the background:
       </p>
       <CodeBlock
-        code={`// Don't await — runs in background
+        code={`// Don't await - runs in background
 mailer.send({
   from: "noreply@example.com",
   to: user.email,

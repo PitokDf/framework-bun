@@ -212,7 +212,7 @@ class AdminController {
       />
 
       <Callout type="info">
-        Guards are async-compatible — you can perform database lookups or API
+        Guards are async-compatible - you can perform database lookups or API
         calls. <code>@UseGuard</code> is syntactic sugar for{" "}
         <code>@Use</code> that returns 403 on failure.
       </Callout>
@@ -448,25 +448,25 @@ app.registerController(UserController);`}
           <a href="/docs/decorators" className="text-accent hover:underline">
             Decorators
           </a>{" "}
-          — Full decorator reference
+          - Full decorator reference
         </li>
         <li>
           <a href="/docs/ioc" className="text-accent hover:underline">
             IoC Container
           </a>{" "}
-          — Dependency injection
+          - Dependency injection
         </li>
         <li>
           <a href="/docs/middleware" className="text-accent hover:underline">
             Middleware
           </a>{" "}
-          — Middleware patterns
+          - Middleware patterns
         </li>
         <li>
           <a href="/docs/routing" className="text-accent hover:underline">
             Routing
           </a>{" "}
-          — Functional routing
+          - Functional routing
         </li>
       </ul>
     </div>

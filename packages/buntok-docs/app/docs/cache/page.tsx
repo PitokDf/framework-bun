@@ -130,7 +130,7 @@ cache.clear();`}
         Common Patterns
       </Heading>
       <CodeBlock
-        code={`// getOrSet — cache-aside pattern
+        code={`// getOrSet - cache-aside pattern
 const user = await cache.getOrSet(
   \`user:\${id}\`,
   () => db.user.findUnique({ where: { id } }),
@@ -145,7 +145,7 @@ const views = await cache.get<number>("page:views");
 await cache.mset([["user:1", data1], ["user:2", data2]], 300);
 const [u1, u2] = await cache.mget(["user:1", "user:2"]);
 
-// Pattern delete — clear all session keys
+// Pattern delete - clear all session keys
 await cache.deletePattern("session:*");`}
       />
 

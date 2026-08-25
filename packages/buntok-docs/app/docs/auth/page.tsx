@@ -98,7 +98,7 @@ AUTH_COOKIE=session`}
 
 const jwt = new JwtService(process.env.JWT_SECRET!);
 
-// Login endpoint — set HttpOnly cookie
+// Login endpoint - set HttpOnly cookie
 app.post("/login", async (ctx) => {
   const { email, password } = await ctx.body();
 
@@ -123,7 +123,7 @@ app.post("/login", async (ctx) => {
   });
 });
 
-// Logout endpoint — clear cookie
+// Logout endpoint - clear cookie
 app.post("/logout", (ctx) => {
   const response = ctx.json({ success: true });
   return deleteCookie(response, process.env.AUTH_COOKIE!, {
@@ -266,8 +266,8 @@ app.get("/profile", requireAuth(secret), async (ctx) => {
         Next Steps
       </Heading>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
-        <li><a href="/docs/rbac" className="text-accent hover:underline">RBAC</a> — Role-based access control</li>
-        <li><a href="/docs/middleware" className="text-accent hover:underline">Middleware</a> — Learn about middleware</li>
+        <li><a href="/docs/rbac" className="text-accent hover:underline">RBAC</a> - Role-based access control</li>
+        <li><a href="/docs/middleware" className="text-accent hover:underline">Middleware</a> - Learn about middleware</li>
       </ul>
     </div>
   );

@@ -19,7 +19,7 @@ export default function QueuePage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Job queue for background processing with priority, delay, retries, and
-        backoff strategies. In-memory by default — plug in your own driver for
+        backoff strategies. In-memory by default - plug in your own driver for
         persistence.
       </p>
 

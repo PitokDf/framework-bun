@@ -19,7 +19,7 @@ export default function WebSocketPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Bidirectional real-time communication backed by Bun's native WebSocket
-        server. No polyfills or extra abstraction — direct access to{" "}
+        server. No polyfills or extra abstraction - direct access to{" "}
         <code>Bun.serve</code> WebSocket.
       </p>
 
@@ -319,19 +319,19 @@ app.listen(1212);`}
           <a href="/docs/sse" className="text-accent hover:underline">
             SSE
           </a>{" "}
-          — Simpler server-to-client streaming
+          - Simpler server-to-client streaming
         </li>
         <li>
           <a href="/docs/emitter" className="text-accent hover:underline">
             Event Emitter
           </a>{" "}
-          — Decouple code with events
+          - Decouple code with events
         </li>
         <li>
           <a href="/docs/routing" className="text-accent hover:underline">
             Routing
           </a>{" "}
-          — Route groups and middleware
+          - Route groups and middleware
         </li>
       </ul>
     </div>

@@ -195,15 +195,15 @@ async createPost(ctx: Context) {
           <tbody>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">401</td>
-              <td className="px-4 py-2"><code>Authentication required</code> — ctx.user is missing</td>
+              <td className="px-4 py-2"><code>Authentication required</code> - ctx.user is missing</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">403</td>
-              <td className="px-4 py-2"><code>Requires one of: admin, moderator</code> — role does not match</td>
+              <td className="px-4 py-2"><code>Requires one of: admin, moderator</code> - role does not match</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">403</td>
-              <td className="px-4 py-2"><code>Missing permissions: users:delete</code> — permission is missing</td>
+              <td className="px-4 py-2"><code>Missing permissions: users:delete</code> - permission is missing</td>
             </tr>
           </tbody>
         </table>
@@ -213,8 +213,8 @@ async createPost(ctx: Context) {
         Next Steps
       </Heading>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
-        <li><a href="/docs/auth" className="text-accent hover:underline">Authentication</a> — JWT authentication</li>
-        <li><a href="/docs/middleware" className="text-accent hover:underline">Middleware</a> — Learn about middleware</li>
+        <li><a href="/docs/auth" className="text-accent hover:underline">Authentication</a> - JWT authentication</li>
+        <li><a href="/docs/middleware" className="text-accent hover:underline">Middleware</a> - Learn about middleware</li>
       </ul>
     </div>
   );

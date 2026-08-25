@@ -173,10 +173,10 @@ const url = container.resolve<string>("DATABASE_URL");`}
       </div>
 
       <CodeBlock
-        code={`// Singleton — same instance returned every time
+        code={`// Singleton - same instance returned every time
 container.register(UserService, { useClass: UserService, scope: "singleton" });
 
-// Transient — new instance each time
+// Transient - new instance each time
 container.register(RequestLogger, { useClass: RequestLogger, scope: "transient" });`}
       />
 

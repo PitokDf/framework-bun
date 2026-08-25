@@ -92,7 +92,7 @@ export default function MiddlewarePage() {
   const token = ctx.request.headers.get("Authorization");
   if (!token) {
     return ctx.json({ error: "Unauthorized" }, 401);
-    // Do NOT call next() — request stops here
+    // Do NOT call next() - request stops here
   }
   return next(); // Token exists, continue
 };`}
@@ -422,10 +422,10 @@ app.use(compress({
         memory).
       </p>
       <CodeBlock
-        code={`// Fixed window — 100 requests per minute
+        code={`// Fixed window - 100 requests per minute
 app.use(rateLimiter({ max: 100, windowMs: 60000 }));
 
-// Sliding window — more accurate for burst traffic
+// Sliding window - more accurate for burst traffic
 app.use(slidingWindowRateLimiter({ max: 100, windowMs: 60000 }));
 
 // With SQLite store (survives restarts)
@@ -546,19 +546,19 @@ app.listen(1212);`}
           <a href="/docs/auth" className="text-accent hover:underline">
             Authentication
           </a>{" "}
-          — JWT authentication middleware
+          - JWT authentication middleware
         </li>
         <li>
           <a href="/docs/rbac" className="text-accent hover:underline">
             RBAC
           </a>{" "}
-          — Role-based access control
+          - Role-based access control
         </li>
         <li>
           <a href="/docs/validation" className="text-accent hover:underline">
             Validation
           </a>{" "}
-          — Request data validation
+          - Request data validation
         </li>
       </ul>
     </div>

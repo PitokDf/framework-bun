@@ -30,10 +30,10 @@ export default function ApiDocsPage() {
       </p>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
         <li>
-          <code>public/docs/swagger.json</code> — OpenAPI 3.0 spec
+          <code>public/docs/swagger.json</code> - OpenAPI 3.0 spec
         </li>
         <li>
-          <code>public/docs/index.html</code> — Scalar API Reference UI
+          <code>public/docs/index.html</code> - Scalar API Reference UI
         </li>
       </ul>
 

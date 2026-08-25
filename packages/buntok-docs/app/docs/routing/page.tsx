@@ -422,7 +422,7 @@ app.static("/files", "./assets");`}
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Static file responses include <code>Cache-Control: public, max-age=3600</code>{" "}
-        (1 hour). ETag support is also included — if the client sends{" "}
+        (1 hour). ETag support is also included - if the client sends{" "}
         <code>If-None-Match</code> and the ETag matches, the server returns{" "}
         <code>304 Not Modified</code>.
       </p>
@@ -560,19 +560,19 @@ app.get("/users/:id", async (ctx) => {
       </p>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
         <li>
-          <strong>Static routes</strong> — Stored in a flat{" "}
+          <strong>Static routes</strong> - Stored in a flat{" "}
           <code>Map</code> for O(1) lookup
         </li>
         <li>
-          <strong>Dynamic routes</strong> — Trie-based with native FFI (with JS
+          <strong>Dynamic routes</strong> - Trie-based with native FFI (with JS
           fallback)
         </li>
         <li>
-          <strong>LRU cache</strong> — 2048-entry cache avoids re-traversal for
+          <strong>LRU cache</strong> - 2048-entry cache avoids re-traversal for
           repeated paths
         </li>
         <li>
-          <strong>AOT compilation</strong> — Middleware pipelines compiled into
+          <strong>AOT compilation</strong> - Middleware pipelines compiled into
           single functions at boot
         </li>
       </ul>
@@ -638,25 +638,25 @@ app.get("/users/:id", async (ctx) => {
           <a href="/docs/controllers" className="text-accent hover:underline">
             Controllers
           </a>{" "}
-          — Organize routes with class-based controllers
+          - Organize routes with class-based controllers
         </li>
         <li>
           <a href="/docs/middleware" className="text-accent hover:underline">
             Middleware
           </a>{" "}
-          — Learn more about middleware patterns
+          - Learn more about middleware patterns
         </li>
         <li>
           <a href="/docs/validation" className="text-accent hover:underline">
             Validation
           </a>{" "}
-          — Validate request data with Zod
+          - Validate request data with Zod
         </li>
         <li>
           <a href="/docs/context" className="text-accent hover:underline">
             Context
           </a>{" "}
-          — Explore the full Context API
+          - Explore the full Context API
         </li>
       </ul>
     </div>

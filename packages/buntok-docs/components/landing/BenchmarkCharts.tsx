@@ -249,7 +249,7 @@ export function BenchmarkCharts({
             <div className="flex items-center gap-2 mb-4">
               <Activity className="w-4 h-4 text-[#f97316]" />
               <h2 className="font-semibold text-text-primary">
-                Throughput Over Time — /plaintext
+                Throughput Over Time - /plaintext
               </h2>
             </div>
             <div className="h-72">

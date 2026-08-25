@@ -387,14 +387,14 @@ export const metadata = {
 };
 
 
-// 1. Repository — data access
+// 1. Repository - data access
 class UserRepository extends BaseRepository<User, PrismaClient> {
   constructor(prisma: PrismaClient) {
     super(prisma, "user");
   }
 }
 
-// 2. Service — adapt method names for BaseController
+// 2. Service - adapt method names for BaseController
 class UserService {
   constructor(private repo: UserRepository) {}
   getAll()     { return this.repo.findAll(); }
@@ -404,7 +404,7 @@ class UserService {
   delete(id)   { return this.repo.delete(id); }
 }
 
-// 3. Controller — auto CRUD routes
+// 3. Controller - auto CRUD routes
 @Controller("/users")
 class UserController extends BaseController<User> {
   constructor(private userService: UserService) {

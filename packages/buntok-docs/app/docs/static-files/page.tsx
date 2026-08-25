@@ -102,7 +102,7 @@ app.static("/files", "./assets");`}
           <code>Cache-Control: public, max-age=3600</code> (1 hour)
         </li>
         <li>
-          <strong>ETag support</strong> — If the client sends{" "}
+          <strong>ETag support</strong> - If the client sends{" "}
           <code>If-None-Match</code> and the ETag matches, the server returns{" "}
           <code>304 Not Modified</code>
         </li>
@@ -152,13 +152,13 @@ app.static("/public", "./public");
           <a href="/docs/routing" className="text-accent hover:underline">
             Routing
           </a>{" "}
-          — Learn about route groups and other routing features
+          - Learn about route groups and other routing features
         </li>
         <li>
           <a href="/docs/middleware" className="text-accent hover:underline">
             Middleware
           </a>{" "}
-          — Add middleware to static file routes
+          - Add middleware to static file routes
         </li>
       </ul>
     </div>

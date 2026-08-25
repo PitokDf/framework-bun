@@ -25,7 +25,7 @@ export default function SchedulerPage() {
         >
           croner
         </a>
-        . Run tasks on a schedule — daily cleanups, periodic reports, health
+        . Run tasks on a schedule - daily cleanups, periodic reports, health
         checks.
       </p>
 
