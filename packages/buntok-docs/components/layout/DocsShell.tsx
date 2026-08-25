@@ -19,7 +19,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
         />
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 p-4">
           <div className="max-w-4xl mx-auto">{children}</div>
         </main>
         <TableOfContents />

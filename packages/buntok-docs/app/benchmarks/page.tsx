@@ -21,6 +21,28 @@ export const metadata: Metadata = {
     title: "Buntok Framework Benchmarks",
     description:
       "Performance comparison: Buntok, Hono, Elysia, Express, Fastify on Bun runtime.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Buntok Framework Benchmarks",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Buntok Framework Benchmarks",
+    description:
+      "Performance comparison: Buntok, Hono, Elysia, Express, Fastify on Bun runtime.",
+    images: [
+      {
+        url: "/twitter-image",
+        width: 1200,
+        height: 630,
+        alt: "Buntok Framework Benchmarks",
+      },
+    ],
   },
 };
 

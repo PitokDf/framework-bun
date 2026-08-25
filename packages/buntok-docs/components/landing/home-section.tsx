@@ -50,8 +50,8 @@ export function HomeSection() {
   };
 
   return (
-    <div className="relative animate-fade-up">
-      <div className="absolute top-0 left-[50%] right-[50%] ml-[-50vw] mr-[-50vw] w-screen h-full pointer-events-none z-0">
+    <div className="relative animate-fade-up overflow-x-hidden">
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
         {/* Subtle dynamic background glow */}
         <div
           className="absolute inset-0 transition-opacity duration-300"
@@ -66,8 +66,8 @@ export function HomeSection() {
             className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-size-[4rem_4rem]"
             style={{ backgroundPosition: "center top" }}
           />
-          {/* Animated Circuit Beams (Cornering) */}
-          <svg className="absolute top-0 left-1/2 -translate-x-1/2 w-480 h-250 pointer-events-none">
+          {/* Animated Circuit Beams - hidden on mobile, visible on sm+ */}
+          <svg className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-[480px] h-[250px] pointer-events-none">
             <defs>
               <filter id="glow">
                 <feGaussianBlur stdDeviation="4" result="coloredBlur" />
@@ -78,7 +78,6 @@ export function HomeSection() {
               </filter>
             </defs>
             <g filter="url(#glow)">
-              {/* Path 1: Top-left, down, right, down */}
               <path
                 d="M 384 -64 V 256 H 704 V 800"
                 stroke="#f97316"
@@ -95,8 +94,6 @@ export function HomeSection() {
                   repeatCount="indefinite"
                 />
               </path>
-
-              {/* Path 2: Right, left, down, left */}
               <path
                 d="M 1984 128 H 1280 V 384 H 896 V 900"
                 stroke="#f97316"
@@ -114,8 +111,6 @@ export function HomeSection() {
                   repeatCount="indefinite"
                 />
               </path>
-
-              {/* Path 3: Bottom-left, up, right, up */}
               <path
                 d="M 192 1000 V 448 H 512 V -64"
                 stroke="#f97316"
@@ -133,8 +128,6 @@ export function HomeSection() {
                   repeatCount="indefinite"
                 />
               </path>
-
-              {/* Path 4: Top-right, down, left, down */}
               <path
                 d="M 1600 -64 V 192 H 1408 V 800"
                 stroke="#f97316"
@@ -158,7 +151,7 @@ export function HomeSection() {
       </div>
 
       {/* ── Hero ── */}
-      <section className="relative z-10 flex flex-col items-center text-center pt-24 pb-20">
+      <section className="relative z-10 flex flex-col items-center text-center pt-24 pb-12 sm:pb-20 px-4 sm:px-0">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border-primary bg-bg-secondary/50 backdrop-blur-sm text-xs text-text-secondary mb-8 hover:border-[#f97316]/50 hover:bg-[#f97316]/5 transition-all cursor-default group">
           <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse group-hover:scale-125 transition-transform" />
@@ -166,7 +159,7 @@ export function HomeSection() {
         </div>
 
         {/* Headline */}
-        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.08] mb-6 max-w-4xl relative">
+        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.08] mb-6 max-w-4xl relative px-2 sm:px-0">
           Decorator-Powered, Zero-Config <br className="hidden sm:block" />
           <span className="relative inline-block text-[#f97316] hover:scale-105 transition-transform duration-300 cursor-default">
             API Framework
@@ -175,7 +168,7 @@ export function HomeSection() {
           for Bun
         </h1>
 
-        <p className="text-base sm:text-lg text-text-secondary max-w-xl mb-10 leading-relaxed">
+        <p className="text-sm sm:text-lg text-text-secondary max-w-xl mb-8 sm:mb-10 leading-relaxed px-2 sm:px-0">
           Zero-config, zero overhead. Built for developers who want
           decorator-powered architecture without the complexity.
         </p>
@@ -201,7 +194,7 @@ export function HomeSection() {
         </div>
 
         {/* Divider stats bar */}
-        <div className="mt-16 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-text-secondary">
+        <div className="mt-10 sm:mt-16 flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-10 gap-y-3 sm:gap-y-4 text-xs sm:text-sm text-text-secondary">
           {[
             {
               val: data?.frameworks?.buntok
@@ -228,22 +221,22 @@ export function HomeSection() {
       </section>
 
       {/* ── Code preview ── */}
-      <section className="relative z-10 border-t border-border-primary py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section className="relative z-10 border-t border-border-primary py-12 sm:py-20 px-4 sm:px-0">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
           <div className="order-2 lg:order-1 hover:translate-x-2 transition-transform duration-500">
             <p className="text-xs font-semibold uppercase tracking-widest text-[#f97316] mb-3 flex items-center gap-2">
               <span className="w-8 h-px bg-[#f97316]/50" />
               Why Buntok?
             </p>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-5">
               Clean. Fast. Typed.
             </h2>
-            <p className="text-text-secondary leading-relaxed mb-8 text-lg">
+            <p className="text-text-secondary leading-relaxed mb-6 sm:mb-8 text-base sm:text-lg">
               Write your API the way it should be written - with classes,
               decorators, and automatic type inference. Buntok compiles
               everything ahead of time so the runtime has zero overhead.
             </p>
-            <ul className="space-y-4 text-sm text-text-secondary">
+            <ul className="space-y-3 sm:space-y-4 text-xs sm:text-sm text-text-secondary">
               {[
                 "Decorator-based Controllers with @Get, @Post, @Put, @Delete, etc.",
                 "ZodCtx<Path, Body> for 100% type-safe validation",
@@ -275,16 +268,18 @@ export function HomeSection() {
                   user.controller.ts
                 </span>
               </div>
-              <SyntaxHighlighter
-                language="typescript"
-                style={theme == "dark" ? vscDarkPlus : vs}
-                customStyle={{
-                  margin: 0,
-                  padding: "1.5rem",
-                  fontSize: "0.85rem",
-                  lineHeight: "1.7",
-                }}
-              >{`import { Controller, Get, Post, Use, zValidator, ZodCtx, z } from 'buntok';
+              <div className="overflow-x-auto">
+                <SyntaxHighlighter
+                  language="typescript"
+                  style={theme == "dark" ? vscDarkPlus : vs}
+                  customStyle={{
+                    margin: 0,
+                    padding: "1.5rem",
+                    fontSize: "0.75rem",
+                    lineHeight: "1.7",
+                    minWidth: "320px",
+                  }}
+                >{`import { Controller, Get, Post, Use, zValidator, ZodCtx, z } from 'buntok';
 
 const UserSchema = z.object({
 	name: z.string().min(2),
@@ -306,31 +301,32 @@ export class UserController {
 		return ctx.json({ success: true, data });
 	}
 }`}</SyntaxHighlighter>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── Performance Highlight ── */}
-      <section className="relative z-10 border-t border-border-primary py-20 bg-bg-secondary/20">
-        <div className="max-w-4xl mx-auto text-center px-5">
+      <section className="relative z-10 border-t border-border-primary py-12 sm:py-20 bg-bg-secondary/20">
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#f97316] mb-3 flex items-center justify-center gap-2">
             <span className="w-8 h-px bg-[#f97316]/50" />
             Raw Performance
             <span className="w-8 h-px bg-[#f97316]/50" />
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-5">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-5">
             Faster than Hono. <br className="sm:hidden" /> Neck-and-neck with
             Elysia.
           </h2>
-          <p className="text-text-secondary leading-relaxed mb-12 text-lg max-w-2xl mx-auto">
+          <p className="text-text-secondary leading-relaxed mb-8 sm:mb-12 text-base sm:text-lg max-w-2xl mx-auto">
             Buntok wasn't just built for developer experience-it was built for
             raw throughput. By compiling your decorators Ahead-of-Time (AOT),
             Buntok bypasses the heavy runtime routing overhead found in Express
             and NestJS.
           </p>
 
-          <div className="grid sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-3xl mx-auto">
             <div className="bg-bg-primary rounded-xl p-6 border border-border-primary hover:border-[#f97316]/30 transition-colors shadow-lg shadow-black/5">
               <h3 className="text-2xl font-black text-text-primary mb-1">
                 {data?.frameworks?.buntok
@@ -355,7 +351,7 @@ export class UserController {
             </div>
           </div>
 
-          <div className="mt-12 text-sm text-text-secondary">
+          <div className="mt-8 sm:mt-12 text-xs sm:text-sm text-text-secondary px-2 sm:px-0">
             <p>
               In our independent benchmarks, Buntok consistently outperforms{" "}
               <strong>Hono</strong> and stays highly competitive with{" "}

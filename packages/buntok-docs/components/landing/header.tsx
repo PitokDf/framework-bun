@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import Link from "next/link";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
@@ -12,6 +14,7 @@ const NAV_ITEMS = [
 
 export function Header() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -67,8 +70,43 @@ export function Header() {
           </Link>
           <div className="w-px h-4 bg-border-primary hidden sm:block" />
           <ThemeToggle />
+
+          {/* Mobile hamburger */}
+          <button
+            className="sm:hidden p-2 rounded-lg hover:bg-bg-tertiary transition-colors"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? (
+              <X className="w-5 h-5 text-text-secondary" />
+            ) : (
+              <Menu className="w-5 h-5 text-text-secondary" />
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu dropdown */}
+      {mobileOpen && (
+        <div className="sm:hidden border-t border-border-primary bg-bg-primary/95 backdrop-blur-md">
+          <div className="px-5 py-3 flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? "bg-accent-muted text-accent"
+                    : "text-text-secondary hover:text-text-primary hover:bg-bg-secondary"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

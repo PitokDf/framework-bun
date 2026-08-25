@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://buntok.dev";
+const baseUrl = "https://buntok.pitok.my.id";
 
 export const metadata: Metadata = {
   title: {
@@ -24,19 +24,35 @@ export const metadata: Metadata = {
     "A fast, type-safe web framework for Bun with built-in auth, validation, caching, rate limiting, and zero dependencies. Decorator-first or functional API.",
   metadataBase: new URL(baseUrl),
   openGraph: {
-    title: "Buntok Framework",
+    title: "Buntok Framework — Decorator-Powered Web Framework for Bun",
     description:
-      "Fast, type-safe web framework for Bun. Built-in auth, validation, caching, rate limiting. Zero config.",
+      "Fast, type-safe web framework for Bun. Built-in auth, validation, caching, rate limiting. Zero config, zero dependencies.",
     url: baseUrl,
     siteName: "Buntok Framework",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Buntok Framework — Decorator-Powered Web Framework for Bun",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Buntok Framework",
+    title: "Buntok Framework — Decorator-Powered Web Framework for Bun",
     description:
-      "Fast, type-safe web framework for Bun. Built-in auth, validation, caching, rate limiting. Zero config.",
+      "Fast, type-safe web framework for Bun. Built-in auth, validation, caching, rate limiting. Zero config, zero dependencies.",
+    images: [
+      {
+        url: "/twitter-image",
+        width: 1200,
+        height: 630,
+        alt: "Buntok Framework — Decorator-Powered Web Framework for Bun",
+      },
+    ],
   },
   alternates: {
     canonical: baseUrl,
@@ -52,6 +68,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -59,12 +78,39 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Buntok Framework",
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Cross-platform",
+    description:
+      "A fast, type-safe web framework for Bun with built-in auth, validation, caching, rate limiting, and zero dependencies.",
+    url: baseUrl,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    author: {
+      "@type": "Organization",
+      name: "Buntok",
+      url: baseUrl,
+    },
+  };
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
       </body>

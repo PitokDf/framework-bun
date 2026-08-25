@@ -1,62 +1,66 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://buntok.pitok.my.id";
-
-const docPages = [
-  "",
-  "routing",
-  "controllers",
-  "decorators",
-  "context",
-  "validation",
-  "middleware",
-  "error-handling",
-  "auth",
-  "oauth",
-  "rbac",
-  "upload",
-  "static-files",
-  "cache",
-  "queue",
-  "scheduler",
-  "mailer",
-  "emitter",
-  "audit-log",
-  "health-check",
-  "ai",
-  "timezone",
-  "ioc",
-  "repository",
-  "api-docs",
-  "sse",
-  "websocket",
-  "helpers",
-  "cli",
-  "app-config",
-  "testing",
-];
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://buntok.dev";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const docs = docPages.map((page) => ({
-    url: `${BASE_URL}/docs${page ? `/${page}` : ""}`,
+  const docsPages = [
+    "routing",
+    "controllers",
+    "context",
+    "validation",
+    "decorators",
+    "auth",
+    "middleware",
+    "ioc",
+    "cache",
+    "error-handling",
+    "helpers",
+    "static-files",
+    "upload",
+    "sse",
+    "websocket",
+    "rbac",
+    "oauth",
+    "api-docs",
+    "testing",
+    "cli",
+    "repository",
+    "app-config",
+    "health-check",
+    "scheduler",
+    "queue",
+    "mailer",
+    "audit-log",
+    "timezone",
+    "ai",
+  ];
+
+  const docsEntries: MetadataRoute.Sitemap = docsPages.map((page) => ({
+    url: `${baseUrl}/docs/${page}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
-    priority: page === "" ? 1 : 0.8,
+    priority: 0.7,
   }));
 
-  const home = {
-    url: BASE_URL,
-    lastModified: new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 1,
-  };
-
-  const benchmarks = {
-    url: `${BASE_URL}/benchmarks`,
-    lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
-  };
-
-  return [home, ...docs, benchmarks];
+  return [
+    {
+      url: baseUrl,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 1,
+    },
+    {
+      url: `${baseUrl}/docs`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/benchmarks`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    ...docsEntries,
+  ];
 }

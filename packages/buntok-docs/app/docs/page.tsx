@@ -14,8 +14,8 @@ export default function GettingStartedPage() {
         Getting Started
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        A comprehensive guide to get started building web applications with the Buntok
-        Framework.
+        A comprehensive guide to get started building web applications with the
+        Buntok Framework.
       </p>
 
       <Heading
@@ -66,8 +66,8 @@ bunx buntok init`}
       />
 
       <Callout type="info">
-        <code>buntok init</code> will automatically set up your project with
-        an optimal configuration.
+        <code>buntok init</code> will automatically set up your project with an
+        optimal configuration.
       </Callout>
 
       <Heading
@@ -128,9 +128,9 @@ bunx buntok init`}
       </div>
 
       <Callout type="tip">
-        <code>.agents/skills/buntok-skill/SKILL.md</code> contains the
-        complete framework documentation that can be read by AI assistants such as Cursor,
-        Copilot, or Claude.
+        <code>.agents/skills/buntok-skill/SKILL.md</code> contains the complete
+        framework documentation that can be read by AI assistants such as
+        Cursor, Copilot, or Claude.
       </Callout>
 
       <Heading
@@ -183,13 +183,17 @@ bunx buntok init`}
               <td className="px-4 py-2">
                 <code>buntok init</code>
               </td>
-              <td className="px-4 py-2">Set up project with optimal configuration</td>
+              <td className="px-4 py-2">
+                Set up project with optimal configuration
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
                 <code>buntok create &lt;entity&gt;</code>
               </td>
-              <td className="px-4 py-2">Generate repository, service, and controller for an entity</td>
+              <td className="px-4 py-2">
+                Generate repository, service, and controller for an entity
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
@@ -214,10 +218,10 @@ bunx buntok init`}
       </div>
 
       <Callout type="info">
-        Use <code>buntok create user</code> to generate all files
-        (repository, service, controller) at once. Add{" "}
-        <code>--repo</code>, <code>--service</code>, or{" "}
-        <code>--controller</code> for partial generation.
+        Use <code>buntok create user</code> to generate all files (repository,
+        service, controller) at once. Add <code>--repo</code>,{" "}
+        <code>--service</code>, or <code>--controller</code> for partial
+        generation.
       </Callout>
 
       <Heading
@@ -243,20 +247,14 @@ touch src/index.ts`}
         code={`// src/index.ts
 import { App } from "@buntok/core";
 
-export const metadata = {
-  title: "Getting Started",
-  description: "Learn how to install and set up Buntok framework for building fast APIs with Bun.",
-};
-
-
 const app = new App();
 
 app.get("/", (ctx) => {
   return ctx.json({ message: "Hello, Buntok!" });
 });
 
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+app.listen(1212, () => {
+  console.log("Server running on http://localhost:1212");
 });`}
       />
 
@@ -276,12 +274,10 @@ bun run src/index.ts`}
       />
 
       <p className="my-3 text-text-secondary leading-relaxed">
-        Open <code>http://localhost:3000</code> in your browser. You will see:
+        Open <code>http://localhost:1212</code> in your browser. You will see:
       </p>
 
-      <CodeBlock
-        code={`{ "message": "Hello, Buntok!" }`}
-      />
+      <CodeBlock code={`{ "message": "Hello, Buntok!" }`} />
 
       <Heading
         level={2}
