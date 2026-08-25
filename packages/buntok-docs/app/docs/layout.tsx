@@ -3,11 +3,11 @@ import { DocsShell } from "@/components/layout/DocsShell";
 
 export const metadata: Metadata = {
   title: {
-    default: "Buntok Framework — Documentation",
+    default: "Buntok Framework - Documentation",
     template: "%s | Buntok Framework",
   },
   description:
-    "Complete documentation for Buntok — a fast, type-safe web framework for Bun with built-in auth, validation, caching, and more.",
+    "Complete documentation for Buntok - a fast, type-safe web framework for Bun with built-in auth, validation, caching, and more.",
   openGraph: {
     title: "Buntok Framework Documentation",
     description:

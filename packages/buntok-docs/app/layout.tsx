@@ -17,14 +17,14 @@ const baseUrl = "https://buntok.pitok.my.id";
 
 export const metadata: Metadata = {
   title: {
-    default: "Buntok Framework — Fast Web Framework for Bun",
+    default: "Buntok Framework - Fast Web Framework for Bun",
     template: "%s | Buntok Framework",
   },
   description:
     "A fast, type-safe web framework for Bun with built-in auth, validation, caching, rate limiting, and zero dependencies. Decorator-first or functional API.",
   metadataBase: new URL(baseUrl),
   openGraph: {
-    title: "Buntok Framework — Decorator-Powered Web Framework for Bun",
+    title: "Buntok Framework - Decorator-Powered Web Framework for Bun",
     description:
       "Fast, type-safe web framework for Bun. Built-in auth, validation, caching, rate limiting. Zero config, zero dependencies.",
     url: baseUrl,
@@ -36,13 +36,13 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Buntok Framework — Decorator-Powered Web Framework for Bun",
+        alt: "Buntok Framework - Decorator-Powered Web Framework for Bun",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Buntok Framework — Decorator-Powered Web Framework for Bun",
+    title: "Buntok Framework - Decorator-Powered Web Framework for Bun",
     description:
       "Fast, type-safe web framework for Bun. Built-in auth, validation, caching, rate limiting. Zero config, zero dependencies.",
     images: [
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
         url: "/twitter-image",
         width: 1200,
         height: 630,
-        alt: "Buntok Framework — Decorator-Powered Web Framework for Bun",
+        alt: "Buntok Framework - Decorator-Powered Web Framework for Bun",
       },
     ],
   },

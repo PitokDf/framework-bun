@@ -392,7 +392,7 @@ function BenchmarkPage({ data }: { data: BenchmarkData }) {
               >
                 bombardier
               </a>
-              , a load testing tool. Buntok is still in active development — the
+              , a load testing tool. Buntok is still in active development - the
               AOT router and middleware pipeline are being optimized. Results
               may vary across different hardware and configurations.
             </p>
@@ -530,7 +530,7 @@ function BenchmarkPage({ data }: { data: BenchmarkData }) {
                                 ? Math.round(
                                     routeData.reqPerSec,
                                   ).toLocaleString()
-                                : "—"}
+                                : "-"}
                             </span>
                           </td>
                         );
