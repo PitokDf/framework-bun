@@ -243,6 +243,12 @@ touch src/index.ts`}
         code={`// src/index.ts
 import { App } from "@buntok/core";
 
+export const metadata = {
+  title: "Getting Started",
+  description: "Learn how to install and set up Buntok framework for building fast APIs with Bun.",
+};
+
+
 const app = new App();
 
 app.get("/", (ctx) => {

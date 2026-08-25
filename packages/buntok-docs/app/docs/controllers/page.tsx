@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -151,6 +149,12 @@ app.listen(1212);`}
       <CodeBlock
         code={`import { Controller, Get, Use } from "@buntok/core";
 import { zValidator } from "@buntok/core";
+
+export const metadata = {
+  title: "Controllers",
+  description: "Create reusable controllers with dependency injection and CRUD scaffolding.",
+};
+
 
 const auth = async (ctx, next) => {
   const token = ctx.getCookie("token");

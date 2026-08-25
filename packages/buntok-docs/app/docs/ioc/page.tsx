@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "IoC Container",
+  description: "Manage dependencies with inversion of control and circular dependency detection.",
+};
+
 
 export default function IoCPage() {
   return (

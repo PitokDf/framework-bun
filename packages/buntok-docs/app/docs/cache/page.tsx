@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Cache",
+  description: "Cache responses and data with in-memory store, TTL, and pattern deletion.",
+};
+
 
 export default function CachePage() {
   return (

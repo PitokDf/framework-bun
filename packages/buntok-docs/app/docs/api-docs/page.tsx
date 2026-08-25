@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -179,6 +177,12 @@ app.get(
       <CodeBlock
         code={`
 import { z } from "@buntok/core";
+
+export const metadata = {
+  title: "API Documentation",
+  description: "Generate OpenAPI docs and serve Scalar UI for interactive API exploration.",
+};
+
 
 const app = new App();
 

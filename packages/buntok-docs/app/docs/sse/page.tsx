@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Server-Sent Events",
+  description: "Stream real-time updates to clients with SSE helpers.",
+};
+
 
 export default function SSEPage() {
   return (

@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { Callout } from "@/components/ui/Callout";
 import { CodeBlock } from "@/components/ui/CodeBlock";
+
+export const metadata = {
+  title: "Helpers",
+  description: "Utility functions for async, password hashing, crypto, strings, and more.",
+};
+
 
 export default function HelpersPage() {
   return (

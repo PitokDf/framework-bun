@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Decorators",
+  description: "Use decorators for route handling, validation, guards, and middleware in Buntok.",
+};
+
 
 export default function DecoratorsPage() {
   return (

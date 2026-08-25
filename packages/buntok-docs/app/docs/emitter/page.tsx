@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -192,6 +190,12 @@ async function createUser(data) {
 
 // notification.service.ts — listens, knows nothing about auth
 import { emitter } from "@buntok/core";
+
+export const metadata = {
+  title: "Event Emitter",
+  description: "Decouple logic with typed events, listeners, and one-time handlers.",
+};
+
 
 emitter.on("user:created", async ({ user }) => {
   await sendWelcomeEmail(user.email);

@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Health Check",
+  description: "Monitor service health with configurable health check endpoints.",
+};
+
 
 export default function HealthCheckPage() {
   return (

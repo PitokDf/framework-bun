@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Mailer",
+  description: "Send emails with Resend, SendGrid, Mailgun, or SMTP providers.",
+};
+
 
 export default function MailerPage() {
   return (

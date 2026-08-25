@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Scheduler",
+  description: "Run cron jobs and scheduled tasks with the built-in scheduler.",
+};
+
 
 export default function SchedulerPage() {
   return (

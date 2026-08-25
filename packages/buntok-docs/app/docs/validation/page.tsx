@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Validation",
+  description: "Validate request bodies, params, and query strings with Zod schemas.",
+};
+
 
 export default function ValidationPage() {
   return (

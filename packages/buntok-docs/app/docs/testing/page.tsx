@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -100,6 +98,12 @@ console.log(res2.status); // 201`}
       <CodeBlock
         code={`import { describe, it, expect } from "bun:test";
 import { App } from "@buntok/core";
+
+export const metadata = {
+  title: "Testing",
+  description: "Write unit and integration tests with app.request().",
+};
+
 
 function createTestApp() {
   const app = new App();

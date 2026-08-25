@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -217,6 +215,12 @@ app.post("/chat", async (ctx) => {
       <CodeBlock
         code={`import { App, streamAI, injectSystemPrompt, AICache, Cache } from "@buntok/core";
 import OpenAI from "openai";
+
+export const metadata = {
+  title: "AI Module",
+  description: "Stream AI responses with Vercel AI SDK integration and SSE.",
+};
+
 
 const app = new App();
 const openai = new OpenAI();

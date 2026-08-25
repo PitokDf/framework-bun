@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Queue",
+  description: "Process background jobs with priority, delays, retries, and backoff strategies.",
+};
+
 
 export default function QueuePage() {
   return (

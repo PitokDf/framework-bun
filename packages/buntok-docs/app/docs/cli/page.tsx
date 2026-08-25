@@ -1,7 +1,11 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
+
+export const metadata = {
+  title: "CLI Commands",
+  description: "Scaffold projects, generate code, and manage databases with the CLI.",
+};
+
 
 export default function CLIPage() {
   return (

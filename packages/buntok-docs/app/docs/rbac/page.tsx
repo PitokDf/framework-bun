@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Role-Based Access Control",
+  description: "Enforce roles and permissions with requireRole and requirePermission middleware.",
+};
+
 
 export default function RBACPage() {
   return (

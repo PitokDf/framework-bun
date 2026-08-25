@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -33,6 +31,12 @@ export default function AppConfigPage() {
       <CodeBlock
         code={`import { App, z } from "@buntok/core";
 import { z } from "@buntok/core";
+
+export const metadata = {
+  title: "App Configuration",
+  description: "Validate environment variables and configure built-in features.",
+};
+
 
 const app = new App();
 

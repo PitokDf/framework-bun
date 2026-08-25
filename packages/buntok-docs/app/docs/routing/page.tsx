@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Routing",
+  description: "Define routes with path parameters, wildcards, and regex patterns in Buntok.",
+};
+
 
 export default function RoutingPage() {
   return (

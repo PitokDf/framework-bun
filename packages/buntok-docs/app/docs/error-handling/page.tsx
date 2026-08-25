@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Error Handling",
+  description: "Handle errors gracefully with built-in error classes and custom handlers.",
+};
+
 
 export default function ErrorHandlingPage() {
   return (

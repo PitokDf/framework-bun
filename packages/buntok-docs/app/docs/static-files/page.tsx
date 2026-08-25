@@ -1,8 +1,12 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Static Files",
+  description: "Serve static assets from directories with configurable caching headers.",
+};
+
 
 export default function StaticFilesPage() {
   return (

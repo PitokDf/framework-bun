@@ -1,33 +1,32 @@
-"use client";
+import type { Metadata } from "next";
+import { DocsShell } from "@/components/layout/DocsShell";
 
-import { useState } from "react";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { TableOfContents } from "@/components/layout/TableOfContents";
+export const metadata: Metadata = {
+  title: {
+    default: "Buntok Framework — Documentation",
+    template: "%s | Buntok Framework",
+  },
+  description:
+    "Complete documentation for Buntok — a fast, type-safe web framework for Bun with built-in auth, validation, caching, and more.",
+  openGraph: {
+    title: "Buntok Framework Documentation",
+    description:
+      "Fast, type-safe web framework for Bun with built-in auth, validation, caching, and more.",
+    type: "website",
+    siteName: "Buntok Framework",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Buntok Framework Documentation",
+    description:
+      "Fast, type-safe web framework for Bun with built-in auth, validation, caching, and more.",
+  },
+};
 
 export default function DocsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-      />
-      <div className="flex-1 flex">
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />
-        <main className="flex-1 min-w-0">
-          <div className="max-w-4xl mx-auto">{children}</div>
-        </main>
-        <TableOfContents />
-      </div>
-    </div>
-  );
+  return <DocsShell>{children}</DocsShell>;
 }

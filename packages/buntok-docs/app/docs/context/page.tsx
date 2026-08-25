@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -567,6 +565,12 @@ app.get("/users/:id", (ctx) => {
       <CodeBlock
         code={`
 import { z } from "@buntok/core";
+
+export const metadata = {
+  title: "Context",
+  description: "Access request data, response helpers, and store state via the Context object.",
+};
+
 
 const app = new App();
 

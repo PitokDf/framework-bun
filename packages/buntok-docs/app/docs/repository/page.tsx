@@ -1,5 +1,3 @@
-"use client";
-
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
@@ -382,6 +380,12 @@ class UserController extends BaseController<User> {
         code={`import { App, Controller, BaseController } from "@buntok/core";
 import { BaseRepository } from "@buntok/prisma";
 import type { PrismaClient } from "../prisma/generated/client";
+
+export const metadata = {
+  title: "Repository Pattern",
+  description: "CRUD operations with Prisma, Drizzle, or TypeORM repositories.",
+};
+
 
 // 1. Repository — data access
 class UserRepository extends BaseRepository<User, PrismaClient> {
