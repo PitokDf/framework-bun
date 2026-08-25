@@ -4,8 +4,11 @@ bench-native.ts
 bench-optimize.ts
 test-trie*.ts
 src/
+db/
+services/
+repositories/
+routes/
 controllers/
-devtools-ui/
 benchmarks/
 node_modules/
 .git/

@@ -1,10 +1,8 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-// Mock database connection for example project
-// In a real app, use a real connection string (e.g., from process.env.DATABASE_URL)
-import { Pool } from "pg";
+import { connect } from "buntok";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/buntok",
+const db = await connect({
+  driver: "postgres",
+  url: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/buntok",
 });
 
-export const db = drizzle(pool);
+export { db };

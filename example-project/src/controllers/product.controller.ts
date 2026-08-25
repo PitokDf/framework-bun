@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Put, Delete, Use, zValidator, z } from "buntok";
-import type { Context, RouteContext } from "buntok";
+import type { Context, ZodCtx } from "buntok";
 import { ProductService } from "../services/product.service";
+
+const idParamsSchema = z.object({ id: z.string() });
 
 @Controller("/products")
 export class ProductController {
@@ -13,10 +15,11 @@ export class ProductController {
   }
 
   @Get("/:id")
-  @Use(zValidator("params", { "id": z.string() })) // Validasi parameter id sebagai UUID
-  async getById(ctx: RouteContext<"/:id", { id: string }>) {
+  @Use(zValidator("params", idParamsSchema))
+  async getById(ctx: ZodCtx<{ params: z.infer<typeof idParamsSchema> }>) {
     try {
-      const product = await this.service.getById(ctx.params.id);
+      const { id } = ctx.valid("params");
+      const product = await this.service.getById(id);
       return ctx.success(product, "Record retrieved successfully");
     } catch (error: any) {
       return ctx.error(error.message, 404);

@@ -1,0 +1,477 @@
+"use client";
+
+import { Heading } from "@/components/ui/Heading";
+import { CodeBlock } from "@/components/ui/CodeBlock";
+import { Callout } from "@/components/ui/Callout";
+
+export default function RepositoryPage() {
+  return (
+    <div>
+      <Heading
+        level={1}
+        className="text-4xl font-bold mt-8 mb-4 text-text-primary"
+      >
+        Repository
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        <code>BaseRepository</code> provides a standard CRUD interface with
+        lifecycle hooks for any supported ORM. Available as separate packages:
+      </p>
+
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Package
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Install
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">@buntok/prisma</td>
+              <td className="px-4 py-2 font-mono text-xs">bun add @buntok/prisma</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">@buntok/drizzle</td>
+              <td className="px-4 py-2 font-mono text-xs">bun add @buntok/drizzle</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">@buntok/typeorm</td>
+              <td className="px-4 py-2 font-mono text-xs">bun add @buntok/typeorm</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* ──────────────── CRUD METHODS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        CRUD Methods
+      </Heading>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Method
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">findAll()</td>
+              <td className="px-4 py-2">Get all records</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                findById(id)
+              </td>
+              <td className="px-4 py-2">Find by primary key</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                findOne(where)
+              </td>
+              <td className="px-4 py-2">Find first matching record</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">create(data)</td>
+              <td className="px-4 py-2">Create a new record</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                createMany(data[])
+              </td>
+              <td className="px-4 py-2">Bulk create</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                update(id, data)
+              </td>
+              <td className="px-4 py-2">Update by primary key</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">delete(id)</td>
+              <td className="px-4 py-2">Delete by primary key</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">count()</td>
+              <td className="px-4 py-2">Count all records</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                exists(where)
+              </td>
+              <td className="px-4 py-2">Check if record exists</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* ──────────────── HOOKS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Lifecycle Hooks
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Prisma-based repos support hooks that run before/after each operation.
+        Override them in your subclass:
+      </p>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Hook
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                beforeCreate(data)
+              </td>
+              <td className="px-4 py-2">
+                Modify or validate data before insert. Return modified data or
+                throw to abort.
+              </td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                afterCreate(result)
+              </td>
+              <td className="px-4 py-2">
+                Run side effects after insert (logging, notifications, etc.)
+              </td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                beforeUpdate(id, data)
+              </td>
+              <td className="px-4 py-2">
+                Modify data before update. Return modified data or throw.
+              </td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                afterUpdate(id, result)
+              </td>
+              <td className="px-4 py-2">Run side effects after update.</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                beforeDelete(id)
+              </td>
+              <td className="px-4 py-2">
+                Validate before delete. Throw to abort.
+              </td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                afterDelete(id)
+              </td>
+              <td className="px-4 py-2">Run side effects after delete.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* ──────────────── PRISMA ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Prisma
+      </Heading>
+      <CodeBlock
+        code={`import type { PrismaClient } from "../prisma/generated/client";
+import type { Prisma } from "../prisma/generated/client";
+import { BaseRepository } from "@buntok/prisma";
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// Simple usage
+class UserRepository extends BaseRepository<User, PrismaClient> {
+  constructor(prisma: PrismaClient) {
+    super(prisma, "user");
+  }
+
+  async findByEmail(email: string) {
+    return this.delegate.findUnique({ where: { email } });
+  }
+}
+
+// With hooks
+class UserRepository extends BaseRepository<User, PrismaClient, Prisma.UserCreateInput, Prisma.UserUpdateInput> {
+  constructor(prisma: PrismaClient) {
+    super(prisma, "user");
+  }
+
+  protected async beforeCreate(data: Prisma.UserCreateInput) {
+    data.email = data.email.toLowerCase();
+    return data;
+  }
+
+  protected async afterCreate(user: User) {
+    console.log("User created:", user.id);
+  }
+}`}
+      />
+
+      {/* ──────────────── DRIZZLE ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Drizzle
+      </Heading>
+      <CodeBlock
+        code={`import { drizzle } from "drizzle-orm/bun-sqlite";
+import { BaseRepository } from "@buntok/drizzle";
+import { users } from "./db/schema";
+import type { DrizzleDB } from "./db";
+
+interface CreateUserInput {
+  name: string;
+  email: string;
+}
+
+interface UpdateUserInput {
+  name?: string;
+  email?: string;
+}
+
+class UserRepository extends BaseRepository<typeof users, CreateUserInput, UpdateUserInput, DrizzleDB> {
+  constructor(db: DrizzleDB) {
+    super(db, users);
+  }
+
+  async findWithPosts() {
+    return this.db.query.users.findMany({
+      with: { posts: true }
+    });
+  }
+}`}
+      />
+
+      {/* ──────────────── TYPEORM ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        TypeORM
+      </Heading>
+      <CodeBlock
+        code={`import { DataSource } from "typeorm";
+import { BaseRepository } from "@buntok/typeorm";
+import { User } from "./entities/user";
+import { Post } from "./entities/post";
+
+interface CreateUserInput {
+  name: string;
+  email: string;
+}
+
+interface UpdateUserInput {
+  name?: string;
+  email?: string;
+}
+
+class UserRepository extends BaseRepository<User, CreateUserInput, UpdateUserInput> {
+  constructor(dataSource: DataSource) {
+    super(dataSource, User);
+  }
+
+  async findWithPosts() {
+    return this.dataSource.getRepository(User).find({
+      relations: ["posts"]
+    });
+  }
+}`}
+      />
+
+      {/* ──────────────── FULL STACK ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Full Stack: Auto CRUD
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Combine <code>BaseRepository</code> with <code>BaseController</code> to
+        get a complete CRUD API with zero boilerplate.{" "}
+        <code>BaseController</code> auto-registers 5 routes:
+        <code>GET /</code>, <code>GET /:id</code>, <code>POST /</code>,{" "}
+        <code>PUT /:id</code>, <code>DELETE /:id</code>.
+      </p>
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Service Layer
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The service adapts repository method names to match{" "}
+        <code>BaseController</code>'s expected interface:
+      </p>
+      <CodeBlock
+        code={`// BaseController expects: getAll, getById, create, update, delete
+// BaseRepository provides: findAll, findById, create, update, delete
+
+class UserService {
+  constructor(private repo: UserRepository) {}
+
+  getAll()     { return this.repo.findAll(); }
+  getById(id)  { return this.repo.findById(id); }
+  create(data) { return this.repo.create(data); }
+  update(id, data) { return this.repo.update(id, data); }
+  delete(id)   { return this.repo.delete(id); }
+}`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Controller
+      </Heading>
+      <CodeBlock
+        code={`import { Controller, BaseController } from "@buntok/core";
+
+@Controller("/users")
+class UserController extends BaseController<User> {
+  constructor(private userService: UserService) {
+    super(userService);
+  }
+}
+
+// That's it! These routes are automatically registered:
+// GET    /users        → userService.getAll()
+// GET    /users/:id    → userService.getById(id)
+// POST   /users        → userService.create(body)
+// PUT    /users/:id    → userService.update(id, body)
+// DELETE /users/:id    → userService.delete(id)`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Complete Example (Prisma)
+      </Heading>
+      <CodeBlock
+        code={`import { App, Controller, BaseController } from "@buntok/core";
+import { BaseRepository } from "@buntok/prisma";
+import type { PrismaClient } from "../prisma/generated/client";
+
+// 1. Repository — data access
+class UserRepository extends BaseRepository<User, PrismaClient> {
+  constructor(prisma: PrismaClient) {
+    super(prisma, "user");
+  }
+}
+
+// 2. Service — adapt method names for BaseController
+class UserService {
+  constructor(private repo: UserRepository) {}
+  getAll()     { return this.repo.findAll(); }
+  getById(id)  { return this.repo.findById(id); }
+  create(data) { return this.repo.create(data); }
+  update(id, data) { return this.repo.update(id, data); }
+  delete(id)   { return this.repo.delete(id); }
+}
+
+// 3. Controller — auto CRUD routes
+@Controller("/users")
+class UserController extends BaseController<User> {
+  constructor(private userService: UserService) {
+    super(userService);
+  }
+}
+
+// 4. Register
+const app = new App();
+app.registerController(UserController);
+app.listen(1212);`}
+      />
+
+      <Callout type="info">
+        For complex business logic, skip <code>BaseController</code> and write
+        custom controller methods with validation, auth, etc.
+      </Callout>
+
+      {/* ──────────────── COMPARISON ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Comparison
+      </Heading>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Feature
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Prisma
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Drizzle
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                TypeORM
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">CRUD methods</td>
+              <td className="px-4 py-2 text-center">✅</td>
+              <td className="px-4 py-2 text-center">✅</td>
+              <td className="px-4 py-2 text-center">✅</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">Lifecycle hooks</td>
+              <td className="px-4 py-2 text-center">✅</td>
+              <td className="px-4 py-2 text-center">❌</td>
+              <td className="px-4 py-2 text-center">❌</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">ORM accessor</td>
+              <td className="px-4 py-2 font-mono text-xs">this.delegate</td>
+              <td className="px-4 py-2 font-mono text-xs">this.db</td>
+              <td className="px-4 py-2 font-mono text-xs">this.dataSource</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">Multi-table queries</td>
+              <td className="px-4 py-2">Via delegate</td>
+              <td className="px-4 py-2">Via this.db.query</td>
+              <td className="px-4 py-2">Via dataSource.getRepository</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

@@ -1,16 +1,21 @@
-import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+import { Entity, Column, PrimaryKey } from "buntok";
 
-export const product = pgTable("product", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  
-  // TODO: Add your columns here
-  // Example:
-  // name: varchar("name", { length: 255 }).notNull(),
-  // email: varchar("email", { length: 255 }).notNull().unique(),
-  
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+@Entity("product")
+export class Product {
+  @PrimaryKey()
+  id: string = crypto.randomUUID();
 
-export type Product = typeof product.$inferSelect;
-export type NewProduct = typeof product.$inferInsert;
+  @Column({ type: "varchar", length: 255, nullable: true })
+  name?: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  email?: string;
+
+  @Column({ type: "timestamp" })
+  createdAt: Date = new Date();
+
+  @Column({ type: "timestamp" })
+  updatedAt: Date = new Date();
+}
+
+export type NewProduct = Omit<Product, "id" | "createdAt" | "updatedAt">;

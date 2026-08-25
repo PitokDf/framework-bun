@@ -1,9 +1,8 @@
-import { drizzle } from "drizzle-orm/bun-sql";
-import * as schema from "./schemas/index";
+import { connect } from "buntok";
 
-// TODO: Update DATABASE_URL in .env file
-// Example: DATABASE_URL=postgresql://user:password@localhost:5432/mydb
+const db = await connect({
+  driver: "postgres",
+  url: Bun.env.DATABASE_URL || "postgresql://localhost:5432/buntok",
+});
 
-const connection = Bun.env.DATABASE_URL || "postgresql://localhost:5432/buntok";
-
-export const db = drizzle(connection, { schema });
+export { db };

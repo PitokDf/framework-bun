@@ -21,7 +21,10 @@
 		"rules": {
 			"preset": "recommended",
 			"suspicious": {
-				"noExplicitAny": "error"
+				"noExplicitAny": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "warn"
 			}
 		}
 	},

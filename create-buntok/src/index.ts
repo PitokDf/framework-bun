@@ -10,15 +10,7 @@ import { createInterface } from "node:readline";
 const TEMPLATES_DIR = join(import.meta.dir, "..", "templates");
 
 function printBanner() {
-	console.log(`
-\x1b[36m
-  ██████╗ ██╗   ██╗███╗   ██╗████████╗ ██████╗ ██╗  ██╗
-  ██╔══██╗██║   ██║████╗  ██║╚══██╔══╝██╔═══██╗██║ ██╔╝
-  ██████╔╝██║   ██║██╔██╗ ██║   ██║   ██║   ██║█████╔╝ 
-  ██╔══██╗██║   ██║██║╚██╗██║   ██║   ██║   ██║██╔═██╗ 
-  ██████╔╝╚██████╔╝██║ ╚████║   ██║   ╚██████╔╝██║  ██╗
-  ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝	
-\x1b[0m`);
+	console.log(`\n\x1b[36m  create-buntok\x1b[0m\n`);
 }
 
 function printUsage() {

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Use, zValidator, z, uploader, LocalDiskStorage } from "buntok";
-import type { Context, RouteContext } from "buntok";
+import type { Context, ZodCtx } from "buntok";
 const uploadSchema = z.object({ file: z.file(), description: z.string().optional() });
 
 const paginationSchema = z.object({
@@ -12,7 +12,7 @@ export class PostController {
 
   @Get("/")
   @Use(zValidator("query", paginationSchema))
-  async getAll(ctx: RouteContext<"/", unknown, unknown, z.infer<typeof paginationSchema>>) {
+  async getAll(ctx: ZodCtx<{ query: z.infer<typeof paginationSchema> }>) {
     const queries = ctx.valid("query");
     return ctx.paginate([], 11, queries.page, queries.limit, "Records retrieved successfully");
   }
@@ -48,8 +48,8 @@ export class PostController {
   @Use(zValidator("body", uploadSchema, { contentType: "multipart/form-data" }))
   @Use(uploader({ storage: new LocalDiskStorage("./uploads") }))
   // 2. Pasang tipe schema-nya di parameter kedua RouteContext
-  async upload(ctx: RouteContext<"/upload", z.infer<typeof uploadSchema>>) {
-    // SEKARANG OTOMATIS! TypeScript langsung tahu ctx.valid("body") punya .file
+  async upload(ctx: ZodCtx<{ body: z.infer<typeof uploadSchema> }>) {
+    // TypeScript langsung tahu ctx.valid("body") punya .file
     const body = ctx.valid("body");
 
     return ctx.success(body.description, "File uploaded successfully", 201);

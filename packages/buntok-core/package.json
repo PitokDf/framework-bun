@@ -1,0 +1,62 @@
+{
+	"name": "@buntok/core",
+	"version": "2.1.1",
+	"description": "Core HTTP framework for Bun, bring your own structure",
+	"module": "dist/core-exports.js",
+	"type": "module",
+	"main": "dist/core-exports.cjs",
+	"types": "dist/core-exports.d.ts",
+	"bin": {
+		"buntok": "./dist/cli/index.js"
+	},
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/core-exports.d.ts",
+				"default": "./dist/core-exports.js"
+			},
+			"require": {
+				"types": "./dist/core-exports.d.cts",
+				"default": "./dist/core-exports.cjs"
+			}
+		}
+	},
+	"files": [
+		"dist",
+		"public",
+		"scripts",
+		"README.md"
+	],
+	"scripts": {
+		"test": "bun --watch test/src/index.ts",
+		"build": "tsup && bun run build:types",
+		"build:types": "bunx tsc --project tsconfig.build.json",
+		"dev": "tsup --watch",
+		"typecheck": "tsc --noEmit",
+		"clean": "rm -rf dist"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"tsup": "^8.5.1",
+		"typescript": "^5.0.0"
+	},
+	"keywords": [
+		"bun",
+		"framework",
+		"web",
+		"api",
+		"typescript",
+		"http",
+		"express"
+	],
+	"author": "Pitok",
+	"license": "MIT",
+	"dependencies": {
+		"@asteasolutions/zod-to-openapi": "^8.5.0",
+		"croner": "^10.0.1",
+		"zod": "^4.4.3"
+	},
+	"peerDependencies": {
+		"bun": ">=1.0.0"
+	}
+}

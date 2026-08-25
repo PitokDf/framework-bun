@@ -1,0 +1,40 @@
+{
+	"name": "@buntok/typeorm",
+	"version": "1.0.1",
+	"description": "TypeORM BaseRepository for Buntok framework",
+	"module": "dist/index.js",
+	"type": "module",
+	"main": "dist/index.cjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"keywords": [
+		"bun",
+		"framework",
+		"typeorm",
+		"orm",
+		"repository",
+		"crud"
+	],
+	"author": "",
+	"license": "MIT",
+	"peerDependencies": {
+		"typeorm": ">=0.3.0"
+	},
+	"devDependencies": {
+		"typeorm": "^1.1.0"
+	}
+}

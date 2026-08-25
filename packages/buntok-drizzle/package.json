@@ -1,0 +1,40 @@
+{
+	"name": "@buntok/drizzle",
+	"version": "1.0.1",
+	"description": "Drizzle BaseRepository for Buntok framework",
+	"module": "dist/index.js",
+	"type": "module",
+	"main": "dist/index.cjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"keywords": [
+		"bun",
+		"framework",
+		"drizzle",
+		"orm",
+		"repository",
+		"crud"
+	],
+	"author": "",
+	"license": "MIT",
+	"peerDependencies": {
+		"drizzle-orm": ">=0.30.0"
+	},
+	"devDependencies": {
+		"drizzle-orm": "^0.45.2"
+	}
+}

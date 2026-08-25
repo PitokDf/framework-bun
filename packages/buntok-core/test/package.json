@@ -1,0 +1,8 @@
+{
+	"scripts": {
+		"dev": "bun --watch src/index.ts"
+	},
+	"dependencies": {
+		"buntok": "file:/home/pitok/Projects/framework-bun/packages/buntok-core"
+	}
+}
