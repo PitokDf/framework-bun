@@ -3,8 +3,7 @@ name: Benchmark Suite
 on:
   push:
     branches:
-      - master
-      - main
+      - benchmarks
   pull_request:
 
 jobs:
