@@ -1,7 +1,13 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
-type DbCommand = "migrate" | "seed" | "reset" | "generate" | "studio" | "status";
+type DbCommand =
+	| "migrate"
+	| "seed"
+	| "reset"
+	| "generate"
+	| "studio"
+	| "status";
 
 function detectOrm(): "prisma" | "drizzle" | "typeorm" | null {
 	// Check for Prisma
@@ -15,7 +21,11 @@ function detectOrm(): "prisma" | "drizzle" | "typeorm" | null {
 	}
 
 	// Check for TypeORM
-	if (existsSync("ormconfig.json") || existsSync("ormconfig.ts") || existsSync("ormconfig.js")) {
+	if (
+		existsSync("ormconfig.json") ||
+		existsSync("ormconfig.ts") ||
+		existsSync("ormconfig.js")
+	) {
 		return "typeorm";
 	}
 
@@ -105,7 +115,14 @@ export async function dbCommand(args: string[]): Promise<void> {
 		return;
 	}
 
-	const validCommands: DbCommand[] = ["migrate", "seed", "reset", "generate", "studio", "status"];
+	const validCommands: DbCommand[] = [
+		"migrate",
+		"seed",
+		"reset",
+		"generate",
+		"studio",
+		"status",
+	];
 	if (!validCommands.includes(subcommand)) {
 		console.error(`\x1b[31mUnknown command: ${subcommand}\x1b[0m`);
 		printUsage();

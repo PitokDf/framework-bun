@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { buildCommand } from "./commands/build.js";
 import { createCommand } from "./commands/create.js";
 import { dbCommand } from "./commands/db.js";
 import { initCommand } from "./commands/init.js";
@@ -18,6 +19,7 @@ function printUsage() {
 
 \x1b[36mCommands:\x1b[0m
   init                   Setup project: copy SKILL.md + configure package.json scripts
+  build                  Build project for production (output → .buntok/)
   create <entity>        Generate all files for entity (repo, service, controller)
   db <command>           Database operations (migrate, seed, reset, generate, studio, status)
   make:docs              Generate OpenAPI documentation automatically
@@ -29,6 +31,7 @@ function printUsage() {
 
 \x1b[36mExamples:\x1b[0m
   buntok init                             # Initialize project setup
+  buntok build                            # Build project for production
   buntok create user                      # Generate all files for user entity
   buntok create user --repo --service     # Generate repository and service only
   buntok db migrate                       # Run pending migrations
@@ -52,6 +55,9 @@ export async function main() {
 	switch (command) {
 		case "init":
 			await initCommand();
+			break;
+		case "build":
+			await buildCommand();
 			break;
 		case "create":
 			if (!arg1) {

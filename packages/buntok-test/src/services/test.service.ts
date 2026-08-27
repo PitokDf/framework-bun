@@ -12,7 +12,7 @@ export class TestService {
 		const label = getGroupLabels(test, "hour", "id")
 
 		console.log("test", test, "label", label)
-		// const result = await parseUploads(ctx, {
+		// const result = await handleUploads(ctx, {
 		// 	storage: new LocalDiskStorage("./uploads"),
 		// 	fields: {
 		// 		avatar: {

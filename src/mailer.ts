@@ -1,9 +1,29 @@
+export interface MailAttachment {
+	filename: string;
+	/** Buffer, base64 string, or file path */
+	content?: Buffer | string;
+	/** Remote URL (Resend only) */
+	path?: string;
+	/** MIME type (e.g., "application/pdf", "image/png") */
+	contentType?: string;
+	/** Content-ID for inline images (e.g., "logo" for cid:logo) */
+	cid?: string;
+}
+
 export interface MailOptions {
 	from: string;
 	to: string | string[];
+	/** Carbon Copy recipients */
+	cc?: string | string[];
+	/** Blind Carbon Copy recipients */
+	bcc?: string | string[];
+	/** Reply-To address (different from from) */
+	replyTo?: string | string[];
 	subject: string;
 	text?: string;
 	html?: string;
+	/** File attachments */
+	attachments?: MailAttachment[];
 }
 
 export interface MailerConfig {
@@ -24,6 +44,44 @@ export interface MailerConfig {
 	};
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function toBase64(content: Buffer | string): string {
+	if (typeof content === "string") {
+		// Assume already base64 encoded
+		return content;
+	}
+	return content.toString("base64");
+}
+
+function toArray(value: string | string[]): string[] {
+	return Array.isArray(value) ? value : [value];
+}
+
+function inferMimeType(filename: string): string {
+	const ext = filename.split(".").pop()?.toLowerCase();
+	const mimeMap: Record<string, string> = {
+		pdf: "application/pdf",
+		png: "image/png",
+		jpg: "image/jpeg",
+		jpeg: "image/jpeg",
+		gif: "image/gif",
+		svg: "image/svg+xml",
+		webp: "image/webp",
+		txt: "text/plain",
+		html: "text/html",
+		css: "text/css",
+		js: "application/javascript",
+		json: "application/json",
+		zip: "application/zip",
+		doc: "application/msword",
+		docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		xls: "application/vnd.ms-excel",
+		xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	};
+	return mimeMap[ext || ""] || "application/octet-stream";
+}
+
 /**
  * Built-in Mailer wrapper for Buntok.
  * Supports Resend, SendGrid, and Mailgun (HTTP-based, zero-deps).
@@ -40,127 +98,320 @@ export class Mailer {
 		options: MailOptions,
 	): Promise<{ success: boolean; id?: string; error?: string }> {
 		if (this.config.provider === "resend") {
-			try {
-				const res = await fetch("https://api.resend.com/emails", {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${this.config.apiKey}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						from: options.from,
-						to: Array.isArray(options.to) ? options.to : [options.to],
-						subject: options.subject,
-						text: options.text,
-						html: options.html,
-					}),
-				});
-
-				const data = (await res.json()) as Record<string, unknown>;
-				if (!res.ok) return { success: false, error: data.message as string };
-				return { success: true, id: data.id as string };
-			} catch (err: unknown) {
-				const e = err as Error;
-				return { success: false, error: e.message };
-			}
+			return this.sendResend(options);
 		}
 
 		if (this.config.provider === "sendgrid") {
-			try {
-				const toArray = Array.isArray(options.to) ? options.to : [options.to];
-				const content = [];
-				if (options.text)
-					content.push({ type: "text/plain", value: options.text });
-				if (options.html)
-					content.push({ type: "text/html", value: options.html });
-
-				const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${this.config.apiKey}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						personalizations: [{ to: toArray.map((email) => ({ email })) }],
-						from: { email: options.from },
-						subject: options.subject,
-						content,
-					}),
-				});
-
-				if (!res.ok) {
-					const data = (await res.json()) as { errors?: { message: string }[] };
-					return {
-						success: false,
-						error: data.errors?.[0]?.message || "SendGrid Error",
-					};
-				}
-				return { success: true };
-			} catch (err: unknown) {
-				const e = err as Error;
-				return { success: false, error: e.message };
-			}
+			return this.sendSendGrid(options);
 		}
 
 		if (this.config.provider === "mailgun") {
-			try {
-				if (!this.config.domain)
-					throw new Error("Mailgun requires a domain configured");
-				const formData = new FormData();
-				formData.append("from", options.from);
-				const toArray = Array.isArray(options.to) ? options.to : [options.to];
-				for (const t of toArray) formData.append("to", t);
-				formData.append("subject", options.subject);
-				if (options.text) formData.append("text", options.text);
-				if (options.html) formData.append("html", options.html);
-
-				const basicAuth = btoa(`api:${this.config.apiKey}`);
-				const res = await fetch(
-					`https://api.mailgun.net/v3/${this.config.domain}/messages`,
-					{
-						method: "POST",
-						headers: { Authorization: `Basic ${basicAuth}` },
-						body: formData,
-					},
-				);
-
-				const data = (await res.json()) as Record<string, unknown>;
-				if (!res.ok) return { success: false, error: data.message as string };
-				return { success: true, id: data.id as string };
-			} catch (err: unknown) {
-				const e = err as Error;
-				return { success: false, error: e.message };
-			}
+			return this.sendMailgun(options);
 		}
 
 		if (this.config.provider === "smtp") {
-			if (!this.config.smtp)
-				return { success: false, error: "SMTP configuration missing" };
-			try {
-				// Dynamic import to keep Buntok dependency-free
-				// @ts-expect-error
-				const nodemailer = await import("nodemailer");
-				const transporter = nodemailer.createTransport(this.config.smtp);
-				const info = await transporter.sendMail({
-					from: options.from,
-					to: Array.isArray(options.to) ? options.to.join(",") : options.to,
-					subject: options.subject,
-					text: options.text,
-					html: options.html,
-				});
-				return { success: true, id: info.messageId };
-			} catch (err: unknown) {
-				const e = err as { code?: string; message: string };
-				if (e.code === "ERR_MODULE_NOT_FOUND") {
-					return {
-						success: false,
-						error: "Nodemailer is required for SMTP. Run 'bun add nodemailer'",
-					};
-				}
-				return { success: false, error: e.message };
-			}
+			return this.sendSmtp(options);
 		}
 
 		return { success: false, error: "Unsupported provider" };
+	}
+
+	// ─── Resend ──────────────────────────────────────────────────────────────
+
+	private async sendResend(
+		options: MailOptions,
+	): Promise<{ success: boolean; id?: string; error?: string }> {
+		try {
+			const payload: Record<string, unknown> = {
+				from: options.from,
+				to: toArray(options.to),
+				subject: options.subject,
+				text: options.text,
+				html: options.html,
+			};
+
+			if (options.cc) payload.cc = toArray(options.cc);
+			if (options.bcc) payload.bcc = toArray(options.bcc);
+			if (options.replyTo) payload.reply_to = toArray(options.replyTo);
+
+			if (options.attachments && options.attachments.length > 0) {
+				payload.attachments = options.attachments.map((att) => {
+					const attachment: Record<string, unknown> = {
+						filename: att.filename,
+					};
+
+					if (att.path) {
+						attachment.path = att.path;
+					} else if (att.content) {
+						attachment.content = toBase64(att.content);
+					}
+
+					if (att.contentType) {
+						attachment.content_type = att.contentType;
+					} else if (att.filename) {
+						attachment.content_type = inferMimeType(att.filename);
+					}
+
+					if (att.cid) {
+						attachment.content_id = att.cid;
+					}
+
+					return attachment;
+				});
+			}
+
+			const res = await fetch("https://api.resend.com/emails", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${this.config.apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(payload),
+			});
+
+			const data = (await res.json()) as Record<string, unknown>;
+			if (!res.ok) return { success: false, error: data.message as string };
+			return { success: true, id: data.id as string };
+		} catch (err: unknown) {
+			const e = err as Error;
+			return { success: false, error: e.message };
+		}
+	}
+
+	// ─── SendGrid ────────────────────────────────────────────────────────────
+
+	private async sendSendGrid(
+		options: MailOptions,
+	): Promise<{ success: boolean; id?: string; error?: string }> {
+		try {
+			const toArray = (v: string | string[]) =>
+				(Array.isArray(v) ? v : [v]).map((email) => ({ email }));
+
+			const personalization: Record<string, unknown> = {
+				to: toArray(options.to),
+			};
+			if (options.cc) personalization.cc = toArray(options.cc);
+			if (options.bcc) personalization.bcc = toArray(options.bcc);
+
+			const payload: Record<string, unknown> = {
+				personalizations: [personalization],
+				from: { email: options.from },
+				subject: options.subject,
+			};
+
+			if (options.replyTo) {
+				const replyToArr = toArray(options.replyTo);
+				if (replyToArr.length === 1) {
+					payload.reply_to = { email: replyToArr[0] };
+				} else {
+					payload.reply_to_list = replyToArr.map((email) => ({ email }));
+				}
+			}
+
+			const content = [];
+			if (options.text)
+				content.push({ type: "text/plain", value: options.text });
+			if (options.html)
+				content.push({ type: "text/html", value: options.html });
+			payload.content = content;
+
+			if (options.attachments && options.attachments.length > 0) {
+				payload.attachments = options.attachments.map((att) => {
+					const attachment: Record<string, unknown> = {
+						content: att.content ? toBase64(att.content) : "",
+						filename: att.filename,
+						disposition: att.cid ? "inline" : "attachment",
+					};
+
+					if (att.contentType) {
+						attachment.type = att.contentType;
+					} else if (att.filename) {
+						attachment.type = inferMimeType(att.filename);
+					}
+
+					if (att.cid) {
+						attachment.content_id = att.cid;
+					}
+
+					return attachment;
+				});
+			}
+
+			const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${this.config.apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(payload),
+			});
+
+			if (!res.ok) {
+				const data = (await res.json()) as { errors?: { message: string }[] };
+				return {
+					success: false,
+					error: data.errors?.[0]?.message || "SendGrid Error",
+				};
+			}
+			return { success: true };
+		} catch (err: unknown) {
+			const e = err as Error;
+			return { success: false, error: e.message };
+		}
+	}
+
+	// ─── Mailgun ─────────────────────────────────────────────────────────────
+
+	private async sendMailgun(
+		options: MailOptions,
+	): Promise<{ success: boolean; id?: string; error?: string }> {
+		try {
+			if (!this.config.domain)
+				throw new Error("Mailgun requires a domain configured");
+
+			const formData = new FormData();
+			formData.append("from", options.from);
+
+			const toArray = (v: string | string[]) => (Array.isArray(v) ? v : [v]);
+			for (const t of toArray(options.to)) formData.append("to", t);
+			if (options.cc)
+				for (const c of toArray(options.cc)) formData.append("cc", c);
+			if (options.bcc)
+				for (const b of toArray(options.bcc)) formData.append("bcc", b);
+
+			formData.append("subject", options.subject);
+			if (options.text) formData.append("text", options.text);
+			if (options.html) formData.append("html", options.html);
+
+			if (options.replyTo) {
+				const replyTo = toArray(options.replyTo).join(", ");
+				formData.append("h:Reply-To", replyTo);
+			}
+
+			if (options.attachments && options.attachments.length > 0) {
+				for (const att of options.attachments) {
+					if (att.cid) {
+						// Inline attachment
+						if (att.content) {
+							const blob =
+								typeof att.content === "string"
+									? new Blob([
+											Uint8Array.from(atob(att.content), (c) =>
+												c.charCodeAt(0),
+											),
+										])
+									: new Blob([att.content]);
+							formData.append("inline", blob, att.filename);
+						} else if (att.path) {
+							const res = await fetch(att.path);
+							const blob = await res.blob();
+							formData.append("inline", blob, att.filename);
+						}
+					} else {
+						// Regular attachment
+						if (att.content) {
+							const blob =
+								typeof att.content === "string"
+									? new Blob([
+											Uint8Array.from(atob(att.content), (c) =>
+												c.charCodeAt(0),
+											),
+										])
+									: new Blob([att.content]);
+							formData.append("attachment", blob, att.filename);
+						} else if (att.path) {
+							const res = await fetch(att.path);
+							const blob = await res.blob();
+							formData.append("attachment", blob, att.filename);
+						}
+					}
+				}
+			}
+
+			const basicAuth = btoa(`api:${this.config.apiKey}`);
+			const res = await fetch(
+				`https://api.mailgun.net/v3/${this.config.domain}/messages`,
+				{
+					method: "POST",
+					headers: { Authorization: `Basic ${basicAuth}` },
+					body: formData,
+				},
+			);
+
+			const data = (await res.json()) as Record<string, unknown>;
+			if (!res.ok) return { success: false, error: data.message as string };
+			return { success: true, id: data.id as string };
+		} catch (err: unknown) {
+			const e = err as Error;
+			return { success: false, error: e.message };
+		}
+	}
+
+	// ─── SMTP (nodemailer) ──────────────────────────────────────────────────
+
+	private async sendSmtp(
+		options: MailOptions,
+	): Promise<{ success: boolean; id?: string; error?: string }> {
+		if (!this.config.smtp)
+			return { success: false, error: "SMTP configuration missing" };
+		try {
+			// Dynamic import to keep Buntok dependency-free
+			// @ts-expect-error
+			const nodemailer = await import("nodemailer");
+			const transporter = nodemailer.createTransport(this.config.smtp);
+
+			const mailOptions: Record<string, unknown> = {
+				from: options.from,
+				to: toArray(options.to).join(","),
+				subject: options.subject,
+				text: options.text,
+				html: options.html,
+			};
+
+			if (options.cc) mailOptions.cc = toArray(options.cc).join(",");
+			if (options.bcc) mailOptions.bcc = toArray(options.bcc).join(",");
+			if (options.replyTo)
+				mailOptions.replyTo = toArray(options.replyTo).join(",");
+
+			if (options.attachments && options.attachments.length > 0) {
+				mailOptions.attachments = options.attachments.map((att) => {
+					const attachment: Record<string, unknown> = {
+						filename: att.filename,
+					};
+
+					if (att.path) {
+						attachment.path = att.path;
+					} else if (att.content) {
+						attachment.content =
+							typeof att.content === "string"
+								? Buffer.from(att.content, "base64")
+								: att.content;
+					}
+
+					if (att.contentType) {
+						attachment.contentType = att.contentType;
+					}
+
+					if (att.cid) {
+						attachment.cid = att.cid;
+						attachment.contentDisposition = "inline";
+					}
+
+					return attachment;
+				});
+			}
+
+			const info = await transporter.sendMail(mailOptions);
+			return { success: true, id: info.messageId };
+		} catch (err: unknown) {
+			const e = err as { code?: string; message: string };
+			if (e.code === "ERR_MODULE_NOT_FOUND") {
+				return {
+					success: false,
+					error: "Nodemailer is required for SMTP. Run 'bun add nodemailer'",
+				};
+			}
+			return { success: false, error: e.message };
+		}
 	}
 }

@@ -7,6 +7,7 @@ export {
 	streamAI,
 } from "./ai";
 export type {
+	EnvValidationOptions,
 	ErrorHandler,
 	ExtractParams,
 	Handler,
@@ -68,7 +69,7 @@ export { Context } from "./context";
 export type { ControllerMeta, RouteMeta } from "./decorators";
 // Emitter
 export { emitter, EventEmitter } from "./emitter";
-export type { AppEvents } from "./emitter";
+export type { AppEvents, EmitOptions, EventEmitterOptions } from "./emitter";
 // Decorators
 export {
 	All,
@@ -192,9 +193,20 @@ export {
 // Logger
 export { Logger, LogLevel, logger } from "./logger";
 // Mailer
-export { Mailer, type MailerConfig, type MailOptions } from "./mailer";
+export { Mailer, type MailerConfig, type MailOptions, type MailAttachment } from "./mailer";
+// Template Engine
+export {
+	TemplateEngine,
+	render,
+	registerHelper,
+	registerPartial,
+	type TemplateOptions,
+	type HelperFn,
+} from "./template";
 // Middlewares
 export { auditLog, type AuditLogEntry, type AuditLogOptions } from "./middlewares/audit-log";
+export type { BodySizeLimitOptions } from "./middlewares/body-size-limit";
+export { bodySizeLimit } from "./middlewares/body-size-limit";
 export type { CompressOptions } from "./middlewares/compress";
 export { compress } from "./middlewares/compress";
 export type { CorsOptions } from "./middlewares/cors";
@@ -257,7 +269,7 @@ export {
 } from "./schedule";
 // SSE
 export type { SSEMessage, SSEOptions } from "./sse";
-export { createSSE, SSE } from "./sse";
+export { createSSE, SSE, SSEBroadcaster } from "./sse";
 // Upload
 export type {
 	ParseUploadResult,
@@ -270,6 +282,8 @@ export {
 	deleteUploadedFile,
 	LocalDiskStorage,
 	MemoryStorage,
-	parseUploads,
+	handleUploads,
 	uploader,
 } from "./upload";
+// WebSocket helpers
+export { Room, validateWSMessage, wsAuth, wsHeartbeat } from "./ws-helpers";

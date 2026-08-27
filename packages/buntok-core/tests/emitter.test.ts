@@ -137,4 +137,126 @@ describe("EventEmitter", () => {
 
 		expect(handler).toHaveBeenCalledWith({ id: 1, name: "test" });
 	});
+
+	describe("emitSerial", () => {
+		it("should emit listeners serially", async () => {
+			const order: number[] = [];
+			emitter.on("test", async () => {
+				await new Promise((r) => setTimeout(r, 10));
+				order.push(1);
+			});
+			emitter.on("test", async () => {
+				order.push(2);
+			});
+
+			await emitter.emitSerial("test", {});
+
+			expect(order).toEqual([1, 2]);
+		});
+
+		it("should stop on first error", async () => {
+			const order: number[] = [];
+			emitter.on("test", () => {
+				order.push(1);
+				throw new Error("error 1");
+			});
+			emitter.on("test", () => {
+				order.push(2);
+			});
+
+			await expect(emitter.emitSerial("test", {})).rejects.toThrow("error 1");
+			expect(order).toEqual([1]);
+		});
+
+		it("should continue on error with isolatedErrors", async () => {
+			const order: number[] = [];
+			emitter.on("test", () => {
+				order.push(1);
+				throw new Error("error 1");
+			});
+			emitter.on("test", () => {
+				order.push(2);
+			});
+
+			await emitter.emitSerial("test", {}, { isolatedErrors: true });
+			expect(order).toEqual([1, 2]);
+		});
+	});
+
+	describe("emit with error isolation", () => {
+		it("should reject if any listener fails (default)", async () => {
+			emitter.on("test", () => {});
+			emitter.on("test", () => {
+				throw new Error("test error");
+			});
+
+			await expect(emitter.emit("test", {})).rejects.toThrow("test error");
+		});
+
+		it("should not reject other listeners with isolatedErrors", async () => {
+			const handler2 = mock(() => {});
+			emitter.on("test", () => {
+				throw new Error("test error");
+			});
+			emitter.on("test", handler2);
+
+			await emitter.emit("test", {}, { isolatedErrors: true });
+
+			expect(handler2).toHaveBeenCalledTimes(1);
+		});
+
+		it("should call onError callback for failed listeners", async () => {
+			const onError = mock(() => {});
+			const error = new Error("test error");
+
+			emitter.on("test", () => {
+				throw error;
+			});
+
+			await emitter.emit("test", {}, { isolatedErrors: true, onError });
+
+			expect(onError).toHaveBeenCalledTimes(1);
+			expect(onError).toHaveBeenCalledWith("test", error, expect.any(Function));
+		});
+	});
+
+	describe("maxListeners", () => {
+		it("should throw when maxListeners exceeded", () => {
+			const emitter = new EventEmitter({ maxListeners: 2 });
+			emitter.on("test", () => {});
+			emitter.on("test", () => {});
+
+			expect(() => emitter.on("test", () => {})).toThrow("Max listeners (2) exceeded");
+		});
+
+		it("should allow increasing maxListeners", () => {
+			const emitter = new EventEmitter({ maxListeners: 2 });
+			emitter.increaseMaxListeners(5);
+
+			emitter.on("test", () => {});
+			emitter.on("test", () => {});
+			emitter.on("test", () => {});
+
+			expect(emitter.listenerCount("test")).toBe(3);
+		});
+
+		it("should return maxListeners", () => {
+			const emitter = new EventEmitter({ maxListeners: 5 });
+			expect(emitter.getMaxListeners()).toBe(5);
+		});
+	});
+
+	describe("eventNames", () => {
+		it("should return event names with listeners", () => {
+			emitter.on("test1", () => {});
+			emitter.on("test2", () => {});
+			emitter.on("test3", () => {});
+
+			const names = emitter.eventNames();
+			expect(names).toContain("test1");
+			expect(names).toContain("test2");
+			expect(names).toContain("test3");
+			expect(names.length).toBe(3);
+		});
+	});
 });

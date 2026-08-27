@@ -132,7 +132,10 @@ export function requireAuth(
 
 		if (!token) {
 			return ctx.json(
-				{ error: "Unauthorized", message: "Missing or invalid authentication token" },
+				{
+					error: "Unauthorized",
+					message: "Missing or invalid authentication token",
+				},
 				401,
 			);
 		}

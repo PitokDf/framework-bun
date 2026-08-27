@@ -1,12 +1,11 @@
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
-import { Callout } from "@/components/ui/Callout";
 
 export const metadata = {
   title: "Static Files",
-  description: "Serve static assets from directories with configurable caching headers.",
+  description:
+    "Serve static assets from directories with configurable caching headers.",
 };
-
 
 export default function StaticFilesPage() {
   return (
@@ -116,7 +115,8 @@ app.static("/files", "./assets");`}
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         If the requested file does not exist, the server returns a{" "}
-        <code>404</code> response with <code>{"{ error: 'File Not Found' }"}</code>.
+        <code>404</code> response with{" "}
+        <code>{"{ error: 'File Not Found' }"}</code>.
       </p>
 
       <Heading

@@ -1,56 +1,51 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type {
-  OAuth2Tokens,
-  OAuthUser,
-  OAuthProviderConfig,
-  OAuthProvider,
-  CreateAuthorizationURLOptions,
-  ValidateAuthorizationCodeOptions,
-  AppleProviderConfig,
-} from "./types";
-
-export {
-  OAuthError,
-  OAuthStateError,
-  OAuthTokenError,
-  OAuthProviderError,
-} from "./types";
-
-// ─── PKCE ─────────────────────────────────────────────────────────────────────
-export {
-  generateCodeVerifier,
-  generateCodeChallenge,
-  generatePKCE,
-} from "./pkce";
-
-// ─── State Management ─────────────────────────────────────────────────────────
-export {
-  storeOAuthState,
-  verifyOAuthState,
-  getCodeVerifier,
-  clearOAuthCookies,
-} from "./state";
-
-// ─── Base Provider ────────────────────────────────────────────────────────────
-export { BaseOAuthProvider } from "./provider";
 
 // ─── Generic Helpers ──────────────────────────────────────────────────────────
 export {
-  createOAuth2AuthorizationURL,
-  validateOAuth2AuthorizationCode,
-  decodeIdToken,
+	createOAuth2AuthorizationURL,
+	decodeIdToken,
+	validateOAuth2AuthorizationCode,
 } from "./helpers";
-
+// ─── PKCE ─────────────────────────────────────────────────────────────────────
+export {
+	generateCodeChallenge,
+	generateCodeVerifier,
+	generatePKCE,
+} from "./pkce";
+// ─── Base Provider ────────────────────────────────────────────────────────────
+export { BaseOAuthProvider } from "./provider";
+export { AppleProvider, type AppleUser } from "./providers/apple";
+export { GitHubProvider, type GitHubUser } from "./providers/github";
 // ─── Built-in Providers ───────────────────────────────────────────────────────
 export { GoogleProvider, type GoogleUser } from "./providers/google";
-export { GitHubProvider, type GitHubUser } from "./providers/github";
-export { AppleProvider, type AppleUser } from "./providers/apple";
+// ─── State Management ─────────────────────────────────────────────────────────
+export {
+	clearOAuthCookies,
+	getCodeVerifier,
+	storeOAuthState,
+	verifyOAuthState,
+} from "./state";
+export type {
+	AppleProviderConfig,
+	CreateAuthorizationURLOptions,
+	OAuth2Tokens,
+	OAuthProvider,
+	OAuthProviderConfig,
+	OAuthUser,
+	ValidateAuthorizationCodeOptions,
+} from "./types";
+export {
+	OAuthError,
+	OAuthProviderError,
+	OAuthStateError,
+	OAuthTokenError,
+} from "./types";
 
-// ─── Convenience Factory ──────────────────────────────────────────────────────
-import type { OAuthProviderConfig, AppleProviderConfig } from "./types";
-import { GoogleProvider } from "./providers/google";
-import { GitHubProvider } from "./providers/github";
 import { AppleProvider } from "./providers/apple";
+import { GitHubProvider } from "./providers/github";
+import { GoogleProvider } from "./providers/google";
+// ─── Convenience Factory ──────────────────────────────────────────────────────
+import type { AppleProviderConfig, OAuthProviderConfig } from "./types";
 
 /**
  * Create OAuth providers with a simple factory API
@@ -67,7 +62,7 @@ import { AppleProvider } from "./providers/apple";
  * ```
  */
 export const createOAuth = {
-  google: (config: OAuthProviderConfig) => new GoogleProvider(config),
-  github: (config: OAuthProviderConfig) => new GitHubProvider(config),
-  apple: (config: AppleProviderConfig) => new AppleProvider(config),
+	google: (config: OAuthProviderConfig) => new GoogleProvider(config),
+	github: (config: OAuthProviderConfig) => new GitHubProvider(config),
+	apple: (config: AppleProviderConfig) => new AppleProvider(config),
 };

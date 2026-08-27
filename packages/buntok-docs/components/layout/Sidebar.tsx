@@ -51,6 +51,7 @@ const navigation: NavItem[] = [
     items: [
       { title: "Cache", href: "/docs/cache" },
       { title: "Mailer", href: "/docs/mailer" },
+      { title: "Template Engine", href: "/docs/template" },
       { title: "Queue", href: "/docs/queue" },
       { title: "Scheduler", href: "/docs/scheduler" },
     ],

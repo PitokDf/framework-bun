@@ -1,5 +1,4 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,11 +6,12 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "ignore": [
-      "node_modules",
-      "dist",
-      ".buntok",
-      "coverage"
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.buntok",
+      "!**/coverage"
     ]
   },
   "formatter": {

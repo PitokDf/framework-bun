@@ -1,6 +1,11 @@
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
-import { Callout } from "@/components/ui/Callout";
+
+export const metadata = {
+  title: "Event Emitter",
+  description:
+    "Decouple logic with typed events, listeners, and one-time handlers.",
+};
 
 export default function EmitterPage() {
   return (
@@ -12,9 +17,8 @@ export default function EmitterPage() {
         Event Emitter
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Lightweight typed event emitter for decoupling modules. Emit events
-        from one part of your app, listen from another - no direct imports
-        needed.
+        Lightweight typed event emitter for decoupling modules. Emit events from
+        one part of your app, listen from another - no direct imports needed.
       </p>
 
       {/* ──────────────── BASIC USAGE ──────────────── */}
@@ -75,8 +79,12 @@ unsub(); // Stop listening`}
                 "Subscribe once, auto-unsubscribes after first call",
               ],
               [
-                "emitter.emit(event, data)",
+                "emitter.emit(event, data, options?)",
                 "Emit an event (waits for all listeners to finish)",
+              ],
+              [
+                "emitter.emitSerial(event, data, options?)",
+                "Emit listeners serially (one at a time)",
               ],
               [
                 "emitter.off(event?)",
@@ -85,6 +93,10 @@ unsub(); // Stop listening`}
               [
                 "emitter.listenerCount(event)",
                 "Get number of listeners for an event",
+              ],
+              [
+                "emitter.eventNames()",
+                "Get all event names with listeners",
               ],
             ].map(([method, desc]) => (
               <tr
@@ -98,6 +110,77 @@ unsub(); // Stop listening`}
           </tbody>
         </table>
       </div>
+
+      {/* ──────────────── ERROR ISOLATION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Error Isolation
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        By default, if any listener throws, the entire <code>emit()</code>{" "}
+        call rejects. Use <code>isolatedErrors</code> to prevent one failing
+        listener from blocking others:
+      </p>
+      <CodeBlock
+        code={`// Default behavior - one failure rejects all
+await emitter.emit("user:created", { user }); // Rejects if any listener fails
+
+// With error isolation - failures don't affect other listeners
+await emitter.emit("user:created", { user }, {
+  isolatedErrors: true,
+  onError: (event, error, listener) => {
+    console.error(\`Listener failed for \${event}:\`, error);
+  },
+});`}
+      />
+
+      {/* ──────────────── SERIAL EXECUTION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Serial Execution
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>emitSerial()</code> to run listeners one at a time (useful
+        when order matters):
+      </p>
+      <CodeBlock
+        code={`// Listeners run in order, one after another
+await emitter.emitSerial("order:placed", { order });
+
+// With error isolation - continues despite failures
+await emitter.emitSerial("order:placed", { order }, {
+  isolatedErrors: true,
+  onError: (event, error) => console.error(error),
+});`}
+      />
+
+      {/* ──────────────── MAX LISTENERS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Max Listeners
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Prevent memory leaks by limiting the number of listeners per event:
+      </p>
+      <CodeBlock
+        code={`const emitter = new EventEmitter({
+  maxListeners: 10, // Max 10 listeners per event
+});
+
+// Throws if limit exceeded
+emitter.on("test", handler); // ✅
+// ... 9 more listeners
+emitter.on("test", handler); // ❌ Throws "Max listeners (10) exceeded"
+
+// Increase limit if needed
+emitter.increaseMaxListeners(20);`}
+      />
 
       {/* ──────────────── TYPED EVENTS ──────────────── */}
       <Heading
@@ -190,12 +273,6 @@ async function createUser(data) {
 
 // notification.service.ts - listens, knows nothing about auth
 import { emitter } from "@buntok/core";
-
-export const metadata = {
-  title: "Event Emitter",
-  description: "Decouple logic with typed events, listeners, and one-time handlers.",
-};
-
 
 emitter.on("user:created", async ({ user }) => {
   await sendWelcomeEmail(user.email);

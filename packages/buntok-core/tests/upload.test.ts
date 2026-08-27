@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import {
-	parseUploads,
+	handleUploads,
 	MemoryStorage,
 	type UploadedFile,
 	type StorageDriver,
@@ -41,10 +41,45 @@ function createMockFile(
 	type: string,
 ): File {
 	const buffer = new ArrayBuffer(size);
+	const view = new Uint8Array(buffer);
+
+	// Add magic bytes based on MIME type
+	if (type === "image/png") {
+		// PNG signature: 89 50 4E 47 0D 0A 1A 0A
+		const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+		pngSignature.forEach((byte, i) => {
+			if (i < view.length) view[i] = byte;
+		});
+	} else if (type === "image/jpeg") {
+		// JPEG signature: FF D8 FF
+		const jpegSignature = [0xff, 0xd8, 0xff];
+		jpegSignature.forEach((byte, i) => {
+			if (i < view.length) view[i] = byte;
+		});
+	} else if (type === "image/gif") {
+		// GIF signature: 47 49 46 38 (GIF8)
+		const gifSignature = [0x47, 0x49, 0x46, 0x38];
+		gifSignature.forEach((byte, i) => {
+			if (i < view.length) view[i] = byte;
+		});
+	} else if (type === "image/webp") {
+		// WebP signature: 52 49 46 46 (RIFF)
+		const webpSignature = [0x52, 0x49, 0x46, 0x46];
+		webpSignature.forEach((byte, i) => {
+			if (i < view.length) view[i] = byte;
+		});
+	} else if (type === "application/pdf") {
+		// PDF signature: 25 50 44 46 (%PDF)
+		const pdfSignature = [0x25, 0x50, 0x44, 0x46];
+		pdfSignature.forEach((byte, i) => {
+			if (i < view.length) view[i] = byte;
+		});
+	}
+
 	return new File([buffer], name, { type });
 }
 
-describe("parseUploads", () => {
+describe("handleUploads", () => {
 	const storage: StorageDriver = new MemoryStorage();
 
 	it("should parse text fields and return them", async () => {
@@ -53,7 +88,7 @@ describe("parseUploads", () => {
 			email: "john@example.com",
 		});
 
-		const result = await parseUploads(ctx, { storage });
+		const result = await handleUploads(ctx, { storage });
 
 		expect(result.fields).toEqual({
 			name: "John",
@@ -69,7 +104,7 @@ describe("parseUploads", () => {
 			name: "John",
 		});
 
-		const result = await parseUploads(ctx, {
+		const result = await handleUploads(ctx, {
 			storage,
 			fields: { avatar: {} },
 		});
@@ -104,7 +139,7 @@ describe("parseUploads", () => {
 		form.append("name", "Test");
 		ctx.formData = async () => form;
 
-		const result = await parseUploads(ctx, {
+		const result = await handleUploads(ctx, {
 			storage,
 			fields: { photos: {} },
 		});
@@ -120,7 +155,7 @@ describe("parseUploads", () => {
 		const ctx = createMockContext("application/json", {});
 
 		try {
-			await parseUploads(ctx, { storage });
+			await handleUploads(ctx, { storage });
 			expect(true).toBe(false); // Should not reach
 		} catch (e) {
 			expect(e).toBeInstanceOf(BadRequestError);
@@ -134,7 +169,7 @@ describe("parseUploads", () => {
 		});
 
 		try {
-			await parseUploads(ctx, {
+			await handleUploads(ctx, {
 				storage,
 				fields: { avatar: { required: true } },
 			});
@@ -152,7 +187,7 @@ describe("parseUploads", () => {
 		});
 
 		try {
-			await parseUploads(ctx, {
+			await handleUploads(ctx, {
 				storage,
 				fields: { avatar: { maxFileSize: 5 * 1024 } },
 			});
@@ -170,7 +205,7 @@ describe("parseUploads", () => {
 		});
 
 		try {
-			await parseUploads(ctx, {
+			await handleUploads(ctx, {
 				storage,
 				maxFileSize: 5 * 1024,
 			});
@@ -188,7 +223,7 @@ describe("parseUploads", () => {
 		});
 
 		try {
-			await parseUploads(ctx, {
+			await handleUploads(ctx, {
 				storage,
 				fields: { avatar: { allowedMimeTypes: ["image/png", "image/jpeg"] } },
 			});
@@ -206,7 +241,7 @@ describe("parseUploads", () => {
 		});
 
 		try {
-			await parseUploads(ctx, {
+			await handleUploads(ctx, {
 				storage,
 				allowedMimeTypes: ["image/png", "image/jpeg"],
 			});
@@ -223,7 +258,7 @@ describe("parseUploads", () => {
 			avatar: file,
 		});
 
-		const result = await parseUploads(ctx, {
+		const result = await handleUploads(ctx, {
 			storage,
 			fields: { document: {} }, // avatar not in whitelist
 		});
@@ -238,7 +273,7 @@ describe("parseUploads", () => {
 			avatar: file,
 		});
 
-		const result = await parseUploads(ctx, {
+		const result = await handleUploads(ctx, {
 			storage,
 			fields: {
 				avatar: {
@@ -260,7 +295,7 @@ describe("parseUploads", () => {
 		});
 
 		try {
-			await parseUploads(ctx, {
+			await handleUploads(ctx, {
 				storage,
 				fields: {
 					avatar: {},

@@ -112,14 +112,17 @@ app.get("/users/:id", validateParams(idSchema), handler);`}
       <CodeBlock
         code={`{
   "success": false,
-  "error": {
-    "name": "ValidationError",
-    "message": "Validation failed",
-    "details": [
-      { "field": "name", "message": "String must contain at least 1 character(s)" },
-      { "field": "email", "message": "Invalid email" }
-    ]
-  }
+  "message": "Validation Failed",
+  "details": [
+    {
+      "field": "name",
+      "message": "Name is required and must be at least 1 character long."
+    },
+    {
+      "field": "email",
+      "message": "Invalid email"
+    }
+  ]
 }`}
       />
 
@@ -132,6 +135,51 @@ app.get("/users/:id", validateParams(idSchema), handler);`}
   email: z.string().email("Invalid email"),
 });`}
       />
+
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        Custom Error Format
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The default error response format is:
+      </p>
+      <CodeBlock
+        code={`{
+  "success": false,
+  "message": "Validation Failed",
+  "details": [
+    { "field": "name", "message": "..." }
+  ]
+}`}
+      />
+      <p className="my-3 text-text-secondary leading-relaxed">
+        To customize this format globally, use <code>app.onError()</code>:
+      </p>
+      <CodeBlock
+        code={`import { App, ValidationError } from "@buntok/core";
+
+const app = new App();
+
+app.onError((error, ctx) => {
+  // Handle validation errors specifically
+  if (error instanceof ValidationError) {
+    return ctx.json({
+      status: "error",
+      code: "VALIDATION_ERROR",
+      errors: error.details,
+    }, 422);
+  }
+
+  // Handle other errors
+  return ctx.json({
+    status: "error",
+    message: error.message,
+  }, 500);
+});`}
+      />
+
+      <Callout type="info">
+        The error handler receives the error and context. Check for validation-specific errors and return your custom format.
+      </Callout>
 
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Combining Validators
@@ -150,6 +198,31 @@ app.get("/users/:id", validateParams(idSchema), handler);`}
 
       <Callout type="info">
         Each <code>zValidator</code> only validates a specific target (body, query, params, or headers). You can use multiple validators simultaneously.
+      </Callout>
+
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        File Upload Validation
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        For file uploads, <code>zValidator</code> supports <code>multipart/form-data</code> but only validates <strong>text fields</strong>:
+      </p>
+      <CodeBlock
+        code={`const schema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+});
+
+// Only validates text fields (name, description)
+app.post("/upload", zValidator("body", schema, { 
+  contentType: "multipart/form-data" 
+}), (ctx) => {
+  const data = ctx.valid("body"); // { name: "...", description: "..." }
+  return ctx.json(data);
+});`}
+      />
+
+      <Callout type="warning">
+        For comprehensive file validation (size, magic bytes, MIME types), use <code><a href="/docs/upload" className="text-accent hover:underline">handleUploads()</a></code> instead. <code>zValidator</code> with <code>multipart/form-data</code> only handles text fields.
       </Callout>
 
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">

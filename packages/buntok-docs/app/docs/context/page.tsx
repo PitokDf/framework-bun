@@ -2,6 +2,12 @@ import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
+export const metadata = {
+  title: "Context",
+  description:
+    "Access request data, response helpers, and store state via the Context object.",
+};
+
 export default function ContextPage() {
   return (
     <div>
@@ -13,8 +19,8 @@ export default function ContextPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         The <code>Context</code> object (<code>ctx</code>) is passed to every
-        route handler and middleware. It provides access to the request, response
-        helpers, validated data, and shared state.
+        route handler and middleware. It provides access to the request,
+        response helpers, validated data, and shared state.
       </p>
 
       {/* ──────────────── REQUEST PROPERTIES ──────────────── */}
@@ -52,7 +58,11 @@ export default function ContextPage() {
                 "Record<string, string>",
                 "Parsed query string (lazily cached)",
               ],
-              ["ctx.user", "Record<string, unknown>", "JWT payload (after auth)"],
+              [
+                "ctx.user",
+                "Record<string, unknown>",
+                "JWT payload (after auth)",
+              ],
               ["ctx.ip", "string", "Client IP (reads X-Forwarded-For)"],
               [
                 "ctx.store",
@@ -124,8 +134,7 @@ app.get("/files/*", (ctx) => {
 
       <Callout type="info">
         <code>ctx.ip</code> reads from the <code>X-Forwarded-For</code> header
-        (first value) if present, otherwise returns{" "}
-        <code>"127.0.0.1"</code>.
+        (first value) if present, otherwise returns <code>"127.0.0.1"</code>.
       </Callout>
 
       <Heading
@@ -183,9 +192,7 @@ app.get("/profile", auth, (ctx) => {
                 await ctx.formData()
               </td>
               <td className="px-4 py-2 font-mono">Promise&lt;FormData&gt;</td>
-              <td className="px-4 py-2">
-                Parse multipart/form-data (cached)
-              </td>
+              <td className="px-4 py-2">Parse multipart/form-data (cached)</td>
             </tr>
           </tbody>
         </table>
@@ -483,14 +490,24 @@ return ctx.redirect("/new-url", 301);`}
           </thead>
           <tbody>
             {[
-              ["sendInitial", "boolean", "true", 'Send initial "connected" event'],
+              [
+                "sendInitial",
+                "boolean",
+                "true",
+                'Send initial "connected" event',
+              ],
               [
                 "initialEvent",
                 "string",
                 '"connected"',
                 "Custom event name for initial",
               ],
-              ["retry", "number", "undefined", "Client reconnection timeout (ms)"],
+              [
+                "retry",
+                "number",
+                "undefined",
+                "Client reconnection timeout (ms)",
+              ],
             ].map(([opt, type, def, desc]) => (
               <tr
                 key={opt}
@@ -565,12 +582,6 @@ app.get("/users/:id", (ctx) => {
       <CodeBlock
         code={`
 import { z } from "@buntok/core";
-
-export const metadata = {
-  title: "Context",
-  description: "Access request data, response helpers, and store state via the Context object.",
-};
-
 
 const app = new App();
 

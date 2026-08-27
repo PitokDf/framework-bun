@@ -1,11 +1,11 @@
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
+import { Callout } from "@/components/ui/Callout";
 
 export const metadata = {
   title: "CLI Commands",
   description: "Scaffold projects, generate code, and manage databases with the CLI.",
 };
-
 
 export default function CLIPage() {
   return (
@@ -15,42 +15,258 @@ export default function CLIPage() {
         Buntok provides a CLI for scaffolding and managing projects.
       </p>
 
+      {/* ──────────────── INIT ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
-        Commands
+        init
       </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Initialize a new Buntok project with optimal configuration.
+      </p>
+      <CodeBlock code={`bunx buntok init`} />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">init</Heading>
-      <pre className="p-4 overflow-x-auto text-sm leading-relaxed rounded-lg border border-border-primary bg-bg-tertiary my-4">
-        <code>bunx buntok init</code>
-      </pre>
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Interactive Prompts
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        During initialization, you'll be asked:
+      </p>
+      <CodeBlock code={`? Do you want to deploy to Vercel? (y/N):`} />
+      <p className="my-3 text-text-secondary leading-relaxed">
+        If you answer <code>y</code>, a <code>vercel.json</code> file will be created with the recommended configuration for Bun projects.
+      </p>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">dev</Heading>
-      <pre className="p-4 overflow-x-auto text-sm leading-relaxed rounded-lg border border-border-primary bg-bg-tertiary my-4">
-        <code>bunx buntok dev</code>
-      </pre>
-
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">db</Heading>
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        What Gets Created
+      </Heading>
       <CodeBlock
-        code={`bunx buntok db migrate
+        code={`$ bunx buntok init
+
+✓ Created .agents/skills/buntok-skill/SKILL.md
+✓ Updated package.json (added 5 scripts)
+✓ Created tsconfig.json
+✓ Installed @biomejs/biome
+✓ Created biome.json
+✓ Created .vscode/settings.json
+✓ Created src/index.ts
+✓ Created .env
+✓ Created .env.example
+✓ Created .gitignore
+
+? Do you want to deploy to Vercel? (y/N): y
+✓ Created vercel.json`}
+      />
+
+      {/* ──────────────── BUILD ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        build
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Build project for production. Compiles TypeScript to JavaScript and outputs to <code>.buntok/</code>.
+      </p>
+      <CodeBlock code={`bunx buntok build`} />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        What It Does
+      </Heading>
+      <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
+        <li>Compiles <code>src/index.ts</code> using <code>Bun.build()</code></li>
+        <li>Resolves path aliases (e.g., <code>@/*</code>) from <code>tsconfig.json</code></li>
+        <li>Marks all packages as external (not bundled)</li>
+        <li>Outputs to <code>.buntok/index.js</code></li>
+      </ul>
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Output
+      </Heading>
+      <CodeBlock
+        code={`$ bunx buntok build
+
+🔨 Building project...
+✅ Build successful → .buntok/index.js
+  Deploy: copy .buntok/ + node_modules/ + package.json to server`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Deploying
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        After building, deploy these files to your server:
+      </p>
+      <CodeBlock
+        code={`# Files needed for production
+.buntok/index.js    # Compiled application
+node_modules/       # Dependencies
+package.json        # Package manifest`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Development vs Production
+      </Heading>
+      <CodeBlock
+        code={`# Development (hot reload)
+bun run dev
+
+# Build for production
+bun run build
+
+# Run production build
+bun run start`}
+      />
+
+      {/* ──────────────── CREATE ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        create
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Generate repository, service, and controller files for an entity.
+      </p>
+      <CodeBlock code={`bunx buntok create <entity>`} />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Example Output
+      </Heading>
+      <CodeBlock
+        code={`$ bunx buntok create user
+
+✓ Created src/repositories/user.repository.ts
+✓ Created src/services/user.service.ts
+✓ Created src/controllers/user.controller.ts`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Generated Files
+      </Heading>
+      <CodeBlock
+        code={`// src/controllers/user.controller.ts
+import { Controller, Get, Post, Put, Delete } from "@buntok/core";
+import { UserService } from "../services/user.service";
+
+@Controller("/users")
+export class UserController {
+  private service = new UserService();
+
+  @Get("/")
+  async findAll(ctx) {
+    const users = await this.service.findAll();
+    return ctx.json({ data: users });
+  }
+
+  @Get("/:id")
+  async findById(ctx) {
+    const user = await this.service.findById(ctx.params.id);
+    if (!user) {
+      return ctx.json({ message: "User not found" }, 404);
+    }
+    return ctx.json({ data: user });
+  }
+
+  @Post("/")
+  async create(ctx) {
+    const body = await ctx.body();
+    const user = await this.service.create(body);
+    return ctx.json({ data: user }, 201);
+  }
+
+  @Put("/:id")
+  async update(ctx) {
+    const body = await ctx.body();
+    const user = await this.service.update(ctx.params.id, body);
+    return ctx.json({ data: user });
+  }
+
+  @Delete("/:id")
+  async delete(ctx) {
+    await this.service.delete(ctx.params.id);
+    return ctx.json({ message: "User deleted" });
+  }
+}`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Partial Generation
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use flags to generate only specific files:
+      </p>
+      <CodeBlock
+        code={`# Generate only the repository
+bunx buntok create user --repo
+
+# Generate only the service
+bunx buntok create user --service
+
+# Generate only the controller
+bunx buntok create user --controller`}
+      />
+
+      {/* ──────────────── DEV ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        dev
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Start the development server with hot reload.
+      </p>
+      <CodeBlock code={`bunx buntok dev`} />
+
+      {/* ──────────────── DB ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        db
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Database management commands.
+      </p>
+      <CodeBlock
+        code={`# Run pending migrations
+bunx buntok db migrate
+
+# Reset database (drop all tables)
 bunx buntok db reset
+
+# Seed database with initial data
 bunx buntok db seed
+
+# Generate migration from schema changes
 bunx buntok db generate`}
       />
 
+      {/* ──────────────── MAKE:DOCS ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        make:docs
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Generate OpenAPI documentation from your routes and controllers.
+      </p>
+      <CodeBlock code={`bunx buntok make:docs`} />
+
+      {/* ──────────────── PROJECT STRUCTURE ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Project Structure
       </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        After using <code>buntok init</code> and <code>buntok create</code>:
+      </p>
       <CodeBlock
         code={`my-app/
 ├── src/
 │   ├── index.ts
 │   ├── controllers/
+│   │   └── user.controller.ts
 │   ├── services/
-│   └── models/
-├── prisma/
-│   └── schema.prisma
-├── package.json
-└── tsconfig.json`}
+│   │   └── user.service.ts
+│   └── repositories/
+│       └── user.repository.ts
+├── .agents/
+│   └── skills/
+│       └── buntok-skill/
+│           └── SKILL.md
+├── .env
+├── .env.example
+├── .gitignore
+├── .vscode/
+│   └── settings.json
+├── biome.json
+├── tsconfig.json
+└── package.json`}
       />
     </div>
   );

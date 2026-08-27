@@ -24,8 +24,37 @@ type EventMap = Record<string, any>;
 
 type Listener<T> = (data: T) => Promise<void> | void;
 
+export interface EmitOptions {
+	/**
+	 * Isolate errors per listener. When true, a failing listener won't reject
+	 * the entire emit() call or affect other listeners.
+	 * Defaults to false for backward compatibility.
+	 */
+	isolatedErrors?: boolean;
+
+	/**
+	 * Custom error handler called when a listener throws.
+	 * Only used when `isolatedErrors` is true.
+	 */
+	onError?: (event: string | symbol, error: unknown, listener: Listener<any>) => void;
+}
+
+export interface EventEmitterOptions {
+	/**
+	 * Maximum number of listeners per event.
+	 * Set to 0 or undefined for unlimited (default).
+	 * When exceeded, `on()` throws an error.
+	 */
+	maxListeners?: number;
+}
+
 export class EventEmitter<TEvents extends EventMap = EventMap> {
 	private listeners = new Map<keyof TEvents, Set<Listener<any>>>();
+	private maxListeners: number;
+
+	constructor(options?: EventEmitterOptions) {
+		this.maxListeners = options?.maxListeners ?? 0;
+	}
 
 	/**
 	 * Subscribe to an event.
@@ -35,7 +64,18 @@ export class EventEmitter<TEvents extends EventMap = EventMap> {
 		if (!this.listeners.has(event)) {
 			this.listeners.set(event, new Set());
 		}
-		this.listeners.get(event)!.add(listener);
+
+		const eventListeners = this.listeners.get(event)!;
+
+		// Check maxListeners limit
+		if (this.maxListeners > 0 && eventListeners.size >= this.maxListeners) {
+			throw new Error(
+				`Max listeners (${this.maxListeners}) exceeded for event "${String(event)}". ` +
+				`Use increaseMaxListeners() to increase the limit.`,
+			);
+		}
+
+		eventListeners.add(listener);
 
 		// Return unsubscribe function
 		return () => {
@@ -59,16 +99,68 @@ export class EventEmitter<TEvents extends EventMap = EventMap> {
 	/**
 	 * Emit an event with data.
 	 * Returns a promise that resolves when all listeners have finished.
+	 *
+	 * @example
+	 * // Default behavior - all listeners run in parallel, any error rejects
+	 * await emitter.emit("user:created", { user });
+	 *
+	 * @example
+	 * // With error isolation - listeners run in parallel, errors don't affect others
+	 * await emitter.emit("user:created", { user }, {
+	 *   isolatedErrors: true,
+	 *   onError: (event, error, listener) => {
+	 *     console.error(`Listener failed for ${event}:`, error);
+	 *   }
+	 * });
 	 */
-	async emit<K extends keyof TEvents>(event: K, data: TEvents[K]): Promise<void> {
+	async emit<K extends keyof TEvents>(
+		event: K,
+		data: TEvents[K],
+		options?: EmitOptions,
+	): Promise<void> {
 		const listeners = this.listeners.get(event);
 		if (!listeners || listeners.size === 0) return;
 
 		const promises: Promise<void>[] = [];
 		for (const listener of listeners) {
-			promises.push(Promise.resolve(listener(data)));
+			promises.push(this.invokeListener(event, listener, data, options));
 		}
-		await Promise.all(promises);
+
+		if (options?.isolatedErrors) {
+			// Use Promise.allSettled to isolate errors
+			await Promise.allSettled(promises);
+		} else {
+			// Default behavior - any error rejects
+			await Promise.all(promises);
+		}
+	}
+
+	/**
+	 * Emit an event serially (one listener at a time).
+	 * Stops on first error unless `isolatedErrors` is true.
+	 *
+	 * @example
+	 * // Serial execution - stops on first error
+	 * await emitter.emitSerial("user:created", { user });
+	 *
+	 * @example
+	 * // With error isolation - continues despite errors
+	 * await emitter.emitSerial("user:created", { user }, {
+	 *   isolatedErrors: true,
+	 *   onError: (event, error) => console.error(error),
+	 * });
+	 */
+	async emitSerial<K extends keyof TEvents>(
+		event: K,
+		data: TEvents[K],
+		options?: EmitOptions,
+	): Promise<void> {
+		const listeners = this.listeners.get(event);
+		if (!listeners || listeners.size === 0) return;
+
+		for (const listener of listeners) {
+			await this.invokeListener(event, listener, data, options);
+		}
 	}
 
 	/**
@@ -87,6 +179,49 @@ export class EventEmitter<TEvents extends EventMap = EventMap> {
 	 */
 	listenerCount<K extends keyof TEvents>(event: K): number {
 		return this.listeners.get(event)?.size ?? 0;
+	}
+
+	/**
+	 * Get all event names that have listeners.
+	 */
+	eventNames(): (keyof TEvents)[] {
+		return Array.from(this.listeners.keys()) as (keyof TEvents)[];
+	}
+
+	/**
+	 * Increase the max listeners limit for an event.
+	 * Returns the EventEmitter for chaining.
+	 */
+	increaseMaxListeners(maxListeners: number): this {
+		this.maxListeners = maxListeners;
+		return this;
+	}
+
+	/**
+	 * Get the current max listeners limit.
+	 */
+	getMaxListeners(): number {
+		return this.maxListeners;
+	}
+
+	/**
+	 * Invoke a single listener with error handling.
+	 */
+	private async invokeListener<K extends keyof TEvents>(
+		event: K,
+		listener: Listener<TEvents[K]>,
+		data: TEvents[K],
+		options?: EmitOptions,
+	): Promise<void> {
+		try {
+			await Promise.resolve(listener(data));
+		} catch (error) {
+			if (options?.isolatedErrors && options.onError) {
+				options.onError(event, error, listener);
+			} else {
+				throw error;
+			}
+		}
 	}
 }
 

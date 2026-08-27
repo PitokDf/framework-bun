@@ -45,16 +45,29 @@ export interface RequireRoleOptions {
  */
 export function requireRole(
 	...roles: string[]
-): (ctx: any, next: () => Promise<Response> | Response) => Promise<Response> | Response;
+): (
+	ctx: any,
+	next: () => Promise<Response> | Response,
+) => Promise<Response> | Response;
 export function requireRole(
 	options: RequireRoleOptions,
-): (ctx: any, next: () => Promise<Response> | Response) => Promise<Response> | Response;
+): (
+	ctx: any,
+	next: () => Promise<Response> | Response,
+) => Promise<Response> | Response;
 export function requireRole(
 	...args: any[]
-): (ctx: any, next: () => Promise<Response> | Response) => Promise<Response> | Response {
+): (
+	ctx: any,
+	next: () => Promise<Response> | Response,
+) => Promise<Response> | Response {
 	// Parse arguments
 	let options: RequireRoleOptions;
-	if (args.length === 1 && typeof args[0] === "object" && !Array.isArray(args[0])) {
+	if (
+		args.length === 1 &&
+		typeof args[0] === "object" &&
+		!Array.isArray(args[0])
+	) {
 		options = args[0];
 	} else {
 		options = { roles: args.flat() };
@@ -66,14 +79,21 @@ export function requireRole(
 		const user = ctx.user as UserWithRoles | undefined;
 
 		if (!user) {
-			return ctx.json({ success: false, message: "Authentication required" }, 401);
+			return ctx.json(
+				{ success: false, message: "Authentication required" },
+				401,
+			);
 		}
 
 		// Resolve user roles
 		let userRoles: string[];
 		if (resolver) {
 			const resolved = resolver(user);
-			userRoles = Array.isArray(resolved) ? resolved : resolved ? [resolved] : [];
+			userRoles = Array.isArray(resolved)
+				? resolved
+				: resolved
+					? [resolved]
+					: [];
 		} else {
 			userRoles = [];
 			if (user.role) userRoles.push(user.role);
@@ -84,11 +104,14 @@ export function requireRole(
 		const hasRole = requiredRoles.some((r) => userRoles.includes(r));
 
 		if (!hasRole) {
-			return ctx.json({
-				success: false,
-				error: "Forbidden",
-				message: message ?? `Requires one of: ${requiredRoles.join(", ")}`,
-			}, 403);
+			return ctx.json(
+				{
+					success: false,
+					error: "Forbidden",
+					message: message ?? `Requires one of: ${requiredRoles.join(", ")}`,
+				},
+				403,
+			);
 		}
 
 		return next();
@@ -112,15 +135,28 @@ export interface RequirePermissionOptions {
  */
 export function requirePermission(
 	...permissions: string[]
-): (ctx: any, next: () => Promise<Response> | Response) => Promise<Response> | Response;
+): (
+	ctx: any,
+	next: () => Promise<Response> | Response,
+) => Promise<Response> | Response;
 export function requirePermission(
 	options: RequirePermissionOptions,
-): (ctx: any, next: () => Promise<Response> | Response) => Promise<Response> | Response;
+): (
+	ctx: any,
+	next: () => Promise<Response> | Response,
+) => Promise<Response> | Response;
 export function requirePermission(
 	...args: any[]
-): (ctx: any, next: () => Promise<Response> | Response) => Promise<Response> | Response {
+): (
+	ctx: any,
+	next: () => Promise<Response> | Response,
+) => Promise<Response> | Response {
 	let options: RequirePermissionOptions;
-	if (args.length === 1 && typeof args[0] === "object" && !Array.isArray(args[0])) {
+	if (
+		args.length === 1 &&
+		typeof args[0] === "object" &&
+		!Array.isArray(args[0])
+	) {
 		options = args[0];
 	} else {
 		options = { permissions: args.flat() };
@@ -132,7 +168,10 @@ export function requirePermission(
 		const user = ctx.user as UserWithRoles | undefined;
 
 		if (!user) {
-			return ctx.json({ success: false, message: "Authentication required" }, 401);
+			return ctx.json(
+				{ success: false, message: "Authentication required" },
+				401,
+			);
 		}
 
 		// Resolve user permissions
@@ -144,15 +183,22 @@ export function requirePermission(
 		}
 
 		// Check if user has all required permissions
-		const hasAll = requiredPermissions.every((p) => userPermissions.includes(p));
+		const hasAll = requiredPermissions.every((p) =>
+			userPermissions.includes(p),
+		);
 
 		if (!hasAll) {
-			const missing = requiredPermissions.filter((p) => !userPermissions.includes(p));
-			return ctx.json({
-				success: false,
-				error: "Forbidden",
-				message: message ?? `Missing permissions: ${missing.join(", ")}`,
-			}, 403);
+			const missing = requiredPermissions.filter(
+				(p) => !userPermissions.includes(p),
+			);
+			return ctx.json(
+				{
+					success: false,
+					error: "Forbidden",
+					message: message ?? `Missing permissions: ${missing.join(", ")}`,
+				},
+				403,
+			);
 		}
 
 		return next();

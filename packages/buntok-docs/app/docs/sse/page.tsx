@@ -150,6 +150,18 @@ export default function SSEPage() {
                 "undefined",
                 "Client reconnection timeout (ms)",
               ],
+              [
+                "maxConnections",
+                "number",
+                "0 (unlimited)",
+                "Max concurrent SSE connections. Returns 503 when exceeded.",
+              ],
+              [
+                "onReconnect",
+                "(lastEventId: string) => Promise<SSEMessage[]>",
+                "undefined",
+                "Callback to replay missed events on reconnection",
+              ],
               ["headers", "Record<string, string>", "{}", "Extra HTTP headers"],
             ].map(([opt, type, def, desc]) => (
               <tr
@@ -180,6 +192,109 @@ export default function SSEPage() {
     headers: { "X-Custom": "value" },
   });
 });`}
+      />
+
+      {/* ──────────────── RECONNECTION SUPPORT ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Reconnection Support
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>onReconnect</code> to replay missed events when a client
+        reconnects with a <code>Last-Event-ID</code> header:
+      </p>
+      <CodeBlock
+        code={`// Store event history (in production, use Redis or database)
+const eventHistory: SSEMessage[][] = [];
+
+app.get("/events", (ctx) => {
+  return ctx.sse(async (sse) => {
+    // Send current state
+    sse.sendEvent("state", { count: 42 });
+
+    // Listen for updates
+    emitter.on("update", (data) => {
+      const message = { id: Date.now(), event: "update", data };
+      sse.send(message);
+      eventHistory.push([message]);
+    });
+  }, {
+    onReconnect: async (lastEventId) => {
+      // Return missed events since lastEventId
+      return eventHistory
+        .flat()
+        .filter(msg => msg.id && msg.id > Number(lastEventId));
+    },
+  });
+});`}
+      />
+
+      {/* ──────────────── CONNECTION LIMITS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Connection Limits
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Limit concurrent connections to prevent resource exhaustion:
+      </p>
+      <CodeBlock
+        code={`app.get("/events", (ctx) => {
+  return ctx.sse(async (sse) => {
+    // Handle events
+  }, {
+    maxConnections: 100, // Limit to 100 concurrent connections
+  });
+});
+
+// Check active connections
+console.log("Active connections:", SSE.activeConnections);`}
+      />
+
+      {/* ──────────────── BROADCASTING ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Broadcasting
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>SSEBroadcaster</code> to manage multiple connections and
+        broadcast to all clients:
+      </p>
+      <CodeBlock
+        code={`import { SSEBroadcaster } from "@buntok/core";
+
+const broadcaster = new SSEBroadcaster();
+
+app.get("/events", (ctx) => {
+  return ctx.sse(async (sse) => {
+    broadcaster.add(sse);
+
+    sse.onClose(() => {
+      broadcaster.remove(sse);
+    });
+
+    // Keep connection alive
+    await new Promise(() => {});
+  });
+});
+
+// Broadcast to all clients
+broadcaster.broadcast("update", { count: 42 });
+
+// Broadcast with filter
+broadcaster.broadcastWhere(
+  (sse) => sse.isConnected,
+  "notification",
+  { message: "Hello!" }
+);
+
+// Check connected clients
+console.log("Connected clients:", broadcaster.size);`}
       />
 
       {/* ──────────────── NAMED EVENTS ──────────────── */}

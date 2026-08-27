@@ -32,22 +32,146 @@ export interface StorageDriver {
 	deleteFile?(path: string): Promise<boolean>;
 }
 
+// Single source of truth — all supported MIME types and their magic bytes signatures.
+// The MimeType type is inferred from the keys.
+const MAGIC_BYTES = {
+	// Images
+	"image/jpeg": [[0xff, 0xd8, 0xff]],
+	"image/png": [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
+	"image/gif": [[0x47, 0x49, 0x46, 0x38]], // GIF8
+	"image/webp": [[0x52, 0x49, 0x46, 0x46]], // RIFF
+	"image/svg+xml": [], // XML-based, no reliable magic bytes
+	"image/bmp": [[0x42, 0x4d]], // BM
+	"image/tiff": [
+		[0x49, 0x49, 0x2a, 0x00], // Little-endian
+		[0x4d, 0x4d, 0x00, 0x2a], // Big-endian
+	],
+	"image/x-icon": [
+		[0x00, 0x00, 0x01, 0x00], // ICO
+		[0x00, 0x00, 0x02, 0x00], // CUR
+	],
+	"image/avif": [[0x00, 0x00, 0x00]], // ftyp avif/mif1
+	"image/heic": [[0x00, 0x00, 0x00]], // ftyp heic/mif1
+	"image/heif": [[0x00, 0x00, 0x00]], // ftyp heif/mif1
+
+	// Videos
+	"video/mp4": [[0x00, 0x00, 0x00]], // ftyp
+	"video/webm": [[0x1a, 0x45, 0xdf, 0xa3]], // EBML
+	"video/ogg": [[0x4f, 0x67, 0x67, 0x53]], // OggS
+	"video/quicktime": [[0x00, 0x00, 0x00]], // ftyp qt
+	"video/x-msvideo": [[0x52, 0x49, 0x46, 0x46]], // RIFF
+	"video/x-matroska": [[0x1a, 0x45, 0xdf, 0xa3]], // EBML
+	"video/mpeg": [
+		[0x00, 0x00, 0x01, 0xba],
+		[0x00, 0x00, 0x01, 0xb3],
+	],
+
+	// Audio
+	"audio/mpeg": [
+		[0xff, 0xfb],
+		[0xff, 0xf3],
+		[0xff, 0xf2],
+	],
+	"audio/mp3": [
+		[0xff, 0xfb],
+		[0xff, 0xf3],
+		[0xff, 0xf2],
+	],
+	"audio/wav": [[0x52, 0x49, 0x46, 0x46]], // RIFF
+	"audio/ogg": [[0x4f, 0x67, 0x67, 0x53]], // OggS
+	"audio/webm": [[0x1a, 0x45, 0xdf, 0xa3]], // EBML
+	"audio/aac": [
+		[0xff, 0xf1],
+		[0xff, 0xf9],
+	], // ADTS
+	"audio/flac": [[0x66, 0x4c, 0x61, 0x43]], // fLaC
+	"audio/mp4": [[0x00, 0x00, 0x00]], // ftyp
+	"audio/x-m4a": [[0x00, 0x00, 0x00]], // ftyp M4A
+
+	// Documents
+	"application/pdf": [[0x25, 0x50, 0x44, 0x46]], // %PDF
+	"application/rtf": [[0x7b, 0x5c, 0x72, 0x74, 0x66]], // {\rtf
+	"text/plain": [],
+	"text/csv": [],
+	"text/html": [],
+	"text/css": [],
+	"text/javascript": [],
+	"application/javascript": [],
+	"application/json": [],
+	"application/xml": [],
+	"text/xml": [],
+
+	// Microsoft Office (OLE2)
+	"application/msword": [[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]],
+	"application/vnd.ms-excel": [
+		[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1],
+	],
+	"application/vnd.ms-powerpoint": [
+		[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1],
+	],
+
+	// Microsoft Office (OOXML - ZIP based)
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+		[0x50, 0x4b, 0x03, 0x04],
+	],
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+		[0x50, 0x4b, 0x03, 0x04],
+	],
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation": [
+		[0x50, 0x4b, 0x03, 0x04],
+	],
+
+	// OpenDocument (ZIP based)
+	"application/vnd.oasis.opendocument.text": [[0x50, 0x4b, 0x03, 0x04]],
+	"application/vnd.oasis.opendocument.spreadsheet": [[0x50, 0x4b, 0x03, 0x04]],
+	"application/vnd.oasis.opendocument.presentation": [[0x50, 0x4b, 0x03, 0x04]],
+
+	// Archives
+	"application/zip": [[0x50, 0x4b, 0x03, 0x04]],
+	"application/x-7z-compressed": [[0x37, 0x7a, 0xaf, 0x1d]],
+	"application/x-rar-compressed": [[0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]],
+	"application/gzip": [[0x1f, 0x8b]],
+	"application/x-tar": [], // Check at offset 257: "ustar"
+	"application/x-bzip2": [[0x42, 0x5a, 0x68]], // BZh
+
+	// Fonts
+	"font/woff": [[0x77, 0x4f, 0x46, 0x46]], // wOFF
+	"font/woff2": [[0x77, 0x4f, 0x46, 0x32]], // wOF2
+	"font/ttf": [
+		[0x00, 0x01, 0x00, 0x00], // TrueType
+		[0x4f, 0x54, 0x54, 0x4f], // OTTO (OpenType)
+	],
+	"font/otf": [[0x4f, 0x54, 0x54, 0x4f]], // OTTO
+
+	// Other
+	"application/octet-stream": [],
+} as const;
+
+/** Supported MIME types — inferred from the MAGIC_BYTES keys. */
+export type MimeType = keyof typeof MAGIC_BYTES;
+
 export interface UploadFieldConfig {
 	/** Whether this file field is required. Defaults to false. */
 	required?: boolean;
 	/** Max file size in bytes for this field */
 	maxFileSize?: number;
 	/** Allowed MIME types for this field */
-	allowedMimeTypes?: string[];
+	allowedMimeTypes?: MimeType[];
 	/** Custom filename generator for this field (overrides global filename) */
-	filename?: (originalName: string, file: File) => { name: string; ext: string };
+	filename?: (
+		originalName: string,
+		file: File,
+	) => { name: string; ext: string };
 }
 
 export interface UploadOptions {
 	/** Destination storage driver (e.g., LocalDiskStorage or MemoryStorage) */
 	storage: StorageDriver;
 	/** Global default filename generator (overridden by per-field filename) */
-	filename?: (originalName: string, file: File) => { name: string; ext: string };
+	filename?: (
+		originalName: string,
+		file: File,
+	) => { name: string; ext: string };
 	/**
 	 * Global max file size in bytes.
 	 * Applied to all fields unless overridden by per-field `maxFileSize`.
@@ -57,7 +181,7 @@ export interface UploadOptions {
 	 * Global allowed MIME types.
 	 * Applied to all fields unless overridden by per-field `allowedMimeTypes`.
 	 */
-	allowedMimeTypes?: string[];
+	allowedMimeTypes?: MimeType[];
 	/**
 	 * Whitelist of accepted file field names.
 	 * Files with a field name not listed here will be silently ignored.
@@ -71,33 +195,42 @@ export interface UploadOptions {
 	 * }
 	 */
 	fields?: Record<string, UploadFieldConfig>;
+	/** Verify file magic bytes against expected MIME type. Defaults to true. */
+	verifyMagicBytes?: boolean;
 }
 
-export type UploadOptionsWithFields<F extends Record<string, UploadFieldConfig>> =
-	Omit<UploadOptions, "fields"> & { fields?: F };
+export type UploadOptionsWithFields<
+	F extends Record<string, UploadFieldConfig>,
+> = Omit<UploadOptions, "fields"> & { fields?: F };
 
 export interface ParseUploadResult<
-	F extends Record<string, UploadFieldConfig> = Record<string, UploadFieldConfig>,
+	F extends Record<string, UploadFieldConfig> = Record<
+		string,
+		UploadFieldConfig
+	>,
 > {
 	/**
 	 * All form fields — text fields are `string`, file fields are typed based on config.
 	 *
 	 * @example
 	 * result.fields.name      // string (text field)
-	 * result.fields.avatar    // UploadedFile | undefined (file field)
-	 * result.fields.gallery   // UploadedFile | UploadedFile[] | undefined (file field)
+	 * result.fields.avatar    // UploadedFile (required: true)
+	 * result.fields.avatar    // UploadedFile | undefined (has maxFileSize/allowedMimeTypes but not required)
+	 * result.fields.gallery   // UploadedFile | UploadedFile[] | undefined (no file config)
 	 */
 	fields: {
 		[K in keyof F]: F[K] extends { required: true }
 			? UploadedFile
-			: UploadedFile | UploadedFile[];
+			: F[K] extends { maxFileSize: any } | { allowedMimeTypes: any }
+				? UploadedFile | undefined
+				: UploadedFile | UploadedFile[] | undefined;
 	} & Record<string, string>;
 	/** Array of files that were successfully uploaded/processed (all files, flattened) */
 	files: UploadedFile[];
 }
 
 export class LocalDiskStorage implements StorageDriver {
-	constructor(private destination: string) { }
+	constructor(private destination: string) {}
 
 	async handleFile(
 		file: File,
@@ -178,7 +311,10 @@ function resolveFilename(
 	originalName: string,
 	file: File,
 	fieldFn?: (originalName: string, file: File) => { name: string; ext: string },
-	globalFn?: (originalName: string, file: File) => { name: string; ext: string },
+	globalFn?: (
+		originalName: string,
+		file: File,
+	) => { name: string; ext: string },
 ): { name: string; ext: string } {
 	const ext = getFileExtension(originalName);
 	const generateFn = fieldFn ?? globalFn ?? defaultFilenameGenerator;
@@ -190,6 +326,25 @@ function resolveFilename(
 	return { name: result.name, ext: finalExt };
 }
 
+async function verifyFileSignature(
+	file: File,
+	expectedType: string,
+): Promise<boolean> {
+	const signatures = MAGIC_BYTES[expectedType as keyof typeof MAGIC_BYTES];
+
+	// No magic bytes defined for this type → skip verification
+	if (!signatures || signatures.length === 0) {
+		return true;
+	}
+
+	// Read first 16 bytes (covers most signatures)
+	const buffer = await file.arrayBuffer();
+	const bytes = new Uint8Array(buffer.slice(0, 16));
+
+	// Check if any of the signatures match
+	return signatures.some((sig) => sig.every((byte, i) => bytes[i] === byte));
+}
+
 /**
  * Parses `multipart/form-data` request, separating standard fields from files.
  * Streams files into the configured storage driver with validation.
@@ -197,7 +352,7 @@ function resolveFilename(
  * Throws `BadRequestError` if validation fails (size, MIME type, or required fields).
  *
  * @example
- * const result = await parseUploads(ctx, {
+ * const result = await handleUploads(ctx, {
  *   storage: new LocalDiskStorage('./uploads'),
  *   maxFileSize: 2 * 1024 * 1024,
  *   allowedMimeTypes: ['image/png', 'image/jpeg'],
@@ -209,8 +364,11 @@ function resolveFilename(
  * // result.fields.avatar  → UploadedFile (required = true)
  * // result.fields.document → UploadedFile (required = true)
  */
-export async function parseUploads<
-	F extends Record<string, UploadFieldConfig> = Record<string, UploadFieldConfig>,
+export async function handleUploads<
+	F extends Record<string, UploadFieldConfig> = Record<
+		string,
+		UploadFieldConfig
+	>,
 >(
 	// biome-ignore lint/suspicious/noExplicitAny: Context is generic
 	ctx: Context<any, any>,
@@ -218,7 +376,9 @@ export async function parseUploads<
 ): Promise<ParseUploadResult<F>> {
 	const contentType = ctx.request.headers.get("content-type") || "";
 	if (!contentType.includes("multipart/form-data")) {
-		throw new BadRequestError("Invalid content-type. Must be multipart/form-data");
+		throw new BadRequestError(
+			"Invalid content-type. Must be multipart/form-data",
+		);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: Undici types conflict with lib.dom FormData
@@ -246,8 +406,7 @@ export async function parseUploads<
 			const fieldConfig = fieldWhitelist?.[key];
 
 			// Validation: Size — per-field config overrides global
-			const maxFileSize =
-				fieldConfig?.maxFileSize ?? options.maxFileSize;
+			const maxFileSize = fieldConfig?.maxFileSize ?? options.maxFileSize;
 			if (maxFileSize && value.size > maxFileSize) {
 				throw new BadRequestError(
 					`File "${value.name}" in field "${key}" exceeds max size of ${maxFileSize} bytes`,
@@ -257,10 +416,20 @@ export async function parseUploads<
 			// Validation: MIME Type — per-field config overrides global
 			const allowedMimeTypes =
 				fieldConfig?.allowedMimeTypes ?? options.allowedMimeTypes;
-			if (allowedMimeTypes && !allowedMimeTypes.includes(value.type)) {
+			if (allowedMimeTypes && !allowedMimeTypes.includes(value.type as MimeType)) {
 				throw new BadRequestError(
 					`File type "${value.type}" is not allowed for field "${key}" (file: "${value.name}")`,
 				);
+			}
+
+			// Validation: Magic Bytes — verify file signature matches claimed MIME type
+			if (options.verifyMagicBytes !== false) {
+				const isValid = await verifyFileSignature(value, value.type);
+				if (!isValid) {
+					throw new BadRequestError(
+						`File "${value.name}" has invalid magic bytes for type "${value.type}"`,
+					);
+				}
 			}
 
 			// Process file
@@ -300,7 +469,10 @@ export async function parseUploads<
 		}
 	}
 
-	return { fields: { ...textFields, ...fileMap }, files } as ParseUploadResult<F>;
+	return {
+		fields: { ...textFields, ...fileMap },
+		files,
+	} as ParseUploadResult<F>;
 }
 
 /**
@@ -313,7 +485,7 @@ export async function parseUploads<
  */
 export function uploader(options: UploadOptions): Middleware {
 	return async (ctx, next) => {
-		const result = await parseUploads(ctx, options);
+		const result = await handleUploads(ctx, options);
 
 		ctx.store.files = result.files;
 		ctx.store.fields = result.fields;
@@ -330,7 +502,7 @@ export function uploader(options: UploadOptions): Middleware {
  * @returns true if deleted, false if not found or error
  *
  * @example
- * const result = await parseUploads(ctx, options);
+ * const result = await handleUploads(ctx, options);
  * const file = result.fileMap.avatar as UploadedFile;
  * await deleteUploadedFile(options.storage, file);
  */

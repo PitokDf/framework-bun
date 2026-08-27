@@ -193,7 +193,10 @@ export function zValidator(
 				const ct = ctx.request.headers.get("content-type") || "";
 				if (!ct.includes("multipart/form-data")) {
 					return ctx.error("Validation Failed", 422, [
-						{ field: "content-type", message: "expected multipart/form-data content-type" },
+						{
+							field: "content-type",
+							message: "expected multipart/form-data content-type",
+						},
 					]);
 				}
 				try {
@@ -207,17 +210,21 @@ export function zValidator(
 						}
 					}
 					raw = fields;
-			} catch {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "body", message: "failed to parse multipart/form-data" },
-				]);
+				} catch {
+					return ctx.error("Validation Failed", 422, [
+						{ field: "body", message: "failed to parse multipart/form-data" },
+					]);
 				}
 			} else if (resolvedContentType === "application/x-www-form-urlencoded") {
 				const ct = ctx.request.headers.get("content-type") || "";
-			if (!ct.includes("application/x-www-form-urlencoded")) {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "content-type", message: "expected application/x-www-form-urlencoded content-type" },
-				]);
+				if (!ct.includes("application/x-www-form-urlencoded")) {
+					return ctx.error("Validation Failed", 422, [
+						{
+							field: "content-type",
+							message:
+								"expected application/x-www-form-urlencoded content-type",
+						},
+					]);
 				}
 				try {
 					const text = await ctx.request.text();
@@ -227,10 +234,13 @@ export function zValidator(
 						fields[key] = value;
 					}
 					raw = fields;
-			} catch {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "body", message: "failed to parse application/x-www-form-urlencoded" },
-				]);
+				} catch {
+					return ctx.error("Validation Failed", 422, [
+						{
+							field: "body",
+							message: "failed to parse application/x-www-form-urlencoded",
+						},
+					]);
 				}
 			} else if (
 				resolvedContentType === "text/plain" ||
@@ -238,41 +248,53 @@ export function zValidator(
 				resolvedContentType === "text/xml"
 			) {
 				const ct = ctx.request.headers.get("content-type") || "";
-			if (!ct.includes(resolvedContentType)) {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "content-type", message: `expected ${resolvedContentType} content-type` },
-				]);
+				if (!ct.includes(resolvedContentType)) {
+					return ctx.error("Validation Failed", 422, [
+						{
+							field: "content-type",
+							message: `expected ${resolvedContentType} content-type`,
+						},
+					]);
 				}
 				try {
 					raw = await ctx.request.text();
-			} catch {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "body", message: `failed to read ${resolvedContentType} body` },
-				]);
+				} catch {
+					return ctx.error("Validation Failed", 422, [
+						{
+							field: "body",
+							message: `failed to read ${resolvedContentType} body`,
+						},
+					]);
 				}
 			} else if (resolvedContentType === "application/octet-stream") {
 				const ct = ctx.request.headers.get("content-type") || "";
-			if (!ct.includes("application/octet-stream")) {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "content-type", message: "expected application/octet-stream content-type" },
-				]);
+				if (!ct.includes("application/octet-stream")) {
+					return ctx.error("Validation Failed", 422, [
+						{
+							field: "content-type",
+							message: "expected application/octet-stream content-type",
+						},
+					]);
 				}
 				try {
 					raw = await ctx.request.arrayBuffer();
-			} catch {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "body", message: "failed to read application/octet-stream body" },
-				]);
+				} catch {
+					return ctx.error("Validation Failed", 422, [
+						{
+							field: "body",
+							message: "failed to read application/octet-stream body",
+						},
+					]);
 				}
 			} else {
 				// Default: application/json
 				try {
 					raw = await ctx.body();
-			} catch {
-				return ctx.error("Validation Failed", 422, [
-					{ field: "body", message: "invalid JSON" },
-				]);
-			}
+				} catch {
+					return ctx.error("Validation Failed", 422, [
+						{ field: "body", message: "invalid JSON" },
+					]);
+				}
 			}
 		} else if (target === "query") {
 			raw = ctx.query;
@@ -285,12 +307,10 @@ export function zValidator(
 			return ctx.error(
 				"Validation Failed",
 				422,
-				result.error.issues.map(
-					(issue) => ({
-						field: issue.path.join(".") || target,
-						message: issue.message,
-					}),
-				),
+				result.error.issues.map((issue) => ({
+					field: issue.path.join(".") || target,
+					message: issue.message,
+				})),
 			);
 		}
 

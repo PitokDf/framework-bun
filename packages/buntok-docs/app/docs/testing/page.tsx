@@ -2,6 +2,11 @@ import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
+export const metadata = {
+  title: "Testing",
+  description: "Write unit and integration tests with app.request().",
+};
+
 export default function TestingPage() {
   return (
     <div>
@@ -80,9 +85,7 @@ console.log(res2.status); // 201`}
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2 font-mono text-accent">init?</td>
               <td className="px-4 py-2 font-mono">RequestInit</td>
-              <td className="px-4 py-2">
-                Method, headers, body, etc.
-              </td>
+              <td className="px-4 py-2">Method, headers, body, etc.</td>
             </tr>
           </tbody>
         </table>
@@ -98,12 +101,6 @@ console.log(res2.status); // 201`}
       <CodeBlock
         code={`import { describe, it, expect } from "bun:test";
 import { App } from "@buntok/core";
-
-export const metadata = {
-  title: "Testing",
-  description: "Write unit and integration tests with app.request().",
-};
-
 
 function createTestApp() {
   const app = new App();
@@ -152,9 +149,9 @@ describe("API Routes", () => {
       />
 
       <Callout type="info">
-        <code>app.request()</code> processes requests through the full middleware
-        stack, so you can test auth, validation, and error handling just like
-        real HTTP requests.
+        <code>app.request()</code> processes requests through the full
+        middleware stack, so you can test auth, validation, and error handling
+        just like real HTTP requests.
       </Callout>
 
       {/* ──────────────── WITH MIDDLEWARE ──────────────── */}

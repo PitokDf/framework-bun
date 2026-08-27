@@ -1,4 +1,4 @@
-import { scryptSync, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 const SCRYPT_OPTIONS = {
 	N: 16384, // 2^14 — memory cost (16 MB)
@@ -49,10 +49,7 @@ export async function verifyPassword(
 		const salt = Buffer.from(saltHex, "hex");
 		const test = scryptSync(password, salt, KEY_LENGTH, SCRYPT_OPTIONS);
 
-		return timingSafeEqual(
-			Buffer.from(expectedHash, "hex"),
-			test,
-		);
+		return timingSafeEqual(Buffer.from(expectedHash, "hex"), test);
 	}
 
 	// Legacy PBKDF2 format

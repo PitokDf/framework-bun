@@ -2,6 +2,12 @@ import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
+export const metadata = {
+  title: "Controllers",
+  description:
+    "Create reusable controllers with dependency injection and CRUD scaffolding.",
+};
+
 export default function ControllersPage() {
   return (
     <div>
@@ -53,9 +59,10 @@ class UserController {
       />
 
       <Callout type="info">
-        <code>@Controller</code> must be the <strong>outermost (topmost)</strong>{" "}
-        decorator on the class. TypeScript decorators execute bottom-to-top, so{" "}
-        <code>@Controller</code> runs last and captures all method routes.
+        <code>@Controller</code> must be the{" "}
+        <strong>outermost (topmost)</strong> decorator on the class. TypeScript
+        decorators execute bottom-to-top, so <code>@Controller</code> runs last
+        and captures all method routes.
       </Callout>
 
       {/* ──────────────── REGISTER CONTROLLERS ──────────────── */}
@@ -150,12 +157,6 @@ app.listen(1212);`}
         code={`import { Controller, Get, Use } from "@buntok/core";
 import { zValidator } from "@buntok/core";
 
-export const metadata = {
-  title: "Controllers",
-  description: "Create reusable controllers with dependency injection and CRUD scaffolding.",
-};
-
-
 const auth = async (ctx, next) => {
   const token = ctx.getCookie("token");
   if (!token) return ctx.json({ error: "Unauthorized" }, 401);
@@ -213,8 +214,8 @@ class AdminController {
 
       <Callout type="info">
         Guards are async-compatible - you can perform database lookups or API
-        calls. <code>@UseGuard</code> is syntactic sugar for{" "}
-        <code>@Use</code> that returns 403 on failure.
+        calls. <code>@UseGuard</code> is syntactic sugar for <code>@Use</code>{" "}
+        that returns 403 on failure.
       </Callout>
 
       {/* ──────────────── GROUPS ──────────────── */}

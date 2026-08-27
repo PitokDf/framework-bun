@@ -2,6 +2,11 @@ import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
+export const metadata = {
+  title: "Repository Pattern",
+  description: "CRUD operations with Prisma, Drizzle, or TypeORM repositories.",
+};
+
 export default function RepositoryPage() {
   return (
     <div>
@@ -30,16 +35,28 @@ export default function RepositoryPage() {
           </thead>
           <tbody>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">@buntok/prisma</td>
-              <td className="px-4 py-2 font-mono text-xs">bun add @buntok/prisma</td>
+              <td className="px-4 py-2 font-mono text-accent">
+                @buntok/prisma
+              </td>
+              <td className="px-4 py-2 font-mono text-xs">
+                bun add @buntok/prisma
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">@buntok/drizzle</td>
-              <td className="px-4 py-2 font-mono text-xs">bun add @buntok/drizzle</td>
+              <td className="px-4 py-2 font-mono text-accent">
+                @buntok/drizzle
+              </td>
+              <td className="px-4 py-2 font-mono text-xs">
+                bun add @buntok/drizzle
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">@buntok/typeorm</td>
-              <td className="px-4 py-2 font-mono text-xs">bun add @buntok/typeorm</td>
+              <td className="px-4 py-2 font-mono text-accent">
+                @buntok/typeorm
+              </td>
+              <td className="px-4 py-2 font-mono text-xs">
+                bun add @buntok/typeorm
+              </td>
             </tr>
           </tbody>
         </table>
@@ -70,9 +87,7 @@ export default function RepositoryPage() {
               <td className="px-4 py-2">Get all records</td>
             </tr>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">
-                findById(id)
-              </td>
+              <td className="px-4 py-2 font-mono text-accent">findById(id)</td>
               <td className="px-4 py-2">Find by primary key</td>
             </tr>
             <tr className="border-b border-border-primary">
@@ -106,9 +121,7 @@ export default function RepositoryPage() {
               <td className="px-4 py-2">Count all records</td>
             </tr>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">
-                exists(where)
-              </td>
+              <td className="px-4 py-2 font-mono text-accent">exists(where)</td>
               <td className="px-4 py-2">Check if record exists</td>
             </tr>
           </tbody>
@@ -380,12 +393,6 @@ class UserController extends BaseController<User> {
         code={`import { App, Controller, BaseController } from "@buntok/core";
 import { BaseRepository } from "@buntok/prisma";
 import type { PrismaClient } from "../prisma/generated/client";
-
-export const metadata = {
-  title: "Repository Pattern",
-  description: "CRUD operations with Prisma, Drizzle, or TypeORM repositories.",
-};
-
 
 // 1. Repository - data access
 class UserRepository extends BaseRepository<User, PrismaClient> {

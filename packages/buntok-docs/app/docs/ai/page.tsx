@@ -2,6 +2,11 @@ import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
+export const metadata = {
+  title: "AI Module",
+  description: "Stream AI responses with Vercel AI SDK integration and SSE.",
+};
+
 export default function AIPage() {
   return (
     <div>
@@ -13,8 +18,8 @@ export default function AIPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Built-in AI integration with streaming support, response caching, and
-        prompt injection. Works with OpenAI, Anthropic, and any OpenAI-compatible
-        API.
+        prompt injection. Works with OpenAI, Anthropic, and any
+        OpenAI-compatible API.
       </p>
 
       {/* ──────────────── STREAM AI ──────────────── */}
@@ -104,8 +109,8 @@ app.post("/chat", async (ctx) => {
         injectSystemPrompt
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Safely inject a system prompt while removing any existing system messages
-        from user input (prevents prompt injection):
+        Safely inject a system prompt while removing any existing system
+        messages from user input (prevents prompt injection):
       </p>
       <CodeBlock
         code={`import { injectSystemPrompt } from "@buntok/core";
@@ -128,8 +133,8 @@ const messages = injectSystemPrompt(
 
       <Callout type="warning">
         <code>injectSystemPrompt</code> removes any <code>role: "system"</code>{" "}
-        messages from user input. This prevents users from overriding your system
-        prompt.
+        messages from user input. This prevents users from overriding your
+        system prompt.
       </Callout>
 
       {/* ──────────────── AI CACHE ──────────────── */}
@@ -215,12 +220,6 @@ app.post("/chat", async (ctx) => {
       <CodeBlock
         code={`import { App, streamAI, injectSystemPrompt, AICache, Cache } from "@buntok/core";
 import OpenAI from "openai";
-
-export const metadata = {
-  title: "AI Module",
-  description: "Stream AI responses with Vercel AI SDK integration and SSE.",
-};
-
 
 const app = new App();
 const openai = new OpenAI();

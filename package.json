@@ -1,100 +1,102 @@
 {
-	"name": "buntok",
-	"module": "dist/exports.js",
-	"type": "module",
-	"version": "0.2.5",
-	"main": "dist/exports.cjs",
-	"types": "dist/exports.d.ts",
-	"bin": {
-		"buntok": "./dist/cli/index.js"
-	},
-	"exports": {
-		".": {
-			"import": {
-				"types": "./dist/exports.d.ts",
-				"default": "./dist/exports.js"
-			},
-			"require": {
-				"types": "./dist/exports.d.cts",
-				"default": "./dist/exports.cjs"
-			}
-		},
-		"./core": {
-			"import": {
-				"types": "./dist/core-exports.d.ts",
-				"default": "./dist/core-exports.js"
-			},
-			"require": {
-				"types": "./dist/core-exports.d.cts",
-				"default": "./dist/core-exports.cjs"
-			}
-		}
-	},
-	"files": [
-		"dist",
-		"zig-out/lib/*.dll",
-		"zig-out/lib/*.so",
-		"zig-out/lib/*.dylib",
-		"native",
-		"build.zig",
-		"README.md"
-	],
-	"description": "High performance, batteries-included Bun backend framework",
-	"keywords": [
-		"bun",
-		"framework",
-		"web",
-		"api",
-		"typescript",
-		"sse",
-		"middleware"
-	],
-	"author": "",
-	"license": "MIT",
-	"devDependencies": {
-		"@biomejs/biome": "2.5.3",
-		"@types/bun": "latest",
-		"@types/pg": "^8.20.0",
-		"autocannon": "^8.0.0",
-		"elysia": "^1.4.29",
-		"express": "^5.2.1",
-		"fastify": "^5.10.0",
-		"hono": "^4.12.29",
-		"tsup": "^8.5.1"
-	},
-	"peerDependencies": {
-		"typescript": "latest"
-	},
-	"scripts": {
-		"dev": "bun --watch src/index.ts",
-		"build": "tsup && bun run build:types",
-		"build:types": "bunx tsc --project tsconfig.build.json",
-		"build:native": "bun run build:native:trie && bun run build:native:json && bun run build:native:parse",
-		"build:native:trie": "zig build-lib native/trie.zig -dynamic -OReleaseFast -femit-bin=zig-out/lib/buntok_trie$(node -p \"process.platform === 'win32' ? '.dll' : process.platform === 'darwin' ? '.dylib' : '.so'\")",
-		"build:native:json": "zig build-lib native/json.zig -dynamic -OReleaseFast -femit-bin=zig-out/lib/buntok_json$(node -p \"process.platform === 'win32' ? '.dll' : process.platform === 'darwin' ? '.dylib' : '.so'\")",
-		"build:native:parse": "zig build-lib native/parse.zig -dynamic -OReleaseFast -femit-bin=zig-out/lib/buntok_parse$(node -p \"process.platform === 'win32' ? '.dll' : process.platform === 'darwin' ? '.dylib' : '.so'\")",
-		"bench": "bun run bench.ts",
-		"bench:prod": "bun run bench.ts --prod",
-		"bench:all": "bun run benchmarks/runner.ts",
-		"test": "bun test packages/buntok-core/tests",
-		"test:watch": "bun test --watch packages/buntok-core/tests",
-		"format": "bunx @biomejs/biome format --write .",
-		"lint": "bunx @biomejs/biome lint .",
-		"check": "bunx @biomejs/biome check --write .",
-		"prepublishOnly": "bun run build && bun run check",
-		"publish:all": "npm run publish:core && npm run publish:prisma && npm run publish:drizzle && npm run publish:typeorm",
-		"publish:core": "cd packages/buntok-core && npm publish --access public",
-		"publish:prisma": "cd packages/buntok-prisma && npm publish --access public",
-		"publish:drizzle": "cd packages/buntok-drizzle && npm publish --access public",
-		"publish:typeorm": "cd packages/buntok-typeorm && npm publish --access public"
-	},
-	"dependencies": {
-		"@asteasolutions/zod-to-openapi": "^8.5.0",
-		"croner": "^10.0.1",
-		"zod": "^4.4.3"
-	},
-	"optionalDependencies": {
-		"mysql2": "^3.23.1",
-		"pg": "^8.22.0"
-	}
+  "name": "buntok",
+  "module": "dist/exports.js",
+  "type": "module",
+  "version": "0.2.5",
+  "main": "dist/exports.cjs",
+  "types": "dist/exports.d.ts",
+  "bin": {
+    "buntok": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/exports.d.ts",
+        "default": "./dist/exports.js"
+      },
+      "require": {
+        "types": "./dist/exports.d.cts",
+        "default": "./dist/exports.cjs"
+      }
+    },
+    "./core": {
+      "import": {
+        "types": "./dist/core-exports.d.ts",
+        "default": "./dist/core-exports.js"
+      },
+      "require": {
+        "types": "./dist/core-exports.d.cts",
+        "default": "./dist/core-exports.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "zig-out/lib/*.dll",
+    "zig-out/lib/*.so",
+    "zig-out/lib/*.dylib",
+    "native",
+    "build.zig",
+    "README.md"
+  ],
+  "description": "High performance, batteries-included Bun backend framework",
+  "keywords": [
+    "bun",
+    "framework",
+    "web",
+    "api",
+    "typescript",
+    "sse",
+    "middleware"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.3",
+    "@types/bun": "latest",
+    "@types/pg": "^8.20.0",
+    "autocannon": "^8.0.0",
+    "elysia": "^1.4.29",
+    "express": "^5.2.1",
+    "fastify": "^5.10.0",
+    "hono": "^4.12.29",
+    "tsup": "^8.5.1"
+  },
+  "peerDependencies": {
+    "typescript": "latest"
+  },
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "tsup && bun run build:types",
+    "build:types": "bunx tsc --project tsconfig.build.json",
+    "build:native": "bun run build:native:trie && bun run build:native:json && bun run build:native:parse",
+    "build:native:trie": "zig build-lib native/trie.zig -dynamic -OReleaseFast -femit-bin=zig-out/lib/buntok_trie$(node -p \"process.platform === 'win32' ? '.dll' : process.platform === 'darwin' ? '.dylib' : '.so'\")",
+    "build:native:json": "zig build-lib native/json.zig -dynamic -OReleaseFast -femit-bin=zig-out/lib/buntok_json$(node -p \"process.platform === 'win32' ? '.dll' : process.platform === 'darwin' ? '.dylib' : '.so'\")",
+    "build:native:parse": "zig build-lib native/parse.zig -dynamic -OReleaseFast -femit-bin=zig-out/lib/buntok_parse$(node -p \"process.platform === 'win32' ? '.dll' : process.platform === 'darwin' ? '.dylib' : '.so'\")",
+    "bench": "bun run bench.ts",
+    "bench:prod": "bun run bench.ts --prod",
+    "bench:all": "bun run benchmarks/runner.ts",
+    "test": "bun test packages/buntok-core/tests",
+    "test:watch": "bun test --watch packages/buntok-core/tests",
+    "format": "bunx @biomejs/biome format --write .",
+    "lint": "bunx @biomejs/biome lint .",
+    "check": "bunx @biomejs/biome check --write .",
+    "prepublishOnly": "bun run build && bun run check",
+    "publish:all": "npm run publish:core && npm run publish:prisma && npm run publish:drizzle && npm run publish:typeorm",
+    "publish:core": "cd packages/buntok-core && npm publish --access public",
+    "publish:prisma": "cd packages/buntok-prisma && npm publish --access public",
+    "publish:drizzle": "cd packages/buntok-drizzle && npm publish --access public",
+    "publish:typeorm": "cd packages/buntok-typeorm && npm publish --access public",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.5.0",
+    "buntok": "file:/home/pitok/Projects/framework-bun/packages/buntok-core",
+    "croner": "^10.0.1",
+    "zod": "^4.4.3"
+  },
+  "optionalDependencies": {
+    "mysql2": "^3.23.1",
+    "pg": "^8.22.0"
+  }
 }

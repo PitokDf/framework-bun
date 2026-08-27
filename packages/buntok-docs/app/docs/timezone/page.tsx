@@ -1,12 +1,11 @@
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
-import { Callout } from "@/components/ui/Callout";
 
 export const metadata = {
   title: "Timezone",
-  description: "Convert and format dates across timezones with built-in helpers.",
+  description:
+    "Convert and format dates across timezones with built-in helpers.",
 };
-
 
 export default function TimezonePage() {
   return (

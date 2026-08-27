@@ -4,7 +4,7 @@ import { Callout } from "@/components/ui/Callout";
 
 export const metadata = {
   title: "File Upload",
-  description: "Handle multipart file uploads with custom storage drivers and validation.",
+  description: "Handle multipart file uploads with custom storage drivers, magic bytes verification, and validation.",
 };
 
 
@@ -19,7 +19,8 @@ export default function UploadPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Parse multipart/form-data requests for file uploads. Supports storage
-        drivers, field validation, custom filenames, and middleware mode.
+        drivers, field validation, magic bytes verification, custom filenames,
+        and middleware mode.
       </p>
 
       {/* ──────────────── STORAGE DRIVERS ──────────────── */}
@@ -104,7 +105,7 @@ class S3Storage implements StorageDriver {
 }
 
 // Usage
-const result = await parseUploads(ctx, {
+const result = await handleUploads(ctx, {
   storage: new S3Storage("my-bucket", "us-east-1"),
 });`}
       />
@@ -123,10 +124,10 @@ const result = await parseUploads(ctx, {
         Basic Usage
       </Heading>
       <CodeBlock
-        code={`import { parseUploads, LocalDiskStorage } from "@buntok/core";
+        code={`import { handleUploads, LocalDiskStorage } from "@buntok/core";
 
 app.post("/upload", async (ctx) => {
-  const result = await parseUploads(ctx, {
+  const result = await handleUploads(ctx, {
     storage: new LocalDiskStorage("./uploads"),
   });
 
@@ -170,7 +171,7 @@ app.post("/upload", async (ctx) => {
               ],
               [
                 "allowedMimeTypes",
-                "string[]",
+                "MimeType[]",
                 "Global allowed MIME types",
               ],
               [
@@ -183,6 +184,11 @@ app.post("/upload", async (ctx) => {
                 "Record<string, UploadFieldConfig>",
                 "Per-field config (required, size, types, filename)",
               ],
+              [
+                "verifyMagicBytes",
+                "boolean",
+                "Verify file magic bytes against MIME type (default: true)",
+              ],
             ].map(([opt, type, desc]) => (
               <tr
                 key={opt}
@@ -193,6 +199,89 @@ app.post("/upload", async (ctx) => {
                   {type}
                 </td>
                 <td className="px-4 py-2">{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ──────────────── MAGIC BYTES VERIFICATION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Magic Bytes Verification
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        By default, <code>handleUploads</code> verifies that the file's actual
+        content matches the claimed MIME type by checking magic bytes (file
+        signatures). This prevents users from uploading malicious files with
+        spoofed MIME types.
+      </p>
+
+      <Callout type="warning">
+        Magic bytes verification is <strong>enabled by default</strong>. A file
+        claiming to be <code>image/png</code> but without the PNG signature
+        (89 50 4E 47) will be rejected.
+      </Callout>
+
+      <CodeBlock
+        code={`import { handleUploads, LocalDiskStorage } from "@buntok/core";
+
+// Magic bytes verification ON (default)
+const result = await handleUploads(ctx, {
+  storage: new LocalDiskStorage("./uploads"),
+  allowedMimeTypes: ["image/png", "image/jpeg"],
+});
+
+// Disable magic bytes verification (not recommended)
+const result = await handleUploads(ctx, {
+  storage: new LocalDiskStorage("./uploads"),
+  verifyMagicBytes: false,
+});`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Supported Formats
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Magic bytes verification supports 45+ formats including images, videos,
+        audio, documents, archives, and fonts. Text-based formats (JSON, HTML,
+        CSS, etc.) skip verification as they have no reliable magic bytes.
+      </p>
+
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Category
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Formats
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["Images", "JPEG, PNG, GIF, WebP, BMP, TIFF, ICO, AVIF, HEIC, HEIF"],
+              ["Videos", "MP4, WebM, OGG, QuickTime, AVI, Matroska, MPEG"],
+              ["Audio", "MP3, WAV, OGG, WebM, AAC, FLAC, M4A"],
+              ["Documents", "PDF, RTF"],
+              ["Office", "DOC, DOCX, XLS, XLSX, PPT, PPTX"],
+              ["OpenDocument", "ODT, ODS, ODP"],
+              ["Archives", "ZIP, 7Z, RAR, GZIP, TAR, BZIP2"],
+              ["Fonts", "WOFF, WOFF2, TTF, OTF"],
+            ].map(([category, formats]) => (
+              <tr
+                key={category}
+                className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors"
+              >
+                <td className="px-4 py-2 font-mono text-accent">{category}</td>
+                <td className="px-4 py-2">{formats}</td>
               </tr>
             ))}
           </tbody>
@@ -231,7 +320,7 @@ app.post("/upload", async (ctx) => {
               ],
               [
                 "allowedMimeTypes",
-                "string[]",
+                "MimeType[]",
                 "Allowed types (overrides global)",
               ],
               [
@@ -263,9 +352,9 @@ app.post("/upload", async (ctx) => {
         Validation
       </Heading>
       <CodeBlock
-        code={`import { parseUploads, LocalDiskStorage } from "@buntok/core";
+        code={`import { handleUploads, LocalDiskStorage } from "@buntok/core";
 
-const result = await parseUploads(ctx, {
+const result = await handleUploads(ctx, {
   storage: new LocalDiskStorage("./uploads"),
   maxFileSize: 5 * 1024 * 1024, // 5MB global
   allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
@@ -285,7 +374,7 @@ const result = await parseUploads(ctx, {
 
       <Callout type="warning">
         Throws <code>BadRequestError</code> if validation fails (size, MIME type,
-        or required fields missing).
+        magic bytes mismatch, or required fields missing).
       </Callout>
 
       {/* ──────────────── UPLOADED FILE ──────────────── */}
@@ -355,12 +444,81 @@ const result = await parseUploads(ctx, {
         Result
       </Heading>
       <CodeBlock
-        code={`const result = await parseUploads(ctx, options);
+        code={`const result = await handleUploads(ctx, options);
 
 result.fields.name       // string (text field)
 result.fields.avatar     // UploadedFile (file field)
 result.fields.gallery    // UploadedFile[] (multiple files with same key)
 result.files             // UploadedFile[] (all files, flattened)`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Type-Safe Field Inference
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The <code>ParseUploadResult</code> type automatically infers the correct
+        type based on your field configuration:
+      </p>
+
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Configuration
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Type
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["{ required: true }", "UploadedFile"],
+              ["{ maxFileSize: ... }", "UploadedFile | undefined"],
+              ["{ allowedMimeTypes: [...] }", "UploadedFile | undefined"],
+              ["{ maxFileSize, allowedMimeTypes }", "UploadedFile | undefined"],
+              [
+                "{} (no config)",
+                "UploadedFile | UploadedFile[] | undefined",
+              ],
+            ].map(([config, type]) => (
+              <tr
+                key={config}
+                className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors"
+              >
+                <td className="px-4 py-2 font-mono text-accent">{config}</td>
+                <td className="px-4 py-2 font-mono text-text-secondary">
+                  {type}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <CodeBlock
+        code={`const result = await handleUploads(ctx, {
+  storage: new LocalDiskStorage("./uploads"),
+  fields: {
+    avatar: {
+      required: true,  // → UploadedFile (guaranteed)
+      maxFileSize: 1024 * 1024 * 5,
+    },
+    thumbnail: {
+      maxFileSize: 1024 * 1024,  // → UploadedFile | undefined
+    },
+    docs: {},  // → UploadedFile | UploadedFile[] | undefined
+  },
+});
+
+// Autocomplete works correctly:
+result.fields.avatar.name;      // ✅ OK (UploadedFile)
+result.fields.thumbnail?.name;  // ✅ OK (UploadedFile | undefined)
+// result.fields.docs.name;     // ❌ Error (need to narrow type first)`}
       />
 
       {/* ──────────────── UPLOADER MIDDLEWARE ──────────────── */}
@@ -411,7 +569,7 @@ api.use(uploader({ storage: new LocalDiskStorage("./uploads") }));`}
       </Heading>
       <CodeBlock
         code={`// Global custom filename
-const result = await parseUploads(ctx, {
+const result = await handleUploads(ctx, {
   storage: new LocalDiskStorage("./uploads"),
   filename: (originalName, file) => {
     const ext = originalName.split(".").pop();
@@ -420,7 +578,7 @@ const result = await parseUploads(ctx, {
 });
 
 // Per-field custom filename (overrides global)
-const result = await parseUploads(ctx, {
+const result = await handleUploads(ctx, {
   storage: new LocalDiskStorage("./uploads"),
   fields: {
     avatar: {
@@ -443,13 +601,49 @@ const result = await parseUploads(ctx, {
         code={`import { deleteUploadedFile, LocalDiskStorage } from "@buntok/core";
 
 const storage = new LocalDiskStorage("./uploads");
-const result = await parseUploads(ctx, { storage });
+const result = await handleUploads(ctx, { storage });
 
 // Delete a specific file
 const file = result.fields.avatar;
 if (file) {
   await deleteUploadedFile(storage, file);
 }`}
+      />
+
+      {/* ──────────────── RATE LIMITING ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Rate Limiting
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Combine with the built-in rate limiter to prevent upload abuse:
+      </p>
+      <CodeBlock
+        code={`import { uploader, rateLimiter, LocalDiskStorage } from "@buntok/core";
+
+// Rate limit uploads to 10 per hour per user
+app.post("/upload",
+  rateLimiter({ windowMs: 60 * 60 * 1000, max: 10 }),
+  uploader({ storage: new LocalDiskStorage("./uploads") }),
+  async (ctx) => {
+    return ctx.json({ uploaded: true });
+  }
+);
+
+// Rate limit by IP with sliding window
+app.post("/upload",
+  slidingWindowRateLimiter({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    keyGenerator: (ctx) => ctx.request.ip,
+  }),
+  uploader({ storage: new LocalDiskStorage("./uploads") }),
+  async (ctx) => {
+    return ctx.json({ uploaded: true });
+  }
+);`}
       />
 
       {/* ──────────────── FULL EXAMPLE ──────────────── */}
@@ -460,7 +654,7 @@ if (file) {
         Full Example
       </Heading>
       <CodeBlock
-        code={`import { App, parseUploads, LocalDiskStorage } from "@buntok/core";
+        code={`import { App, handleUploads, LocalDiskStorage } from "@buntok/core";
 
 const app = new App();
 
@@ -468,7 +662,7 @@ const storage = new LocalDiskStorage("./uploads");
 
 // Single file upload
 app.post("/avatar", async (ctx) => {
-  const result = await parseUploads(ctx, {
+  const result = await handleUploads(ctx, {
     storage,
     maxFileSize: 2 * 1024 * 1024, // 2MB
     fields: {
@@ -485,7 +679,7 @@ app.post("/avatar", async (ctx) => {
 
 // Multiple file upload
 app.post("/gallery", async (ctx) => {
-  const result = await parseUploads(ctx, {
+  const result = await handleUploads(ctx, {
     storage,
     maxFileSize: 10 * 1024 * 1024, // 10MB
     fields: {
@@ -502,7 +696,7 @@ app.post("/gallery", async (ctx) => {
 
 // Text fields + file
 app.post("/post", async (ctx) => {
-  const result = await parseUploads(ctx, {
+  const result = await handleUploads(ctx, {
     storage,
     fields: {
       cover: { required: true },

@@ -2,6 +2,12 @@ import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
+export const metadata = {
+  title: "App Configuration",
+  description:
+    "Validate environment variables and configure built-in features.",
+};
+
 export default function AppConfigPage() {
   return (
     <div>
@@ -31,12 +37,6 @@ export default function AppConfigPage() {
       <CodeBlock
         code={`import { App, z } from "@buntok/core";
 import { z } from "@buntok/core";
-
-export const metadata = {
-  title: "App Configuration",
-  description: "Validate environment variables and configure built-in features.",
-};
-
 
 const app = new App();
 
@@ -73,6 +73,39 @@ Missing or invalid environment variables:
 Server boot aborted.`}
       />
 
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Custom Error Handler
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use the <code>onError</code> callback to handle validation errors
+        yourself (e.g., send to Sentry, log to a file):
+      </p>
+      <CodeBlock
+        code={`const env = app.validateEnv(
+  {
+    DATABASE_URL: z.string().url(),
+    JWT_SECRET: z.string().min(32),
+  },
+  {
+    onError: (errors) => {
+      // Send to monitoring service
+      console.error("Env validation failed:", errors);
+      // You must exit manually when using onError
+      process.exit(1);
+    },
+  }
+);`}
+      />
+
+      <Callout type="info">
+        When <code>onError</code> is provided, the default error printing and{" "}
+        <code>process.exit(1)</code> are skipped. You must handle the exit
+        yourself.
+      </Callout>
+
       {/* ──────────────── DISABLE / ENABLE ──────────────── */}
       <Heading
         level={2}
@@ -102,9 +135,9 @@ app.enable("x-powered-by");`}
         enableReusePort()
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Enable <code>SO_REUSEPORT</code> for multi-process load balancing
-        (Linux only). When enabled, multiple instances of the app can bind to the
-        same port, and incoming requests are load-balanced at the kernel level.
+        Enable <code>SO_REUSEPORT</code> for multi-process load balancing (Linux
+        only). When enabled, multiple instances of the app can bind to the same
+        port, and incoming requests are load-balanced at the kernel level.
       </p>
       <CodeBlock
         code={`const app = new App();
@@ -116,9 +149,10 @@ app.enableReusePort(false);`}
       />
 
       <Callout type="info">
-        <code>SO_REUSEPORT</code> is Linux-only. On other platforms this is a
-        no-op. Useful when running multiple Bun processes behind a load balancer
-        on the same machine.
+        <code>SO_REUSEPORT</code> is Linux-only. On other platforms, a warning
+        is logged in development mode and the option is ignored. Useful when
+        running multiple Bun processes behind a load balancer on the same
+        machine.
       </Callout>
 
       {/* ──────────────── ICON ──────────────── */}
@@ -132,9 +166,7 @@ app.enableReusePort(false);`}
         Set a custom favicon path. Buntok serves a built-in{" "}
         <code>favicon.ico</code> by default.
       </p>
-      <CodeBlock
-        code={`app.icon("./public/favicon.svg");`}
-      />
+      <CodeBlock code={`app.icon("./public/favicon.svg");`} />
 
       {/* ──────────────── CHAINING ──────────────── */}
       <Heading

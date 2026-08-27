@@ -78,7 +78,8 @@ export function toTimezoneParts(date: Date, timezone: string) {
 		hour12: false,
 	}).formatToParts(d);
 
-	const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+	const get = (type: string) =>
+		Number(parts.find((p) => p.type === type)?.value ?? 0);
 
 	return {
 		year: get("year"),
@@ -136,7 +137,14 @@ export function nowInTimezone(timezone: string): Date {
 	const now = new Date();
 	const parts = toTimezoneParts(now, timezone);
 	const reconstructed = new Date(
-		Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second),
+		Date.UTC(
+			parts.year,
+			parts.month - 1,
+			parts.day,
+			parts.hour,
+			parts.minute,
+			parts.second,
+		),
 	);
 	const tzOffset = getTimezoneOffset(timezone, now);
 	return new Date(reconstructed.getTime() + tzOffset * 60000);
@@ -166,7 +174,10 @@ export function getTimezoneOffsetString(timezone: string, date?: Date): string {
  * toISOWithTimezone(date, "Asia/Jakarta");
  * // "2026-08-24T05:00:00+07:00"
  */
-export function toISOWithTimezone(date: Date | string | number, timezone: string): string {
+export function toISOWithTimezone(
+	date: Date | string | number,
+	timezone: string,
+): string {
 	const d = toDate(date);
 	const parts = toTimezoneParts(d, timezone);
 	const offset = getTimezoneOffsetString(timezone, d);
@@ -182,7 +193,11 @@ export interface GroupByTimezoneOptions {
 	labelFormatter?: (key: string, groupBy: GroupByKey) => string;
 }
 
-function defaultLabelFormatter(key: string, groupBy: GroupByKey, locale: string): string {
+function defaultLabelFormatter(
+	key: string,
+	groupBy: GroupByKey,
+	locale: string,
+): string {
 	// If key looks like a date (YYYY-MM-DD)
 	if (/^\d{4}-\d{2}-\d{2}$/.test(key)) {
 		const [y, m, d] = key.split("-").map(Number) as [number, number, number];

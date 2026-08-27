@@ -73,11 +73,7 @@ function truncate(str: string, max: number): string {
  * Logs all requests with timing, user info, and optional body/query.
  */
 export function auditLog(options: AuditLogOptions = {}) {
-	const {
-		logBody = false,
-		logQuery = true,
-		maxBodySize = 1024,
-	} = options;
+	const { logBody = false, logQuery = true, maxBodySize = 1024 } = options;
 
 	return async (ctx: any, next: () => Promise<Response> | Response) => {
 		const method = ctx.request.method;
@@ -136,11 +132,12 @@ export function auditLog(options: AuditLogOptions = {}) {
 			if (options.storage) {
 				await options.storage(entry);
 			} else {
-				const logFn = status >= 500
-					? console.error
-					: status >= 400
-						? console.warn
-						: console.log;
+				const logFn =
+					status >= 500
+						? console.error
+						: status >= 400
+							? console.warn
+							: console.log;
 				logFn(`[audit] ${method} ${path} ${status} ${entry.duration}ms`);
 			}
 		}

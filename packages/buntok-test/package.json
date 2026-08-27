@@ -15,9 +15,10 @@
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "start": "bun run src/index.ts",
+    "start": "bun .buntok/index.js",
     "check": "bunx @biomejs/biome check --write .",
     "format": "bunx @biomejs/biome format --write .",
-    "lint": "bunx @biomejs/biome lint ."
+    "lint": "bunx @biomejs/biome lint .",
+    "build": "bunx buntok build"
   }
 }

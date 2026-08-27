@@ -323,6 +323,7 @@ app.post("/users",
               ["rateLimiter(options)", "Fixed-window rate limiting"],
               ["slidingWindowRateLimiter(options)", "Sliding-window rate limiting (more accurate)"],
               ["compress(options)", "Brotli/gzip response compression"],
+              ["bodySizeLimit(options)", "Limit request body size"],
               ["auditLog(options)", "Request logging"],
             ].map(([middleware, purpose]) => (
               <tr
@@ -395,6 +396,67 @@ app.use(compress({
                 '["text/", "application/json", ...]',
                 "Content-Type prefixes eligible for compression",
               ],
+            ].map(([opt, def, desc]) => (
+              <tr
+                key={opt}
+                className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors"
+              >
+                <td className="px-4 py-2 font-mono text-accent">{opt}</td>
+                <td className="px-4 py-2 font-mono text-text-secondary">{def}</td>
+                <td className="px-4 py-2">{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ──────────────── BODY SIZE LIMIT ──────────────── */}
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        bodySizeLimit()
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Limits the maximum request body size. Returns 413 (Payload Too Large)
+        when exceeded. Useful for preventing abuse and protecting server
+        resources.
+      </p>
+      <CodeBlock
+        code={`// Default: 10MB limit
+app.use(bodySizeLimit());
+
+// Custom limit (5MB)
+app.use(bodySizeLimit({ maxSize: 5 * 1024 * 1024 }));
+
+// Custom error message and status code
+app.use(bodySizeLimit({
+  maxSize: 1024 * 1024, // 1MB
+  message: "File too large",
+  statusCode: 413,
+}));`}
+      />
+
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Option
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Default
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["maxSize", "10485760 (10MB)", "Max body size in bytes"],
+              ["message", '"Payload Too Large"', "Custom error message"],
+              ["statusCode", "413", "HTTP status code for rejection"],
             ].map(([opt, def, desc]) => (
               <tr
                 key={opt}

@@ -20,6 +20,9 @@ export const metadata: Metadata = {
     default: "Buntok Framework - Fast Web Framework for Bun",
     template: "%s | Buntok Framework",
   },
+  alternates: {
+    canonical: "https://buntok.pitok.my.id",
+  },
   description:
     "A fast, type-safe web framework for Bun with built-in auth, validation, caching, rate limiting, and zero dependencies. Decorator-first or functional API.",
   metadataBase: new URL(baseUrl),

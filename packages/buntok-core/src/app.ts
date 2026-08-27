@@ -22,6 +22,12 @@ export interface WSHandler<DI = Record<string, unknown>> {
 		reason: string,
 	) => void;
 	drain?: (ws: ServerWebSocket<WSData<DI>>) => void;
+	/**
+	 * Optional authentication handler.
+	 * Called on connection open. Return null to reject the connection.
+	 * The returned data is stored in `ws.data.auth`.
+	 */
+	authenticate?: (ws: ServerWebSocket<WSData<DI>>) => Promise<unknown | null>;
 }
 
 export type ExtractParams<Path extends string> =
@@ -123,6 +129,27 @@ export type NotFoundHandler<DI = Record<string, unknown>> = (
 	// biome-ignore lint/suspicious/noExplicitAny: generic
 	ctx: Context<DI, any>,
 ) => Response | Promise<Response>;
+
+export interface EnvValidationOptions {
+	/**
+	 * Custom error handler called when env validation fails.
+	 * If provided, the default error printing and process.exit(1) are skipped.
+	 * Use this to send alerts to monitoring services or custom logging before exiting.
+	 *
+	 * @example
+	 * app.validateEnv(schema, {
+	 *   onError: (errors) => {
+	 *     // Send to monitoring service
+	 *     await sentry.captureException(new Error("Env validation failed"));
+	 *     // Log to external service
+	 *     await logger.fatal("Missing env vars", { errors });
+	 *     // Then exit manually
+	 *     process.exit(1);
+	 *   }
+	 * });
+	 */
+	onError?: (errors: { field: string; message: string }[]) => void | never;
+}
 
 export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private router: Router;
@@ -258,22 +285,58 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 * Type-safe Environment Variables Validator.
 	 * Validates `process.env` against a Zod schema object and returns the typed result.
 	 * If validation fails, it prints a beautiful error to the console and exits the process (stops booting).
+	 *
+	 * @example
+	 * // Default behavior - prints error and exits
+	 * const env = app.validateEnv({
+	 *   DATABASE_URL: z.string().url(),
+	 *   PORT: z.coerce.number().default(3000),
+	 * });
+	 *
+	 * @example
+	 * // Custom error handler - send to monitoring before exiting
+	 * const env = app.validateEnv({
+	 *   DATABASE_URL: z.string().url(),
+	 * }, {
+	 *   onError: (errors) => {
+	 *     // Send to monitoring service
+	 *     console.error("ENV ERROR:", errors);
+	 *     // Exit manually after alerting
+	 *     process.exit(1);
+	 *   }
+	 * });
 	 */
 	public validateEnv<T extends z.ZodRawShape>(
 		schema: T,
+		options?: EnvValidationOptions,
 	): z.infer<z.ZodObject<T>> {
 		const envSchema = z.object(schema);
 		const result = envSchema.safeParse(process.env);
 
 		if (!result.success) {
+			const errors = result.error.issues.map((err) => ({
+				field: err.path.join("."),
+				message: err.message,
+			}));
+
+			// If custom handler provided, call it and skip default behavior
+			if (options?.onError) {
+				options.onError(errors);
+				// If onError didn't throw/exit, throw error for caller to handle
+				throw new Error(
+					`Environment validation failed: ${errors.map((e) => `${e.field}: ${e.message}`).join(", ")}`,
+				);
+			}
+
+			// Default behavior: print error and exit
 			console.error("\n\x1b[41m\x1b[37m 🚨 Buntok Environment Error \x1b[0m\n");
 			console.error(
 				"\x1b[31mMissing or invalid environment variables:\x1b[0m\n",
 			);
 
-			result.error.issues.forEach((err) => {
+			errors.forEach((err) => {
 				console.error(
-					`  \x1b[33m❯\x1b[0m \x1b[36m${err.path.join(".")}\x1b[0m: \x1b[90m${err.message}\x1b[0m`,
+					`  \x1b[33m❯\x1b[0m \x1b[36m${err.field}\x1b[0m: \x1b[90m${err.message}\x1b[0m`,
 				);
 			});
 
@@ -393,9 +456,22 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 * Enable SO_REUSEPORT for multi-process load balancing (Linux only).
 	 * When enabled, multiple instances of the app can bind to the same port,
 	 * and incoming requests are load-balanced at the kernel level.
+	 *
+	 * ⚠️ On non-Linux platforms (macOS, Windows), this option is silently ignored.
+	 * A warning will be logged in development mode to help catch environment mismatches.
 	 */
 	public enableReusePort(enabled = true): this {
 		this._reusePort = enabled;
+
+		// Warn in development about platform limitation
+		if (enabled && process.platform !== "linux") {
+			console.warn(
+				`\x1b[33m⚠ Warning: enableReusePort() is only supported on Linux. ` +
+				`Current platform: ${process.platform}. ` +
+				`This option will be ignored in production.\x1b[0m`,
+			);
+		}
+
 		return this;
 	}
 
@@ -1276,7 +1352,22 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		if (this.wsRoutes.size > 0) {
 			serveOptions.websocket = {
-				open: (ws: ServerWebSocket<WSData<DI>>) => {
+				open: async (ws: ServerWebSocket<WSData<DI>>) => {
+					// Run authentication if provided
+					if (ws.data.handler.authenticate) {
+						try {
+							const authData = await ws.data.handler.authenticate(ws);
+							if (authData === null) {
+								ws.close(4001, "Unauthorized");
+								return;
+							}
+							// Store auth data on ws.data
+							(ws.data as any).auth = authData;
+						} catch {
+							ws.close(4001, "Unauthorized");
+							return;
+						}
+					}
 					ws.data.handler.open?.(ws);
 				},
 				message: (
@@ -1298,11 +1389,65 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			};
 		}
 
-		this.server = Bun.serve<WSData<DI>>(serveOptions);
+		// Auto-increment port if already in use
+		let currentPort = finalPort;
+		const maxRetries = 10;
+		for (let attempt = 0; attempt < maxRetries; attempt++) {
+			try {
+				serveOptions.port = currentPort;
+				this.server = Bun.serve<WSData<DI>>(serveOptions);
+				break;
+			} catch (err: any) {
+				if (err?.code === "EADDRINUSE" && attempt < maxRetries - 1) {
+					const originalPort = currentPort;
+					currentPort++;
+					logger.warn(
+						`⚠ Port ${originalPort} is already in use, using port ${currentPort} instead`,
+					);
+					continue;
+				}
+				throw err;
+			}
+		}
 
-		logger.info(`Server listening at http://localhost:${finalPort}`);
+		// Setup graceful shutdown handlers
+		this.setupGracefulShutdown();
+
+		logger.info(`Server listening at http://localhost:${currentPort}`);
 
 		if (callback) callback();
+	}
+
+	/**
+	 * Setup graceful shutdown handlers for SIGTERM and SIGINT signals.
+	 * When a signal is received, the server stops accepting new connections,
+	 * waits for in-flight requests to complete, then exits cleanly.
+	 */
+	private setupGracefulShutdown(): void {
+		const shutdown = async (signal: string) => {
+			logger.info(`\n${signal} received. Starting graceful shutdown...`);
+
+			if (this.server) {
+				// Stop accepting new connections
+				this.server.stop();
+
+				// Give in-flight requests time to complete (max 30 seconds)
+				const shutdownTimeout = 30_000;
+				const forceExitTimeout = setTimeout(() => {
+					logger.warn("Forcing shutdown after timeout");
+					process.exit(1);
+				}, shutdownTimeout);
+
+				// Clear timeout if we exit normally
+				clearTimeout(forceExitTimeout);
+			}
+
+			logger.info("Server shut down gracefully");
+			process.exit(0);
+		};
+
+		process.on("SIGTERM", () => shutdown("SIGTERM"));
+		process.on("SIGINT", () => shutdown("SIGINT"));
 	}
 }
 

@@ -5,6 +5,18 @@ export interface SSEOptions {
 	initialEvent?: string;
 	/** Retry timeout in milliseconds (client reconnection) */
 	retry?: number;
+	/**
+	 * Maximum number of concurrent SSE connections.
+	 * When exceeded, new connections receive 503 Service Unavailable.
+	 * Set to 0 for unlimited (default).
+	 */
+	maxConnections?: number;
+	/**
+	 * Callback to replay missed events on reconnection.
+	 * Receives the Last-Event-ID header value from the client.
+	 * Return an array of messages to replay.
+	 */
+	onReconnect?: (lastEventId: string) => Promise<SSEMessage[]>;
 }
 
 export interface SSEMessage {
@@ -16,21 +28,50 @@ export interface SSEMessage {
 	id?: string | number;
 }
 
+/**
+ * Global connection tracker for maxConnections enforcement.
+ */
+const connectionTracker = {
+	connections: new Set<SSE>(),
+};
+
 export class SSE {
 	private controller: ReadableStreamDefaultController | null = null;
 	private encoder = new TextEncoder();
 	private closed = false;
 	private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+	private lastEventId: string | null = null;
 
 	constructor(
 		private request: Request,
 		private options: SSEOptions = {},
-	) {}
+	) {
+		// Capture Last-Event-ID header for reconnection
+		this.lastEventId = request.headers.get("last-event-id");
+	}
 
 	/**
 	 * Create SSE response with ReadableStream
 	 */
 	connect(): Response {
+		// Check maxConnections limit
+		const maxConnections = this.options.maxConnections ?? 0;
+		if (maxConnections > 0 && connectionTracker.connections.size >= maxConnections) {
+			return new Response(
+				JSON.stringify({
+					error: "Service Unavailable",
+					message: "Maximum connections reached. Please try again later.",
+				}),
+				{
+					status: 503,
+					headers: { "Content-Type": "application/json" },
+				},
+			);
+		}
+
+		// Track this connection
+		connectionTracker.connections.add(this);
+
 		const stream = new ReadableStream({
 			start: (controller) => {
 				this.controller = controller;
@@ -53,6 +94,11 @@ export class SSE {
 				this.request.signal.addEventListener("abort", () => {
 					this.close();
 				});
+
+				// Replay missed events on reconnection
+				if (this.lastEventId && this.options.onReconnect) {
+					this.replayMissedEvents();
+				}
 			},
 			cancel: () => {
 				this.close();
@@ -68,6 +114,22 @@ export class SSE {
 				"X-Accel-Buffering": "no", // Disable nginx buffering
 			},
 		});
+	}
+
+	/**
+	 * Replay missed events from reconnection
+	 */
+	private async replayMissedEvents(): Promise<void> {
+		if (!this.lastEventId || !this.options.onReconnect) return;
+
+		try {
+			const missedEvents = await this.options.onReconnect(this.lastEventId);
+			for (const event of missedEvents) {
+				this.send(event);
+			}
+		} catch (error) {
+			console.error("SSE reconnect replay error:", error);
+		}
 	}
 
 	/**
@@ -106,6 +168,13 @@ export class SSE {
 	 */
 	onClose(callback: () => void): void {
 		this.disconnectCallbacks.push(callback);
+	}
+
+	/**
+	 * Get the Last-Event-ID header value (for reconnection)
+	 */
+	getLastEventId(): string | null {
+		return this.lastEventId;
 	}
 
 	/**
@@ -165,6 +234,9 @@ export class SSE {
 		if (this.closed) return;
 		this.closed = true;
 
+		// Remove from global tracker
+		connectionTracker.connections.delete(this);
+
 		for (const cb of this.disconnectCallbacks) {
 			try {
 				cb();
@@ -192,6 +264,133 @@ export class SSE {
 	 */
 	get isConnected(): boolean {
 		return !this.closed;
+	}
+
+	/**
+	 * Get the number of active SSE connections
+	 */
+	static get activeConnections(): number {
+		return connectionTracker.connections.size;
+	}
+
+	/**
+	 * Get all active SSE connections
+	 */
+	static getActiveConnections(): ReadonlySet<SSE> {
+		return connectionTracker.connections;
+	}
+}
+
+/**
+ * SSE Broadcaster for managing multiple connections.
+ *
+ * @example
+ * ```ts
+ * const broadcaster = new SSEBroadcaster();
+ *
+ * app.get("/events", (ctx) => {
+ *   const sse = createSSE(ctx.request);
+ *   broadcaster.add(sse);
+ *
+ *   sse.onClose(() => broadcaster.remove(sse));
+ *
+ *   return sse.connect();
+ * });
+ *
+ * // Broadcast to all clients
+ * broadcaster.broadcast("update", { count: 42 });
+ * ```
+ */
+export class SSEBroadcaster {
+	private clients = new Set<SSE>();
+
+	/**
+	 * Add an SSE connection to the broadcaster
+	 */
+	add(sse: SSE): void {
+		this.clients.add(sse);
+	}
+
+	/**
+	 * Remove an SSE connection from the broadcaster
+	 */
+	remove(sse: SSE): void {
+		this.clients.delete(sse);
+	}
+
+	/**
+	 * Broadcast a named event to all connected clients
+	 */
+	broadcast(event: string, data: string | object): void {
+		for (const client of this.clients) {
+			if (client.isConnected) {
+				client.sendEvent(event, data);
+			} else {
+				this.clients.delete(client);
+			}
+		}
+	}
+
+	/**
+	 * Broadcast to clients matching a predicate
+	 */
+	broadcastWhere(
+		predicate: (sse: SSE) => boolean,
+		event: string,
+		data: string | object,
+	): void {
+		for (const client of this.clients) {
+			if (!client.isConnected) {
+				this.clients.delete(client);
+				continue;
+			}
+			if (predicate(client)) {
+				client.sendEvent(event, data);
+			}
+		}
+	}
+
+	/**
+	 * Send a message to all connected clients
+	 */
+	sendAll(message: SSEMessage): void {
+		for (const client of this.clients) {
+			if (client.isConnected) {
+				client.send(message);
+			} else {
+				this.clients.delete(client);
+			}
+		}
+	}
+
+	/**
+	 * Close all connections
+	 */
+	closeAll(): void {
+		for (const client of this.clients) {
+			client.close();
+		}
+		this.clients.clear();
+	}
+
+	/**
+	 * Get the number of connected clients
+	 */
+	get size(): number {
+		// Clean up disconnected clients
+		for (const client of this.clients) {
+			if (!client.isConnected) {
+				this.clients.delete(client);
+			}
+		}
+		return this.clients.size;
+	}
+
+	/**
+	 * Check if there are any connected clients
+	 */
+	get isEmpty(): boolean {
+		return this.size === 0;
 	}
 }
 

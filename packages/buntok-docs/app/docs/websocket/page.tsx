@@ -102,6 +102,11 @@ app.listen(1212);`}
                 "(ws) => void",
                 "Buffer is ready for more data",
               ],
+              [
+                "authenticate",
+                "(ws) => Promise<unknown | null>",
+                "Client connects (return null to reject)",
+              ],
             ].map(([cb, sig, when]) => (
               <tr
                 key={cb}
@@ -117,6 +122,162 @@ app.listen(1212);`}
           </tbody>
         </table>
       </div>
+
+      {/* ──────────────── AUTHENTICATION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Authentication
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        WebSocket bypasses HTTP middleware. Use the{" "}
+        <code>authenticate</code> option to validate connections:
+      </p>
+      <CodeBlock
+        code={`app.ws("/chat", {
+  authenticate: async (ws) => {
+    const url = new URL(ws.data.ctx.request.url);
+    const token = url.searchParams.get("token");
+    
+    if (!token) return null; // Reject connection
+    
+    const user = await verifyToken(token);
+    return user ? { user } : null; // Return auth data or reject
+  },
+  open: (ws) => {
+    // ws.data.auth contains the return value from authenticate
+    const { user } = ws.data.auth as { user: User };
+    console.log("Authenticated:", user.name);
+  },
+  message: (ws, msg) => {
+    const { user } = ws.data.auth as { user: User };
+    // user is available here
+  },
+});`}
+      />
+
+      {/* ──────────────── MESSAGE VALIDATION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Message Validation
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>validateWSMessage</code> with Zod to validate incoming
+        messages:
+      </p>
+      <CodeBlock
+        code={`import { z } from "zod";
+import { validateWSMessage } from "@buntok/core";
+
+const messageSchema = z.object({
+  type: z.enum(["chat", "ping", "join"]),
+  payload: z.string().optional(),
+});
+
+app.ws("/chat", {
+  message: (ws, message) => {
+    const result = validateWSMessage(messageSchema, message);
+    
+    if (!result.success) {
+      ws.send(JSON.stringify({
+        error: "Invalid message",
+        details: result.errors.issues,
+      }));
+      return;
+    }
+    
+    // result.data is fully typed
+    switch (result.data.type) {
+      case "chat":
+        handleChat(ws, result.data.payload);
+        break;
+      case "ping":
+        ws.send(JSON.stringify({ type: "pong" }));
+        break;
+      case "join":
+        handleJoin(ws, result.data.payload);
+        break;
+    }
+  },
+});`}
+      />
+
+      {/* ──────────────── ROOM MANAGEMENT ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Room Management
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use the <code>Room</code> class for higher-level room management:
+      </p>
+      <CodeBlock
+        code={`import { Room } from "@buntok/core";
+
+const rooms = new Map<string, Room>();
+
+app.ws("/chat", {
+  open: (ws) => {
+    const roomName = ws.data.ctx.query.get("room") || "general";
+    let room = rooms.get(roomName);
+    
+    if (!room) {
+      room = new Room(roomName);
+      rooms.set(roomName, room);
+    }
+    
+    room.join(ws);
+    ws.data.room = room;
+    
+    // Notify others
+    room.broadcast({
+      type: "user:joined",
+      users: room.size,
+    }, ws);
+  },
+  message: (ws, msg) => {
+    const room = ws.data.room as Room;
+    room.broadcast(msg, ws); // Broadcast to all except sender
+  },
+  close: (ws) => {
+    const room = ws.data.room as Room;
+    room.leave(ws);
+    
+    room.broadcast({
+      type: "user:left",
+      users: room.size,
+    });
+  },
+});`}
+      />
+
+      {/* ──────────────── HEARTBEAT ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Heartbeat (Ping/Pong)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>wsHeartbeat</code> to detect stale connections:
+      </p>
+      <CodeBlock
+        code={`import { wsHeartbeat } from "@buntok/core";
+
+app.ws("/chat", {
+  ...wsHeartbeat(30_000), // 30 second interval
+  open: (ws) => {
+    console.log("Client connected");
+  },
+  message: (ws, msg) => {
+    // Handle message
+  },
+});`}
+      />
 
       {/* ──────────────── PUB/SUB ──────────────── */}
       <Heading

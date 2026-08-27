@@ -2,6 +2,12 @@ import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
 
+export const metadata = {
+  title: "API Documentation",
+  description:
+    "Generate OpenAPI docs and serve Scalar UI for interactive API exploration.",
+};
+
 export default function ApiDocsPage() {
   return (
     <div>
@@ -12,8 +18,8 @@ export default function ApiDocsPage() {
         API Docs
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Auto-generate OpenAPI 3.0 documentation from your Zod validation schemas.
-        One command, zero config.
+        Auto-generate OpenAPI 3.0 documentation from your Zod validation
+        schemas. One command, zero config.
       </p>
 
       {/* ──────────────── HOW IT WORKS ──────────────── */}
@@ -43,9 +49,7 @@ export default function ApiDocsPage() {
       >
         Generate Docs
       </Heading>
-      <CodeBlock
-        code={`buntok make:docs`}
-      />
+      <CodeBlock code={`buntok make:docs`} />
 
       <Heading
         level={3}
@@ -178,12 +182,6 @@ app.get(
         code={`
 import { z } from "@buntok/core";
 
-export const metadata = {
-  title: "API Documentation",
-  description: "Generate OpenAPI docs and serve Scalar UI for interactive API exploration.",
-};
-
-
 const app = new App();
 
 // ─── Schemas ───────────────────────────────────────
@@ -271,8 +269,8 @@ app.listen(1212);
 
       <Callout type="info">
         The <code>buntok make:docs</code> command imports your{" "}
-        <code>src/index.ts</code> and reads the exported{" "}
-        <code>app</code> instance. Make sure you export it:{" "}
+        <code>src/index.ts</code> and reads the exported <code>app</code>{" "}
+        instance. Make sure you export it:{" "}
         <code>export const app = new App()</code>.
       </Callout>
     </div>

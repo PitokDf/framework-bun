@@ -2,20 +2,36 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
+import { createInterface } from "node:readline";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+function askQuestion(question: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		const rl = createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+
+		rl.question(question, (answer) => {
+			rl.close();
+			const normalized = answer.trim().toLowerCase();
+			resolve(normalized === "y" || normalized === "yes" || normalized === "");
+		});
+	});
+}
+
 const REQUIRED_SCRIPTS: Record<string, string> = {
 	dev: "bun --watch src/index.ts",
-	start: "bun run src/index.ts",
+	build: "bunx buntok build",
+	start: "bun .buntok/index.js",
 	check: "bunx @biomejs/biome check --write .",
 	format: "bunx @biomejs/biome format --write .",
 	lint: "bunx @biomejs/biome lint .",
 };
 
 const BIOME_CONFIG = {
-	$schema: "https://biomejs.dev/schemas/2.5.3/schema.json",
 	vcs: {
 		enabled: true,
 		clientKind: "git",
@@ -23,7 +39,7 @@ const BIOME_CONFIG = {
 	},
 	files: {
 		ignoreUnknown: true,
-		ignore: ["node_modules", "dist", ".buntok", "coverage"],
+		includes: ["**", "!**/node_modules", "!**/dist", "!**/.buntok", "!**/coverage"],
 	},
 	formatter: {
 		enabled: true,
@@ -93,9 +109,14 @@ const VSCODE_SETTINGS = {
 	},
 };
 
-const INDEX_TEMPLATE = `import { App, z, zResponse, zValidator, asyncHandler } from "buntok";
+const INDEX_TEMPLATE = `import { App, z, zResponse, zValidator, asyncHandler } from "@buntok/core";
 
 export const app = new App();
+app.static("/docs", "./public/docs");
+
+app.validateEnv({
+	PORT: z.string().length(4)
+})
 
 app.get("/welcome/:name",
 	zValidator("params", z.object({
@@ -109,7 +130,7 @@ app.get("/welcome/:name",
 	})
 );
 
-app.listen(3000);
+app.listen();
 `;
 
 function findSkillMdSource(): string | null {
@@ -303,28 +324,45 @@ function setupVscode(projectRoot: string): boolean {
 }
 
 const ENV_CONTENT = `# Buntok Configuration
+PORT=1212
 AUTH_STORE=header
 AUTH_COOKIE=session
 `;
 
 const ENV_EXAMPLE_CONTENT = `# Buntok Configuration
 #
+# PORT: port is using for the app
 # AUTH_STORE: Where to store/read JWT tokens
 #   - "header" (default): Read from Authorization: Bearer <token> header
 #   - "cookie": Read from HttpOnly cookie (set AUTH_COOKIE for cookie name)
 #
 # AUTH_COOKIE: Cookie name for JWT storage (only used when AUTH_STORE=cookie)
 #
+PORT=1212
 AUTH_STORE=header
 AUTH_COOKIE=session
 `;
+
+const VERCEL_JSON_TEMPLATE = {
+	builds: [
+		{
+			src: "src/index.ts",
+			use: "@vercel/rest",
+		},
+	],
+	routes: [
+		{
+			src: "/(.*)",
+			dest: "src/index.ts",
+		},
+	],
+};
 
 const GITIGNORE_CONTENT = `# Dependencies
 node_modules/
 
 # Build output
-dist/
-.build/
+.buntok/
 
 # Environment
 .env
@@ -390,6 +428,19 @@ function createGitignore(projectRoot: string): boolean {
 	return true;
 }
 
+function createVercelJson(projectRoot: string): boolean {
+	const vercelPath = join(projectRoot, "vercel.json");
+
+	if (existsSync(vercelPath)) {
+		console.log("\x1b[90m• vercel.json: already exists, skipping\x1b[0m");
+		return false;
+	}
+
+	writeFileSync(vercelPath, JSON.stringify(VERCEL_JSON_TEMPLATE, null, 2) + "\n", "utf-8");
+	console.log("\x1b[32m✓ Created\x1b[0m vercel.json");
+	return true;
+}
+
 export async function initCommand() {
 	const projectRoot = process.cwd();
 
@@ -401,4 +452,17 @@ export async function initCommand() {
 	createIndexFile(projectRoot);
 	createEnvFiles(projectRoot);
 	createGitignore(projectRoot);
+
+	const vercelPath = join(projectRoot, "vercel.json");
+	if (!existsSync(vercelPath)) {
+		console.log("");
+		const useVercel = await askQuestion(
+			"\x1b[36mDo you want to deploy to Vercel? (y/N): \x1b[0m",
+		);
+		if (useVercel) {
+			createVercelJson(projectRoot);
+		}
+	} else {
+		console.log("\x1b[90m• vercel.json: already exists, skipping\x1b[0m");
+	}
 }

@@ -538,7 +538,7 @@ app.setContainer(container);
 
 ```ts
 import {
-  uploader, parseUploads, deleteUploadedFile,
+  uploader, handleUploads, deleteUploadedFile,
   LocalDiskStorage, MemoryStorage,
 } from "@buntok/core";
 ```
@@ -548,17 +548,42 @@ import {
 | Option | Type | Description |
 |--------|------|-------------|
 | `storage` | `StorageDriver` | **Required** — `LocalDiskStorage`, `MemoryStorage`, or custom |
-| `filename` | `(original, file) => string` | Global default filename generator |
+| `filename` | `(original, file) => { name, ext }` | Global default filename generator |
+| `maxFileSize` | `number` | Global max file size in bytes |
+| `allowedMimeTypes` | `MimeType[]` | Global allowed MIME types |
 | `fields` | `Record<string, UploadFieldConfig>` | Whitelist & per-field validation |
+| `verifyMagicBytes` | `boolean` | Verify file magic bytes against MIME type (default: true) |
 
 ### Upload Field Config
 
 | Option | Type | Description |
 |--------|------|-------------|
 | `required` | `boolean` | Required or not (default: false) |
-| `maxFileSize` | `number` | Max file size in bytes |
-| `allowedMimeTypes` | `string[]` | Allowed MIME types |
-| `filename` | `(original, file) => string` | Custom filename for this field |
+| `maxFileSize` | `number` | Max file size in bytes (overrides global) |
+| `allowedMimeTypes` | `MimeType[]` | Allowed MIME types (overrides global) |
+| `filename` | `(original, file) => { name, ext }` | Custom filename for this field |
+
+### Magic Bytes Verification
+
+Enabled by default. Verifies that the file's actual content matches the claimed MIME type by checking magic bytes (file signatures). Prevents malicious files with spoofed MIME types.
+
+```ts
+// Magic bytes verification ON (default)
+const result = await handleUploads(ctx, {
+  storage: new LocalDiskStorage("./uploads"),
+  allowedMimeTypes: ["image/png", "image/jpeg"],
+});
+
+// Disable if needed (not recommended)
+const result = await handleUploads(ctx, {
+  storage: new LocalDiskStorage("./uploads"),
+  verifyMagicBytes: false,
+});
+```
+
+Supported formats: JPEG, PNG, GIF, WebP, BMP, TIFF, ICO, AVIF, HEIC, HEIF, MP4, WebM, OGG, QuickTime, AVI, Matroska, MPEG, MP3, WAV, AAC, FLAC, M4A, PDF, RTF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ODT, ODS, ODP, ZIP, 7Z, RAR, GZIP, TAR, BZIP2, WOFF, WOFF2, TTF, OTF.
+
+Text-based formats (JSON, HTML, CSS, etc.) skip verification.
 
 ### Middleware Approach (Recommended)
 
@@ -583,11 +608,11 @@ app.post("/upload",
 
 ### Manual Approach
 
-`parseUploads` throws `BadRequestError` on validation failure:
+`handleUploads` throws `BadRequestError` on validation failure (size, MIME type, magic bytes mismatch, or required fields missing):
 
 ```ts
 app.post("/upload", asyncHandler(async (ctx) => {
-  const result = await parseUploads(ctx, {
+  const result = await handleUploads(ctx, {
     storage: new LocalDiskStorage("./uploads"),
     fields: {
       avatar: { required: true, maxFileSize: 2 * 1024 * 1024 },
@@ -601,11 +626,11 @@ app.post("/upload", asyncHandler(async (ctx) => {
 
 ```ts
 // Global
-filename: (name, file) => `${Date.now()}-${name}`
+filename: (name, file) => ({ name: `${Date.now()}-${name}`, ext: '.png' })
 
 // Per-field
 fields: {
-  avatar: { filename: (name) => `avatars/${Date.now()}-${name}` }
+  avatar: { filename: (name) => ({ name: `avatars/${Date.now()}-${name}`, ext: '.jpg' }) }
 }
 ```
 
@@ -619,25 +644,27 @@ import type { StorageDriver, UploadedFile } from "@buntok/core";
 class S3Storage implements StorageDriver {
   constructor(private bucket: string) {}
 
-  async handleFile(file: File, filename: string): Promise<UploadedFile> {
-    const buffer = await file.arrayBuffer();
+  async handleFile(file: File, name: string, ext: string): Promise<UploadedFile> {
+    const key = `uploads/${name}${ext}`;
     await s3.send(new PutObjectCommand({
       Bucket: this.bucket,
-      Key: filename,
-      Body: new Uint8Array(buffer),
+      Key: key,
+      Body: file,
       ContentType: file.type,
     }));
     return {
       originalName: file.name,
-      filename,
+      name,
+      ext,
       size: file.size,
       type: file.type,
+      path: key,
     };
   }
 
-  async deleteFile(filename: string): Promise<boolean> {
+  async deleteFile(key: string): Promise<boolean> {
     try {
-      await s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: filename }));
+      await s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
       return true;
     } catch {
       return false;
@@ -651,11 +678,28 @@ class S3Storage implements StorageDriver {
 ```ts
 import { deleteUploadedFile } from "@buntok/core";
 
-const result = await parseUploads(ctx, options);
-const avatar = result.fileMap.avatar;
+const result = await handleUploads(ctx, options);
+const avatar = result.fields.avatar;
 
 // Delete file
 const deleted = await deleteUploadedFile(options.storage, avatar);
+```
+
+### Rate Limiting
+
+Combine with the built-in rate limiter to prevent upload abuse:
+
+```ts
+import { uploader, rateLimiter, LocalDiskStorage } from "@buntok/core";
+
+// Rate limit uploads to 10 per hour per user
+app.post("/upload",
+  rateLimiter({ windowMs: 60 * 60 * 1000, max: 10 }),
+  uploader({ storage: new LocalDiskStorage("./uploads") }),
+  async (ctx) => {
+    return ctx.json({ uploaded: true });
+  }
+);
 ```
 
 ### UploadedFile Object
@@ -663,7 +707,8 @@ const deleted = await deleteUploadedFile(options.storage, avatar);
 ```ts
 {
   originalName: string;   // original filename from client
-  filename: string;       // generated filename
+  name: string;           // generated filename (with UUID)
+  ext: string;            // file extension with dot (e.g. .png)
   size: number;           // size in bytes
   type: string;           // MIME type
   buffer?: ArrayBuffer;   // present if MemoryStorage
@@ -676,6 +721,12 @@ const deleted = await deleteUploadedFile(options.storage, avatar);
 ## SSE (Server-Sent Events)
 
 ```ts
+import { SSE, SSEBroadcaster, createSSE } from "@buntok/core";
+```
+
+### Basic Usage
+
+```ts
 app.get("/events", (ctx) => {
   return ctx.sse(async (sse) => {
     sse.send({ event: "message", data: "Hello!" });
@@ -685,9 +736,59 @@ app.get("/events", (ctx) => {
 });
 ```
 
+### Reconnection Support
+
+```ts
+app.get("/events", (ctx) => {
+  return ctx.sse(async (sse) => {
+    // Handle events
+  }, {
+    onReconnect: async (lastEventId) => {
+      return missedEvents;
+    },
+  });
+});
+```
+
+### Connection Limits
+
+```ts
+app.get("/events", (ctx) => {
+  return ctx.sse(async (sse) => {
+    // Handle events
+  }, {
+    maxConnections: 100,
+  });
+});
+
+console.log(SSE.activeConnections);
+```
+
+### Broadcasting
+
+```ts
+const broadcaster = new SSEBroadcaster();
+
+app.get("/events", (ctx) => {
+  return ctx.sse(async (sse) => {
+    broadcaster.add(sse);
+    sse.onClose(() => broadcaster.remove(sse));
+    await new Promise(() => {});
+  });
+});
+
+broadcaster.broadcast("update", { count: 42 });
+```
+
 ---
 
 ## WebSocket
+
+```ts
+import { validateWSMessage, Room, wsAuth, wsHeartbeat } from "@buntok/core";
+```
+
+### Basic Usage
 
 ```ts
 app.ws("/chat", {
@@ -701,6 +802,81 @@ app.ws("/chat", {
   close(ws, code, reason) {
     console.log("Disconnected", code);
   },
+});
+```
+
+### Authentication
+
+```ts
+app.ws("/chat", {
+  authenticate: async (ws) => {
+    const token = new URL(ws.data.ctx.request.url).searchParams.get("token");
+    if (!token) return null;
+    const user = await verifyToken(token);
+    return user ? { user } : null;
+  },
+  open: (ws) => {
+    const { user } = ws.data.auth as { user: User };
+  },
+});
+```
+
+### Message Validation
+
+```ts
+import { z } from "zod";
+import { validateWSMessage } from "@buntok/core";
+
+const schema = z.object({
+  type: z.enum(["chat", "ping"]),
+  payload: z.string().optional(),
+});
+
+app.ws("/chat", {
+  message: (ws, message) => {
+    const result = validateWSMessage(schema, message);
+    if (!result.success) {
+      ws.send(JSON.stringify({ error: "Invalid message" }));
+      return;
+    }
+    // result.data is typed
+  },
+});
+```
+
+### Room Management
+
+```ts
+import { Room } from "@buntok/core";
+
+const rooms = new Map<string, Room>();
+
+app.ws("/chat", {
+  open: (ws) => {
+    let room = rooms.get("general");
+    if (!room) {
+      room = new Room("general");
+      rooms.set("general", room);
+    }
+    room.join(ws);
+    room.broadcast({ type: "user:joined", users: room.size }, ws);
+  },
+  message: (ws, msg) => {
+    const room = ws.data.room as Room;
+    room.broadcast(msg, ws);
+  },
+});
+```
+
+### Heartbeat
+
+```ts
+import { wsHeartbeat } from "@buntok/core";
+
+app.ws("/chat", {
+  ...wsHeartbeat(30_000),
+  open: (ws) => console.log("Connected"),
+  message: (ws, msg) => { /* handle */ },
 });
 ```
 
@@ -1282,6 +1458,33 @@ emitter.off("user:created", listener);
 
 // Check listener count
 const count = emitter.listenerCount("user:created");
+
+// Get all event names
+const names = emitter.eventNames();
+```
+
+### Error Isolation
+
+```ts
+await emitter.emit("user:created", { user }, {
+  isolatedErrors: true,
+  onError: (event, error) => console.error(event, error),
+});
+```
+
+### Serial Execution
+
+```ts
+await emitter.emitSerial("order:placed", { order }, {
+  isolatedErrors: true,
+});
+```
+
+### Max Listeners
+
+```ts
+const emitter = new EventEmitter({ maxListeners: 10 });
+emitter.increaseMaxListeners(20);
 ```
 
 ### Custom Events
@@ -1357,43 +1560,194 @@ class RedisCacheDriver implements CacheDriver {
 
 ## Mailer
 
-Email sending with SMTP support.
+Email sending with built-in support for Resend, SendGrid, and Mailgun (zero-deps HTTP). SMTP via optional `nodemailer` import. Supports attachments, CC/BCC, reply-to, and inline images.
 
 ```ts
 import { Mailer } from "@buntok/core";
 ```
 
-### Usage
+### Providers
+
+| Provider | Requires | Notes |
+|----------|----------|-------|
+| resend | apiKey | Zero-deps, HTTP-based |
+| sendgrid | apiKey | Zero-deps, HTTP-based |
+| mailgun | apiKey + domain | Zero-deps, HTTP-based |
+| smtp | smtp config | Requires nodemailer (bun add nodemailer) |
+
+### Basic Usage
 
 ```ts
+// Resend
 const mailer = new Mailer({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: "your@gmail.com",
-    pass: "your-password",
+  provider: "resend",
+  apiKey: process.env.RESEND_API_KEY,
+});
+
+await mailer.send({
+  from: "noreply@example.com",
+  to: "user@example.com",
+  subject: "Welcome!",
+  html: "<h1>Hello!</h1>",
+});
+
+// SMTP
+const mailer = new Mailer({
+  provider: "smtp",
+  smtp: {
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   },
 });
+```
 
-// Send email
+### CC & BCC
+
+```ts
 await mailer.send({
-  from: "sender@gmail.com",
-  to: "recipient@example.com",
-  subject: "Welcome!",
-  html: "<h1>Hello!</h1><p>Welcome to our platform.</p>",
+  from: "noreply@example.com",
+  to: "user@example.com",
+  cc: "manager@example.com",
+  bcc: ["audit@example.com", "logs@example.com"],
+  subject: "Invoice #123",
+  html: "<p>See attached invoice</p>",
 });
+```
 
-// Send with attachments
+### Reply-To
+
+```ts
 await mailer.send({
-  from: "sender@gmail.com",
-  to: "recipient@example.com",
-  subject: "Report",
-  text: "Please find the report attached.",
+  from: "noreply@example.com",
+  replyTo: "support@example.com",
+  to: "user@example.com",
+  subject: "Your account",
+  html: "<p>Reply to our support team</p>",
+});
+```
+
+### Attachments
+
+```ts
+import { readFileSync } from "fs";
+
+const pdfBuffer = readFileSync("./invoice.pdf");
+
+await mailer.send({
+  from: "noreply@example.com",
+  to: "user@example.com",
+  subject: "Your Invoice",
+  html: "<p>See attached invoice</p>",
   attachments: [
-    { filename: "report.pdf", content: pdfBuffer },
+    {
+      filename: "invoice.pdf",
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    },
   ],
 });
+```
+
+### Inline Images (CID)
+
+Embed images directly in HTML using Content-ID:
+
+```ts
+const logoBase64 = readFileSync("./logo.png").toString("base64");
+
+await mailer.send({
+  from: "noreply@example.com",
+  to: "user@example.com",
+  subject: "Welcome!",
+  html: `
+    <h1>Welcome!</h1>
+    <img src="cid:company-logo" alt="Logo" />
+  `,
+  attachments: [
+    {
+      filename: "logo.png",
+      content: logoBase64,
+      contentType: "image/png",
+      cid: "company-logo",  // Matches cid: in HTML
+    },
+  ],
+});
+```
+
+---
+
+## Template Engine
+
+Handlebars-like template engine with zero dependencies. Perfect for email templates.
+
+```ts
+import { render, TemplateEngine } from "@buntok/core";
+```
+
+### Basic Usage
+
+```ts
+const html = render("Hello {{ name }}!", { name: "World" });
+// → "Hello World!"
+```
+
+### Variables
+
+```ts
+render("{{ user.email }}", { user: { email: "budi@example.com" } });
+// → "budi@example.com"
+```
+
+### Raw HTML (Triple Braces)
+
+```ts
+render("{{{ html }}}", { html: "<b>bold</b>" });
+// → "<b>bold</b>" (not escaped)
+```
+
+### Conditionals
+
+```ts
+render("{{#if active}}Yes{{else}}No{{/if}}", { active: false });
+// → "No"
+
+render("{{#unless verified}}Please verify{{/unless}}", { verified: false });
+// → "Please verify"
+```
+
+### Loops
+
+```ts
+render("{{#each items}}{{name}} {{/each}}", {
+  items: [{ name: "A" }, { name: "B" }],
+});
+// → "A B "
+```
+
+Special variables: `@index`, `@first`, `@last`
+
+### Partials & Helpers
+
+```ts
+const engine = new TemplateEngine();
+engine.registerPartial("header", "<h1>{{ title }}</h1>");
+engine.registerHelper("formatDate", (d) => new Date(d).toLocaleDateString());
+
+const html = engine.render("{{> header }}<p>{{ formatDate date }}</p>", {
+  title: "Welcome",
+  date: "2024-01-15",
+});
+```
+
+### Strict Mode (Typo Detection)
+
+```ts
+render("Hello {{ usre.name }}", { user: { name: "Budi" } });
+// → Error: Variable 'usre.name' not found.
+//   Available keys: user
+//   Did you mean: 'user.name'?
 ```
 
 ---
