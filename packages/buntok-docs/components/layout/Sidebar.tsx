@@ -66,6 +66,7 @@ const navigation: NavItem[] = [
       { title: "Repository", href: "/docs/repository" },
       { title: "Audit Log", href: "/docs/audit-log" },
       { title: "Health Check", href: "/docs/health-check" },
+      { title: "CLI", href: "/docs/cli" },
     ],
   },
 ];
