@@ -1,6 +1,9 @@
 {
 	"name": "@buntok/drizzle",
-	"version": "1.0.1",
+	"version": "1.0.3",
+	"scripts": {
+		"build": "tsup && tsc"
+	},
 	"description": "Drizzle BaseRepository for Buntok framework",
 	"module": "dist/index.js",
 	"type": "module",

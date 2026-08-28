@@ -38,27 +38,85 @@ export abstract class BaseRepository<TTable extends Table, CreateInput, UpdateIn
 	protected db: TDb;
 	protected table: TTable;
 
+	/**
+	 * Fields to exclude from responses (blacklist mode).
+	 *
+	 * @example
+	 * ```ts
+	 * class UserRepository extends BaseRepository<typeof users, CreateInput, UpdateInput> {
+	 *   protected $hidden = ["passwordHash", "resetToken"];
+	 * }
+	 * ```
+	 */
+	protected $hidden?: string[];
+
+	/**
+	 * Fields to include in responses (whitelist mode).
+	 * When set, only these fields are returned. Takes precedence over $hidden.
+	 *
+	 * @example
+	 * ```ts
+	 * class UserRepository extends BaseRepository<typeof users, CreateInput, UpdateInput> {
+	 *   protected $visible = ["id", "name", "email"];
+	 * }
+	 * ```
+	 */
+	protected $visible?: string[];
+
 	constructor(db: TDb, table: TTable) {
 		this.db = db;
 		this.table = table;
 	}
 
 	private get tableName(): string {
-		return this.table[Symbol.for("drizzle:Name")];
+		return (this.table as any)[Symbol.for("drizzle:Name")];
+	}
+
+	// ─── Field Sanitization ────────────────────────────────────────────
+
+	/**
+	 * Sanitize a single entity by applying $visible or $hidden rules.
+	 */
+	private sanitize(item: Record<string, any>): Record<string, any> {
+		if (this.$visible) {
+			const result: Record<string, any> = {};
+			for (const key of this.$visible) {
+				if (key in item) result[key] = item[key];
+			}
+			return result;
+		}
+		if (this.$hidden?.length) {
+			const result: Record<string, any> = { ...item };
+			for (const key of this.$hidden) {
+				delete result[key];
+			}
+			return result;
+		}
+		return item;
+	}
+
+	/**
+	 * Sanitize an array of entities.
+	 */
+	private sanitizeMany(items: Record<string, any>[]): Record<string, any>[] {
+		return items.map((item) => this.sanitize(item));
 	}
 
 	async findAll(): Promise<any[]> {
-		return this.db.query[this.tableName].findMany();
+		const items = await this.db.query[this.tableName].findMany();
+		return this.sanitizeMany(items);
 	}
 
 	async findById(id: number | string): Promise<any | null> {
-		return this.db.query[this.tableName].findFirst({
-			where: eq(this.table.id, id),
+		const item = await this.db.query[this.tableName].findFirst({
+			where: eq((this.table as any).id, id),
 		});
+		return item ? this.sanitize(item) : null;
 	}
 
 	async findOne(where: Record<string, any>): Promise<any | null> {
-		return this.db.query[this.tableName].findFirst({ where });
+		const item = await this.db.query[this.tableName].findFirst({ where });
+		return item ? this.sanitize(item) : null;
 	}
 
 	async create(data: CreateInput): Promise<any> {
@@ -66,24 +124,25 @@ export abstract class BaseRepository<TTable extends Table, CreateInput, UpdateIn
 			.insert(this.table)
 			.values(data)
 			.returning();
-		return result;
+		return this.sanitize(result);
 	}
 
 	async createMany(data: CreateInput[]): Promise<any[]> {
-		return this.db.insert(this.table).values(data).returning();
+		const results = await this.db.insert(this.table).values(data).returning();
+		return this.sanitizeMany(results);
 	}
 
 	async update(id: number | string, data: UpdateInput): Promise<any> {
 		const [result] = await this.db
 			.update(this.table)
 			.set(data)
-			.where(eq(this.table.id, id))
+			.where(eq((this.table as any).id, id))
 			.returning();
-		return result;
+		return this.sanitize(result);
 	}
 
 	async delete(id: number | string): Promise<void> {
-		await this.db.delete(this.table).where(eq(this.table.id, id));
+		await this.db.delete(this.table).where(eq((this.table as any).id, id));
 	}
 
 	async count(): Promise<number> {

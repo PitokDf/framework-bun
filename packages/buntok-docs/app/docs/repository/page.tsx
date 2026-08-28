@@ -201,6 +201,125 @@ export default function RepositoryPage() {
         </table>
       </div>
 
+      {/* ──────────────── FIELD SANITIZATION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Field Sanitization
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Automatically exclude or include specific fields from all CRUD
+        responses. Configure once in your repository — every{" "}
+        <code>findAll()</code>, <code>findById()</code>, <code>create()</code>,
+        etc. will apply the rules automatically.
+      </p>
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        <code>$hidden</code> (Blacklist)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Exclude sensitive fields like passwords, tokens, or internal data from
+        all responses:
+      </p>
+      <CodeBlock
+        code={`interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  resetToken: string | null;
+  createdAt: Date;
+}
+
+// Prisma
+class UserRepository extends BaseRepository<User, PrismaClient> {
+  protected $hidden = ["passwordHash", "resetToken"] as const;
+
+  constructor(prisma: PrismaClient) {
+    super(prisma, "user");
+  }
+}
+
+// Drizzle
+class UserRepository extends BaseRepository<typeof users, CreateInput, UpdateInput> {
+  protected $hidden = ["passwordHash", "resetToken"] as const;
+}
+
+// TypeORM
+class UserRepository extends BaseRepository<User, CreateInput, UpdateInput> {
+  protected $hidden = ["passwordHash", "resetToken"] as const;
+}
+
+// Now ALL responses automatically exclude passwordHash and resetToken:
+await userRepo.findAll();       // no passwordHash, no resetToken
+await userRepo.findById("1");   // same
+await userRepo.create(data);    // same
+await userRepo.update(id, data);// same`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        <code>$visible</code> (Whitelist)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Only return specific fields. Takes precedence over{" "}
+        <code>$hidden</code>:
+      </p>
+      <CodeBlock
+        code={`class UserRepository extends BaseRepository<User, PrismaClient> {
+  // Only return id, name, email — everything else is excluded
+  protected $visible = ["id", "name", "email"] as const;
+
+  constructor(prisma: PrismaClient) {
+    super(prisma, "user");
+  }
+}
+
+// Response: { id: "1", name: "Budi", email: "budi@test.com" }
+// passwordHash, resetToken, createdAt are all excluded`}
+      />
+
+      <Callout type="warning">
+        <code>$visible</code> takes precedence over <code>$hidden</code>. If
+        both are set, only <code>$visible</code> rules are applied.
+      </Callout>
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Type Safety
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Both <code>$hidden</code> and <code>$visible</code> are type-safe —
+        TypeScript will catch typos and non-existent fields at compile time:
+      </p>
+      <CodeBlock
+        code={`class UserRepository extends BaseRepository<User, PrismaClient> {
+  // ✅ Correct
+  protected $hidden = ["passwordHash"] as const;
+
+  // ❌ Compile error: "passwordHaash" is not assignable to keyof User
+  //    Did you mean "passwordHash"?
+  protected $hidden = ["passwordHaash"] as const;
+
+  // ❌ Compile error: "typo_field" is not assignable to keyof User
+  protected $visible = ["id", "typo_field"] as const;
+}`}
+      />
+
+      <Callout type="info">
+        The <code>as const</code> assertion is required to preserve literal
+        types. Without it, TypeScript infers <code>string[]</code> which is not
+        assignable to <code>readonly (keyof T)[]</code>.
+      </Callout>
+
       {/* ──────────────── PRISMA ──────────────── */}
       <Heading
         level={2}
@@ -467,6 +586,14 @@ app.listen(1212);`}
               <td className="px-4 py-2 text-center">✅</td>
               <td className="px-4 py-2 text-center">❌</td>
               <td className="px-4 py-2 text-center">❌</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>$hidden</code> / <code>$visible</code>
+              </td>
+              <td className="px-4 py-2 text-center">✅</td>
+              <td className="px-4 py-2 text-center">✅</td>
+              <td className="px-4 py-2 text-center">✅</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">ORM accessor</td>

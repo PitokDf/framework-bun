@@ -114,15 +114,20 @@ export function setCookie(
 ): Response {
 	const cookie = serializeCookie(name, value, options);
 
-	// Clone response and add Set-Cookie header
-	const newResponse = new Response(response.body, {
+	// Clone response headers into a new Headers object to avoid
+	// the body-stream being consumed by the Response constructor
+	// when the original response's body is already locked.
+	const newHeaders = new Headers();
+	response.headers.forEach((value, key) => {
+		newHeaders.set(key, value);
+	});
+	newHeaders.append("Set-Cookie", cookie);
+
+	return new Response(response.body, {
 		status: response.status,
 		statusText: response.statusText,
-		headers: response.headers,
+		headers: newHeaders,
 	});
-
-	newResponse.headers.append("Set-Cookie", cookie);
-	return newResponse;
 }
 
 /**

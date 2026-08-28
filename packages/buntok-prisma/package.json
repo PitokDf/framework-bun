@@ -1,6 +1,9 @@
 {
 	"name": "@buntok/prisma",
-	"version": "1.0.4",
+	"version": "1.0.8",
+	"scripts": {
+		"build": "tsup && tsc"
+	},
 	"description": "Prisma BaseRepository for Buntok framework",
 	"module": "dist/index.js",
 	"type": "module",
