@@ -21,6 +21,97 @@ export interface UploadedFile {
 	path?: string;
 }
 
+/**
+ * Extended UploadedFile for image files processed with Bun.Image.
+ * Only available when `outputFormat` is set in UploadFieldConfig.
+ */
+export interface ImageUploadedFile extends UploadedFile {
+	/** Discriminant for runtime type narrowing */
+	kind: "image";
+	/** Image width in pixels */
+	width: number;
+	/** Image height in pixels */
+	height: number;
+	/** Detected image format (e.g., "png", "jpeg", "webp") */
+	format: string;
+	/** MIME type before conversion (only set when outputFormat differs from input) */
+	originalType?: string;
+	/** File extension before conversion (only set when outputFormat differs from input) */
+	originalExt?: string;
+}
+
+/** Image MIME types that Bun.Image can process */
+const IMAGE_MIME_TYPES = new Set([
+	"image/jpeg",
+	"image/png",
+	"image/gif",
+	"image/webp",
+	"image/avif",
+	"image/bmp",
+	"image/tiff",
+]);
+
+/** Output format → { ext, type } mapping */
+const OUTPUT_FORMAT_MAP: Record<string, { ext: string; type: string }> = {
+	webp: { ext: ".webp", type: "image/webp" },
+	png: { ext: ".png", type: "image/png" },
+	jpeg: { ext: ".jpg", type: "image/jpeg" },
+	avif: { ext: ".avif", type: "image/avif" },
+};
+
+function isImageMime(type: string): boolean {
+	return IMAGE_MIME_TYPES.has(type);
+}
+
+async function getImageMetadata(
+	file: File,
+): Promise<{ width: number; height: number; format: string } | null> {
+	if (!isImageMime(file.type)) return null;
+	try {
+		const image = new Bun.Image(file);
+		const metadata = await image.metadata();
+		return {
+			width: metadata.width,
+			height: metadata.height,
+			format: metadata.format,
+		};
+	} catch {
+		return null;
+	}
+}
+
+async function convertImage(
+	file: File,
+	outputFormat: keyof typeof OUTPUT_FORMAT_MAP,
+): Promise<File> {
+	const image = new Bun.Image(file);
+	// Bun.Image methods (.png(), .jpeg(), etc.) return Promise<Buffer> at runtime,
+	// but @types/bun types them as returning Image. Cast to fix.
+	let buffer: Buffer;
+
+	switch (outputFormat) {
+		case "png":
+			buffer = (await image.png().toBuffer()) as Buffer;
+			break;
+		case "jpeg":
+			buffer = (await image.jpeg().toBuffer()) as Buffer;
+			break;
+		case "webp":
+			buffer = (await image.webp().toBuffer()) as Buffer;
+			break;
+		case "avif":
+			buffer = (await image.avif().toBuffer()) as Buffer;
+			break;
+		default:
+			buffer = (await image.png().toBuffer()) as Buffer;
+	}
+
+	const info = OUTPUT_FORMAT_MAP[outputFormat]!;
+	return new File([buffer], file.name.replace(/\.[^.]+$/, info.ext), {
+		type: info.type,
+	});
+}
+
 export interface StorageDriver {
 	/** Handle a single file from the FormData stream */
 	handleFile(
@@ -162,6 +253,15 @@ export interface UploadFieldConfig {
 		originalName: string,
 		file: File,
 	) => { name: string; ext: string };
+	/**
+	 * Force image conversion to this format on upload.
+	 * When set, the returned file type narrows to `ImageUploadedFile`
+	 * with `width`, `height`, `format`, and optional `originalType`/`originalExt`.
+	 *
+	 * Only applies to image MIME types (image/jpeg, image/png, image/gif, etc.).
+	 * Non-image files ignore this option.
+	 */
+	outputFormat?: "webp" | "png" | "jpeg" | "avif";
 }
 
 export interface UploadOptions {
@@ -212,21 +312,27 @@ export interface ParseUploadResult<
 	/**
 	 * All form fields — text fields are `string`, file fields are typed based on config.
 	 *
+	 * When `outputFormat` is set, the field narrows to `ImageUploadedFile`
+	 * with `width`, `height`, `format`, and optional `originalType`/`originalExt`.
+	 *
 	 * @example
 	 * result.fields.name      // string (text field)
-	 * result.fields.avatar    // UploadedFile (required: true)
-	 * result.fields.avatar    // UploadedFile | undefined (has maxFileSize/allowedMimeTypes but not required)
-	 * result.fields.gallery   // UploadedFile | UploadedFile[] | undefined (no file config)
+	 * result.fields.avatar    // ImageUploadedFile (outputFormat: "webp")
+	 * result.fields.document  // UploadedFile (no outputFormat)
 	 */
 	fields: {
-		[K in keyof F]: F[K] extends { required: true }
-			? UploadedFile
-			: F[K] extends { maxFileSize: any } | { allowedMimeTypes: any }
-				? UploadedFile | undefined
-				: UploadedFile | UploadedFile[] | undefined;
+		[K in keyof F]: F[K] extends { outputFormat: any }
+			? F[K] extends { required: true }
+				? ImageUploadedFile
+				: ImageUploadedFile | undefined
+			: F[K] extends { required: true }
+				? UploadedFile
+				: F[K] extends { maxFileSize: any } | { allowedMimeTypes: any }
+					? UploadedFile | undefined
+					: UploadedFile | UploadedFile[] | undefined;
 	} & Record<string, string>;
 	/** Array of files that were successfully uploaded/processed (all files, flattened) */
-	files: UploadedFile[];
+	files: (UploadedFile | ImageUploadedFile)[];
 }
 
 export class LocalDiskStorage implements StorageDriver {
@@ -390,8 +496,8 @@ export async function handleUploads<
 	}
 
 	const textFields: Record<string, string> = {};
-	const files: UploadedFile[] = [];
-	const fileMap: Record<string, UploadedFile | UploadedFile[]> = {};
+	const files: (UploadedFile | ImageUploadedFile)[] = [];
+	const fileMap: Record<string, UploadedFile | ImageUploadedFile | (UploadedFile | ImageUploadedFile)[]> = {};
 
 	const fieldWhitelist = options.fields;
 
@@ -439,19 +545,59 @@ export async function handleUploads<
 				fieldConfig?.filename,
 				options.filename,
 			);
-			const uploaded = await options.storage.handleFile(value, name, ext);
-			files.push(uploaded);
+
+			// Check if image conversion is requested
+			const outputFormat = fieldConfig?.outputFormat;
+			let fileToStore = value;
+			let finalExt = ext;
+			let finalType = value.type;
+
+			if (outputFormat && isImageMime(value.type)) {
+				const info = OUTPUT_FORMAT_MAP[outputFormat];
+				if (info) {
+					fileToStore = await convertImage(value, outputFormat);
+					finalExt = info.ext;
+					finalType = info.type;
+				}
+			}
+
+			const uploaded = await options.storage.handleFile(fileToStore, name, finalExt);
+
+			// Image metadata extraction + type narrowing
+			let result: UploadedFile | ImageUploadedFile;
+			if (outputFormat && isImageMime(value.type)) {
+				const metadata = await getImageMetadata(fileToStore);
+				const imgResult: ImageUploadedFile = {
+					...uploaded,
+					kind: "image",
+					width: metadata?.width ?? 0,
+					height: metadata?.height ?? 0,
+					format: OUTPUT_FORMAT_MAP[outputFormat]?.ext.slice(1) ?? outputFormat,
+					type: finalType,
+					ext: finalExt,
+				};
+				// Track original type if conversion happened
+				if (value.type !== finalType) {
+					imgResult.originalType = value.type;
+					imgResult.originalExt = getFileExtension(value.name);
+				}
+				result = imgResult;
+			} else {
+				result = uploaded;
+			}
+
+			files.push(result);
 
 			// Build fileMap: if same key appears multiple times → array
 			if (key in fileMap) {
 				const existing = fileMap[key];
 				if (Array.isArray(existing)) {
-					existing.push(uploaded);
+					existing.push(result);
 				} else {
-					fileMap[key] = [existing as UploadedFile, uploaded];
+					fileMap[key] = [existing as UploadedFile, result];
 				}
 			} else {
-				fileMap[key] = uploaded;
+				fileMap[key] = result;
 			}
 		} else {
 			textFields[key] = value.toString();

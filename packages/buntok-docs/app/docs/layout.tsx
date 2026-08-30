@@ -6,9 +6,6 @@ export const metadata: Metadata = {
     default: "Buntok Framework - Documentation",
     template: "%s | Buntok Framework",
   },
-  alternates: {
-    canonical: "https://buntok.pitok.my.id/docs",
-  },
   description:
     "Complete documentation for Buntok - a fast, type-safe web framework for Bun with built-in auth, validation, caching, and more.",
   openGraph: {

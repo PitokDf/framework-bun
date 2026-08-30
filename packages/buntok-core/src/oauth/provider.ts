@@ -21,7 +21,7 @@ export abstract class BaseOAuthProvider implements OAuthProvider {
   abstract createAuthorizationURL(
     state: string,
     codeVerifier: string,
-  ): string;
+  ): Promise<string> | string;
 
   abstract validateAuthorizationCode(
     code: string,

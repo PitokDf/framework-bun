@@ -3,14 +3,19 @@ export function generateRepository(
 	pascalName: string,
 ): string {
 	return `import { BaseRepository } from "@buntok/prisma";
-import type { ${pascalName} } from "../types/${entityName}";
+// Replace with your own Prisma client instance
+import { prisma } from "@/lib/prisma";
+import type { ${pascalName}, PrismaClient, Prisma } from "@prisma/client";
 
-export class ${pascalName}Repository extends BaseRepository<${pascalName}> {
-  // Define your table name and methods here
-  // Example:
-  // async findAll(): Promise<${pascalName}[]> {
-  //   return this.delegate.findMany();
-  // }
+export class ${pascalName}Repository extends BaseRepository<
+  ${pascalName},
+  PrismaClient,
+  Prisma.${pascalName}CreateInput,
+  Prisma.${pascalName}UpdateInput
+> {
+  constructor() {
+    super(prisma, "${entityName}");
+  }
 }
 `;
 }

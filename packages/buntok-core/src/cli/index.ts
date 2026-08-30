@@ -18,7 +18,7 @@ function printUsage() {
   buntok <command> [arguments] [options]
 
 \x1b[36mCommands:\x1b[0m
-  init                   Setup project: copy SKILL.md + configure package.json scripts
+  init                   Setup project: copy SKILL.md + configure package.json + generate env.ts
   build                  Build project for production (output → .buntok/)
   create <entity>        Generate all files for entity (repo, service, controller)
   db <command>           Database operations (migrate, seed, reset, generate, studio, status)

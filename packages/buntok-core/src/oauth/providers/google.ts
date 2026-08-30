@@ -1,6 +1,7 @@
 import { BaseOAuthProvider } from "../provider";
 import { OAuthTokenError, OAuthProviderError } from "../types";
 import { createOAuth2AuthorizationURL, decodeIdToken } from "../helpers";
+import { generateCodeChallenge } from "../pkce";
 import type {
   OAuthProviderConfig,
   OAuth2Tokens,
@@ -36,13 +37,14 @@ export class GoogleProvider extends BaseOAuthProvider {
     });
   }
 
-  createAuthorizationURL(state: string, codeVerifier: string): string {
+  async createAuthorizationURL(state: string, codeVerifier: string): Promise<string> {
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
     return createOAuth2AuthorizationURL(AUTHORIZATION_ENDPOINT, {
       clientId: this.config.clientId,
       redirectURI: this.config.redirectURI,
       scopes: this.config.scopes,
       state,
-      codeChallenge: codeVerifier,
+      codeChallenge,
     });
   }
 

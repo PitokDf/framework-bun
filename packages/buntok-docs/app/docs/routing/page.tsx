@@ -521,7 +521,7 @@ app.notFound((ctx) => {
               ["ConflictError", "409"],
               ["UnprocessableEntityError", "422"],
               ["TooManyRequestsError", "429"],
-              ["InternalServerErrorError", "500"],
+              ["InternalServerError", "500"],
               ["ServiceUnavailableError", "503"],
             ].map(([error, status]) => (
               <tr

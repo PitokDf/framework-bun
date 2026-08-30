@@ -12,7 +12,7 @@ export default defineConfig({
 	splitting: false,
 	sourcemap: true,
 	clean: true,
-	target: "node18",
+	target: "esnext",
 	outDir: "dist",
 	external: [/^bun:.*/],
 	shims: true,

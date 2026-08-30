@@ -151,6 +151,28 @@ export interface EnvValidationOptions {
 	onError?: (errors: { field: string; message: string }[]) => void | never;
 }
 
+export interface StaticOptions {
+	/** Cache max-age in seconds (default: 3600) */
+	maxAge?: number;
+	/** Override the full Cache-Control header value */
+	cacheControl?: string;
+	/** Enable ETag generation and conditional requests (default: true) */
+	etag?: boolean;
+}
+
+export interface ApiDocsOptions {
+	/** URL path for the docs UI (default: "/docs") */
+	path?: string;
+	/** API title displayed in the docs (default: "API Documentation") */
+	title?: string;
+	/** API version (default: "1.0.0") */
+	version?: string;
+	/** API description */
+	description?: string;
+	/** Hide docs when NODE_ENV is "production" (default: false) */
+	safeOnProduction?: boolean;
+}
+
 export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private router: Router;
 	private middlewares: Middleware<DI>[] = [];
@@ -165,6 +187,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private poweredByHeaderEnabled: boolean = true;
 	private _reusePort: boolean = false;
 	private _skipLogResponse: boolean = false;
+	public _apiDocsConfig: ApiDocsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: Required for internal OpenAPI registry
 	public openApiDocs: any[] = [];
 	private container: Container | null = null;
@@ -282,20 +305,20 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	}
 
 	/**
-	 * Type-safe Environment Variables Validator.
+	 * Type-safe Environment Variables Validator (static).
 	 * Validates `process.env` against a Zod schema object and returns the typed result.
 	 * If validation fails, it prints a beautiful error to the console and exits the process (stops booting).
 	 *
 	 * @example
-	 * // Default behavior - prints error and exits
-	 * const env = app.validateEnv({
+	 * // Static — no App instance needed (ideal for src/env.ts)
+	 * const env = App.validateEnv({
 	 *   DATABASE_URL: z.string().url(),
 	 *   PORT: z.coerce.number().default(3000),
 	 * });
 	 *
 	 * @example
 	 * // Custom error handler - send to monitoring before exiting
-	 * const env = app.validateEnv({
+	 * const env = App.validateEnv({
 	 *   DATABASE_URL: z.string().url(),
 	 * }, {
 	 *   onError: (errors) => {
@@ -306,7 +329,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 *   }
 	 * });
 	 */
-	public validateEnv<T extends z.ZodRawShape>(
+	static validateEnv<T extends z.ZodRawShape>(
 		schema: T,
 		options?: EnvValidationOptions,
 	): z.infer<z.ZodObject<T>> {
@@ -345,6 +368,24 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		}
 
 		return result.data;
+	}
+
+	/**
+	 * Type-safe Environment Variables Validator (instance).
+	 * Delegates to the static method. Kept for backward compatibility.
+	 *
+	 * @example
+	 * const app = new App();
+	 * const env = app.validateEnv({
+	 *   DATABASE_URL: z.string().url(),
+	 *   PORT: z.coerce.number().default(3000),
+	 * });
+	 */
+	public validateEnv<T extends z.ZodRawShape>(
+		schema: T,
+		options?: EnvValidationOptions,
+	): z.infer<z.ZodObject<T>> {
+		return App.validateEnv(schema, options);
 	}
 
 	/**
@@ -934,18 +975,29 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 * directory-traversal vulnerability.
 	 *
 	 * Supports ETag-based conditional requests (If-None-Match → 304).
-	 * ETag is only computed when the client sends If-None-Match, keeping
-	 * the hot path (first request) free of metadata reads.
+	 * ETag is computed on every response and sent to the client, enabling
+	 * efficient caching on subsequent requests.
 	 */
-	public static(routePath: string, directory: string): this {
+	public static(routePath: string, directory: string, options?: StaticOptions): this {
 		const baseDir = join(process.cwd(), directory);
+		const maxAge = options?.maxAge ?? 3600;
+		const cacheControl = options?.cacheControl ?? `public, max-age=${maxAge}`;
+		const enableEtag = options?.etag !== false;
 
 		const handler: Handler<DI> = async (ctx) => {
 			const requestedPath = ctx.params["*"] || "";
-			const absolutePath = join(baseDir, requestedPath);
+			let absolutePath = join(baseDir, requestedPath);
 
 			if (absolutePath !== baseDir && !absolutePath.startsWith(baseDir + sep)) {
 				return ctx.json({ error: "Forbidden" }, 403);
+			}
+
+			// If file doesn't exist, check for directory with index.html
+			if (!(await Bun.file(absolutePath).exists())) {
+				const indexPath = join(absolutePath, "index.html");
+				if (await Bun.file(indexPath).exists()) {
+					absolutePath = indexPath;
+				}
 			}
 
 			const file = Bun.file(absolutePath);
@@ -954,10 +1006,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				return ctx.json({ error: "File Not Found" }, 404);
 			}
 
-			// Only compute ETag when client sends If-None-Match (conditional request)
-			const ifNoneMatch = ctx.request.headers.get("If-None-Match");
-			if (ifNoneMatch) {
-				const etag = `"${file.size}-${file.lastModified}"`;
+			const etag = enableEtag ? `"${file.size}-${file.lastModified}"` : null;
+
+			// ETag-based conditional request (If-None-Match → 304)
+			if (etag) {
+				const ifNoneMatch = ctx.request.headers.get("If-None-Match");
 				if (ifNoneMatch === etag) {
 					return new Response(null, {
 						status: 304,
@@ -966,17 +1019,43 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				}
 			}
 
-			return new Response(file, {
-				headers: {
-					"Cache-Control": "public, max-age=3600",
-				},
-			});
+			const headers: Record<string, string> = {
+				"Cache-Control": cacheControl,
+			};
+			if (etag) {
+				headers.ETag = etag;
+			}
+
+			return new Response(file, { headers });
 		};
 
 		const wildcardPath = routePath.endsWith("/")
 			? `${routePath}*`
 			: `${routePath}/*`;
 		this.get(wildcardPath, handler);
+		return this;
+	}
+
+	/**
+	 * Enable interactive API documentation at the specified path.
+	 *
+	 * Serves a built-in docs UI and the generated OpenAPI spec (swagger.json).
+	 * The docs routes are registered directly on the router and do NOT appear
+	 * in the generated swagger.json.
+	 *
+	 * @example
+	 * ```ts
+	 * app.apiDocs({ path: "/docs", title: "My API", version: "1.0.0" });
+	 * ```
+	 */
+	public apiDocs(options?: ApiDocsOptions): this {
+		this._apiDocsConfig = {
+			path: options?.path ?? "/docs",
+			title: options?.title ?? "API Documentation",
+			version: options?.version ?? "1.0.0",
+			description: options?.description,
+			safeOnProduction: options?.safeOnProduction ?? false,
+		};
 		return this;
 	}
 
@@ -1039,6 +1118,97 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		const factory = new Function("fns", `return function(ctx) { ${code} }`);
 		return factory(fns) as Handler<DI>;
+	}
+
+	/**
+	 * Register API docs routes directly on the router.
+	 * These routes do NOT go through registerRoute() and therefore
+	 * do NOT appear in openApiDocs / swagger.json.
+	 */
+	private registerApiDocsRoutes(): void {
+		const config = this._apiDocsConfig!;
+		const basePath = (config.path ?? "/docs").replace(/\/+$/, "");
+
+		// Resolve template paths relative to this package's dist directory
+		const templatesDir = new URL("./cli/templates", import.meta.url).pathname;
+
+		// Handler for serving the HTML docs UI
+		const uiHandler: Handler<DI> = async () => {
+			const htmlPath = join(templatesDir, "index.html");
+			const file = Bun.file(htmlPath);
+			if (await file.exists()) {
+				let html = await file.text();
+				// Inject config title into <title> tag
+				html = html.replace(
+					/<title>.*?<\/title>/,
+					`<title>${config.title ?? "API Reference"} — API Reference</title>`,
+				);
+				// Inject config into default specData so title/version show before swagger.json loads
+				const escapedTitle = (config.title ?? "API Documentation").replace(/"/g, '\\"');
+				const escapedVersion = (config.version ?? "1.0.0").replace(/"/g, '\\"');
+				html = html.replace(
+					/("title":\s*")API Documentation(")/,
+					`$1${escapedTitle}$2`,
+				);
+				html = html.replace(
+					/("version":\s*")1\.0\.0(")/,
+					`$1${escapedVersion}$2`,
+				);
+				if (config.description) {
+					const escapedDesc = config.description.replace(/"/g, '\\"');
+					html = html.replace(
+						/("description":\s*")Loading API specification\.\.\.(")/,
+						`$1${escapedDesc}$2`,
+					);
+				}
+				return new Response(html, {
+					headers: { "Content-Type": "text/html; charset=utf-8" },
+				});
+			}
+			return new Response("Docs UI not found. Run 'buntok make:docs' first.", { status: 404 });
+		};
+
+		// Handler for serving swagger.json (reads fresh on every request)
+		const swaggerHandler: Handler<DI> = async () => {
+			const swaggerPath = join(process.cwd(), "public/docs/swagger.json");
+			const file = Bun.file(swaggerPath);
+			if (await file.exists()) {
+				return new Response(file, {
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+			return new Response(JSON.stringify({ error: "swagger.json not found. Run 'buntok make:docs' first." }), {
+				status: 404,
+				headers: { "Content-Type": "application/json" },
+			});
+		};
+
+		// Handler for serving static assets (tailwind.js, font-googles.css)
+		const assetsHandler: Handler<DI> = async (ctx) => {
+			const assetName = ctx.params["*"] ?? "";
+			const assetPath = join(templatesDir, assetName);
+			const file = Bun.file(assetPath);
+			if (await file.exists()) {
+				const ext = assetName.split(".").pop()?.toLowerCase() ?? "";
+				const contentTypes: Record<string, string> = {
+					js: "application/javascript; charset=utf-8",
+					css: "text/css; charset=utf-8",
+					json: "application/json",
+					png: "image/png",
+					svg: "image/svg+xml",
+				};
+				return new Response(file, {
+					headers: { "Content-Type": contentTypes[ext] || "application/octet-stream" },
+				});
+			}
+			return new Response("Not Found", { status: 404 });
+		};
+
+		// Register routes directly on router (bypass openApiDocs)
+		this.router.insert("GET", `${basePath}/swagger.json`, swaggerHandler);
+		this.router.insert("GET", `${basePath}/index.html`, uiHandler);
+		this.router.insert("GET", `${basePath}/*`, assetsHandler);
+		this.router.insert("GET", basePath, uiHandler);
 	}
 
 	private compileGlobalPipeline(): void {
@@ -1333,6 +1503,14 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		// Pre-compute whether logResponse can be skipped entirely
 		this._skipLogResponse = !logger.logRequests && !this.poweredByHeaderEnabled;
+
+		// Register API docs routes directly on router (bypasses openApiDocs)
+		if (this._apiDocsConfig) {
+			const isProduction = process.env.NODE_ENV === "production";
+			if (!(this._apiDocsConfig.safeOnProduction && isProduction)) {
+				this.registerApiDocsRoutes();
+			}
+		}
 
 		// Perform AOT compilation for global middlewares
 		this.compileGlobalPipeline();

@@ -343,13 +343,13 @@ class UserController extends BaseController<User, CreateUser> {
 
   // Override the default getAll behavior
   @Get("/")
-  async list(ctx) {
+  override async list(ctx) {
     const users = await this.service.findAllWithRoles();
     return ctx.success(users);
   }
 
   // Override parseId for UUID-based IDs
-  protected parseId(id: string): string {
+  protected override parseId(id: string): string {
     return id; // Keep as string, don't convert to number
   }
 }`}

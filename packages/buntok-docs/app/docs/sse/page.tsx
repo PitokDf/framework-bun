@@ -87,9 +87,27 @@ export default function SSEPage() {
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2 font-mono text-accent">
-                sse.sendJSON(data)
+                sse.send(message)
               </td>
-              <td className="px-4 py-2">Send data as JSON string</td>
+              <td className="px-4 py-2">
+                Send a full SSEMessage object with optional id, event, and data
+              </td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                sse.sendWithId(id, data)
+              </td>
+              <td className="px-4 py-2">
+                Send data with an explicit event ID (for resumption support)
+              </td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                sse.getLastEventId()
+              </td>
+              <td className="px-4 py-2">
+                Get the Last-Event-ID header value from the client
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2 font-mono text-accent">sse.close()</td>
@@ -162,7 +180,6 @@ export default function SSEPage() {
                 "undefined",
                 "Callback to replay missed events on reconnection",
               ],
-              ["headers", "Record<string, string>", "{}", "Extra HTTP headers"],
             ].map(([opt, type, def, desc]) => (
               <tr
                 key={opt}
@@ -189,7 +206,6 @@ export default function SSEPage() {
   }, {
     sendInitial: false,
     retry: 5000,
-    headers: { "X-Custom": "value" },
   });
 });`}
       />

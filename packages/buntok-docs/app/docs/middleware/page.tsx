@@ -324,6 +324,10 @@ app.post("/users",
               ["slidingWindowRateLimiter(options)", "Sliding-window rate limiting (more accurate)"],
               ["compress(options)", "Brotli/gzip response compression"],
               ["bodySizeLimit(options)", "Limit request body size"],
+              ["requestId(options)", "X-Request-Id generation"],
+              ["responseTime(options)", "X-Response-Time header"],
+              ["helmet(options)", "Security headers (HSTS, CSP, etc.)"],
+              ["timeout(ms, message?)", "Request timeout (throws TimeoutError)"],
               ["auditLog(options)", "Request logging"],
             ].map(([middleware, purpose]) => (
               <tr
@@ -344,8 +348,128 @@ app.post("/users",
         code={`import {
   requireAuth, requireRole, requirePermission,
   cors, rateLimiter, slidingWindowRateLimiter,
-  compress, auditLog, zValidator,
+  compress, bodySizeLimit, requestId, responseTime, helmet, timeout, auditLog, zValidator,
 } from "@buntok/core";`}
+      />
+
+      {/* ──────────────── CORS ──────────────── */}
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        cors()
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        CORS with flexible <code>origin</code> handling (string, array, or function). Handles preflight <code>OPTIONS</code> automatically.
+      </p>
+      <CodeBlock
+        code={`import { cors } from "@buntok/core";
+
+app.use(cors({
+  origin: ["http://localhost:3000", "https://myapp.com"],
+  // origin: (origin) => origin.endsWith(".myapp.com"),
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  headers: ["Content-Type", "Authorization"],
+  credentials: true,
+}));
+
+// Defaults: methods GET,POST,PUT,DELETE,PATCH,OPTIONS
+// headers Content-Type,Authorization,x-api-key
+// origin string|string[]|((origin)=>boolean)
+`}
+      />
+      <Callout type="info">
+        <code>origin</code> can be a <code>string</code>, <code>string[]</code>, or <code>(origin: string) =&gt; boolean</code> for dynamic checks.
+      </Callout>
+
+      {/* ──────────────── REQUEST ID ──────────────── */}
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        requestId()
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Adds <code>X-Request-Id</code> (uuid) to every request. Also available <code>shortId</code> (8-char) and <code>uuid</code> helpers.
+      </p>
+      <CodeBlock
+        code={`import { requestId, shortId, uuid } from "@buntok/core";
+
+app.use(requestId());
+// RequestIdOptions { header="x-request-id", generator=uuid, store=true, storeKey="requestId" }
+
+app.use(requestId({ header: "x-correlation-id", generator: shortId }));
+app.use(requestId({ header: "x-request-id", generator: () => crypto.randomUUID() }));`}
+      />
+
+      {/* ──────────────── RESPONSE TIME ──────────────── */}
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        responseTime()
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Adds <code>X-Response-Time</code> header with request duration.
+      </p>
+      <CodeBlock
+        code={`import { responseTime } from "@buntok/core";
+
+app.use(responseTime());
+// ResponseTimeOptions { header="x-response-time", format="ms"|"s", store, storeKey="responseTime" }
+
+app.use(responseTime({ header: "x-response-time", format: "s" }));`}
+      />
+
+      {/* ──────────────── HELMET ──────────────── */}
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        helmet()
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Security headers (X-Content-Type-Options, X-Frame-Options, XSS-Protection, Referrer-Policy, HSTS, DNS-Prefetch, Permissions-Policy).
+      </p>
+      <CodeBlock
+        code={`import { helmet } from "@buntok/core";
+
+app.use(helmet());
+// HelmetOptions { contentTypeOptions, frameOptions, xssProtection, referrerPolicy, hsts, dnsPrefetch, permissionsPolicy, additionalHeaders }
+
+app.use(helmet({
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+  frameOptions: "DENY",
+}));`}
+      />
+
+      {/* ──────────────── TIMEOUT ──────────────── */}
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        timeout()
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Aborts handler if it exceeds <code>ms</code>. Throws <code>TimeoutError &#123; timeoutMs &#125;</code> caught by <code>app.onError</code>.
+      </p>
+      <CodeBlock
+        code={`import { timeout, TimeoutError } from "@buntok/core";
+
+app.get("/slow", timeout(5000), async (ctx) => {
+  await longOperation();
+  return ctx.json({ ok: true });
+});
+
+app.get("/slow2", timeout(5000, "Custom timeout message"), handler);
+
+// Custom error handling
+app.onError((err, ctx) => {
+  if (err instanceof TimeoutError) {
+    return ctx.json({ error: "Timeout", timeoutMs: err.timeoutMs }, 408);
+  }
+  return ctx.json({ error: err.message }, 500);
+});`}
       />
 
       {/* ──────────────── COMPRESS ──────────────── */}
@@ -490,18 +614,15 @@ app.use(rateLimiter({ max: 100, windowMs: 60000 }));
 // Sliding window - more accurate for burst traffic
 app.use(slidingWindowRateLimiter({ max: 100, windowMs: 60000 }));
 
-// With SQLite store (survives restarts)
+// Custom key & skip & headers
 app.use(rateLimiter({
   max: 100,
   windowMs: 60000,
-  store: sqliteStore("rate-limit.db"),
-}));
-
-// Skip certain requests
-app.use(rateLimiter({
-  max: 100,
-  windowMs: 60000,
+  message: "Too many requests",
+  statusCode: 429,
+  headers: true,
   skip: (ctx) => ctx.request.headers.get("x-api-key") === "internal",
+  keyGenerator: (ctx) => ctx.ip, // default ctx.ip
 }));`}
       />
 
@@ -526,8 +647,10 @@ app.use(rateLimiter({
               ["windowMs", "60000", "Window duration in ms"],
               ["message", '"Too many requests..."', "Response message"],
               ["statusCode", "429", "HTTP status code"],
-              ["skip", "-", "Function to skip rate limiting"],
-              ["store", "in-memory Map", "Storage backend (use sqliteStore for persistence)"],
+              ["headers", "true", "Add RateLimit-* headers"],
+              ["keyGenerator", "(ctx)=>ctx.ip", "Key for bucket (default ctx.ip)"],
+              ["skip", "-", "Function (ctx)=>boolean to skip"],
+              ["store", "in-memory Map", "Custom RateLimitStore"],
             ].map(([opt, def, desc]) => (
               <tr
                 key={opt}
@@ -557,7 +680,7 @@ const secret = process.env.JWT_SECRET!;
 
 // Global middleware
 app.use(cors());
-app.use(rateLimit({ max: 100, window: "1m" }));
+app.use(rateLimiter({ max: 100, windowMs: 60_000 }));
 
 // Public route
 app.get("/", (ctx) => {

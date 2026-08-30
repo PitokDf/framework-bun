@@ -56,15 +56,15 @@ const date = parseTime("2024-01-15 14:30", "America/New_York");
       <CodeBlock
         code={`import { formatInTimezone } from "@buntok/core";
 
-const formatted = formatInTimezone(
-  new Date(),
-  "Asia/Jakarta",
-  "HH:mm:ss"  // 14:30:00
-);
+// 3rd arg is enum: "short" | "default" | "full" (not custom pattern)
+const formatted = formatInTimezone(new Date(), "Asia/Jakarta", "short");
+// "14:30" — short
 
-// Other formats
-formatInTimezone(new Date(), "America/New_York", "yyyy-MM-dd HH:mm");
-// 2024-01-15 02:30`}
+formatInTimezone(new Date(), "Asia/Jakarta", "default");
+// "2024-01-15 14:30:00" — default (includes date)
+
+formatInTimezone(new Date(), "Asia/Jakarta", "full");
+// "Monday, January 15, 2024 at 14:30:00 GMT+07:00" — full`}
       />
 
       {/* ──────────────── TO TIMEZONE PARTS ──────────────── */}
@@ -81,7 +81,9 @@ formatInTimezone(new Date(), "America/New_York", "yyyy-MM-dd HH:mm");
         code={`import { toTimezoneParts } from "@buntok/core";
 
 const parts = toTimezoneParts(new Date(), "Asia/Jakarta");
-// { year, month, day, hour, minute, second, weekday }`}
+// { year: 2024, month: 1, day: 15, hour: 14, minute: 30, second: 0 }
+// (6 fields — no weekday)
+`}
       />
 
       {/* ──────────────── NOW IN TIMEZONE ──────────────── */}
@@ -112,11 +114,15 @@ const nyTime = nowInTimezone("America/New_York");`}
         Get timezone offset in minutes from UTC:
       </p>
       <CodeBlock
-        code={`import { getTimezoneOffset } from "@buntok/core";
+        code={`import { getTimezoneOffset, getTimezoneOffsetString } from "@buntok/core";
 
-getTimezoneOffset("Asia/Jakarta");      // 420 (7 hours × 60)
-getTimezoneOffset("America/New_York");  // -300 (-5 hours × 60)
-getTimezoneOffset("UTC");               // 0`}
+getTimezoneOffset("Asia/Jakarta");      // -420 (UTC+7, negative = ahead)
+getTimezoneOffset("America/New_York");  // 240 or 300 (DST, positive = behind)
+getTimezoneOffset("UTC");               // 0
+
+getTimezoneOffsetString("Asia/Jakarta"); // "+07:00"
+getTimezoneOffsetString("America/New_York"); // "-05:00" or "-04:00" (DST)
+`}
       />
 
       {/* ──────────────── IS VALID TIMEZONE ──────────────── */}
@@ -137,6 +143,53 @@ isValidTimezone("America/New_York"); // true
 isValidTimezone("Invalid/Zone");     // false`}
       />
 
+      {/* ──────────────── ADDITIONAL HELPERS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Additional Helpers
+      </Heading>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Function</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["getTimezoneOffsetString(tz)", "Offset as string (+07:00)"],
+              ["toISOWithTimezone(date, tz)", "ISO string with offset (2024-01-15T17:30:00+07:00)"],
+              ['groupByTimezone(items, field, tz, "day")', "Group items by hour/day/month/year"],
+              ["getGroupLabels(groupBy)", "Get group labels"],
+              ["formatGroupLabel(label, groupBy, tz)", "Format label for display"],
+            ].map(([fn, desc]) => (
+              <tr key={fn} className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+                <td className="px-4 py-2 font-mono text-accent text-xs">{fn}</td>
+                <td className="px-4 py-2">{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <CodeBlock
+        code={`import {
+  toISOWithTimezone, groupByTimezone, getGroupLabels, formatGroupLabel,
+} from "@buntok/core";
+// Types: GroupByKey = "hour"|"day"|"month"|"year", GroupByTimezoneOptions { locale?, labelFormatter? }
+
+toISOWithTimezone(new Date(), "Asia/Jakarta");
+// "2024-01-15T17:30:00+07:00"
+
+const grouped = groupByTimezone(orders, "createdAt", "Asia/Jakarta", "day");
+// Map<string, Order[]> — e.g. "2024-01-15" → [orders]
+
+const labels = getGroupLabels("day"); // ["2024-01-15", ...]
+formatGroupLabel("2024-01-15", "day", "Asia/Jakarta"); // "15 Jan 2024"`}
+      />
+
       {/* ──────────────── FULL EXAMPLE ──────────────── */}
       <Heading
         level={2}
@@ -147,7 +200,7 @@ isValidTimezone("Invalid/Zone");     // false`}
       <CodeBlock
         code={`import {
   parseTime, formatInTimezone, nowInTimezone,
-  getTimezoneOffset, isValidTimezone, toTimezoneParts,
+  getTimezoneOffset, getTimezoneOffsetString, isValidTimezone, toTimezoneParts,
 } from "@buntok/core";
 
 // API endpoint returning user's local time
@@ -161,9 +214,10 @@ app.get("/time/:timezone", (ctx) => {
   return ctx.json({
     timezone,
     now: nowInTimezone(timezone),
-    formatted: formatInTimezone(new Date(), timezone, "HH:mm:ss dd/MM/yyyy"),
-    offset: getTimezoneOffset(timezone),
-    parts: toTimezoneParts(new Date(), timezone),
+    formatted: formatInTimezone(new Date(), timezone, "default"), // "short"|"default"|"full"
+    offset: getTimezoneOffset(timezone), // -420 for Jakarta
+    offsetStr: getTimezoneOffsetString(timezone), // "+07:00"
+    parts: toTimezoneParts(new Date(), timezone), // { year, month, day, hour, minute, second }
   });
 });`}
       />

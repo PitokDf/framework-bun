@@ -82,6 +82,48 @@ bunx buntok init`}
         if yes, a <code>vercel.json</code> file will be created.
       </Callout>
 
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Generated <code>src/index.ts</code>
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        After running <code>buntok init</code>, your entry point looks like this:
+      </p>
+      <CodeBlock
+        code={`import { App } from "@buntok/core";
+import { env } from "./env";
+
+const app = new App();
+
+app.get("/", (ctx) => {
+  return ctx.json({ message: "Hello from Buntok!" });
+});
+
+app.listen(env.PORT);`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Generated <code>src/env.ts</code>
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Type-safe environment schema with sensible defaults:
+      </p>
+      <CodeBlock
+        code={`import { App, z } from "@buntok/core";
+
+export const env = App.validateEnv({
+  PORT: z.coerce.number().default(1212),
+  AUTH_STORE: z.enum(["header", "cookie"]).default("header"),
+  AUTH_COOKIE: z.string().default("session"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+});`}
+      />
+
       {/* ──────────────── WHAT DOES INIT DO ──────────────── */}
       <Heading
         level={2}
@@ -117,6 +159,18 @@ bunx buntok init`}
                 <code>tsconfig.json</code>
               </td>
               <td className="px-4 py-2">TypeScript configuration</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>src/env.ts</code>
+              </td>
+              <td className="px-4 py-2">Type-safe environment schema</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>src/index.ts</code>
+              </td>
+              <td className="px-4 py-2">Application entry point</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
@@ -173,50 +227,48 @@ bunx buntok init`}
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Buntok uses environment variables for configuration. The{" "}
-        <code>.env</code> file is created automatically during{" "}
-        <code>buntok init</code>.
+        <code>buntok init</code> command creates a type-safe{" "}
+        <code>src/env.ts</code> file and a <code>.env</code> file automatically.
       </p>
 
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Basic Setup
+        Default Schema
       </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The generated <code>src/env.ts</code> validates your environment at
+        startup with sensible defaults:
+      </p>
       <CodeBlock
-        code={`# .env
-PORT=1212
-DATABASE_URL=postgresql://user:password@localhost:5432/mydb
-JWT_SECRET=your-secret-key-here`}
+        code={`import { App, z } from "@buntok/core";
+
+export const env = App.validateEnv({
+  PORT: z.coerce.number().default(1212),
+  AUTH_STORE: z.enum(["header", "cookie"]).default("header"),
+  AUTH_COOKIE: z.string().default("session"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+});`}
       />
 
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Validating Environment Variables
+        Adding More Variables
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Use <code>validateEnv()</code> to ensure required variables are set and
-        correctly typed:
+        Extend the schema as needed. The server will exit with a clear error if
+        any required variable is missing or invalid:
       </p>
-
       <CodeBlock
-        code={`import { App } from "@buntok/core";
-import { z } from "@buntok/core";
-
-const app = new App();
-
-const env = app.validateEnv({
+        code={`export const env = App.validateEnv({
+  PORT: z.coerce.number().default(1212),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
-  PORT: z.coerce.number().default(1212),
-  NODE_ENV: z.enum(["development", "production", "test"]),
-});
-
-// env is fully typed!
-console.log(env.DATABASE_URL);
-console.log(env.PORT); // number (defaulted)`}
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+});`}
       />
 
       <Callout type="warning">
@@ -246,18 +298,19 @@ console.log(env.PORT); // number (defaulted)`}
       <CodeBlock
         code={`my-app/
 ├── src/
-│   └── index.ts           # Entry point
+│   ├── index.ts              # Entry point
+│   └── env.ts                # Type-safe env schema
 ├── .agents/
 │   └── skills/
 │       └── buntok-skill/
-│           └── SKILL.md    # AI skill guide
+│           └── SKILL.md      # AI skill guide
 ├── .vscode/
-│   └── settings.json       # VS Code settings
-├── .env                    # Environment variables
-├── .env.example            # Environment variables template
-├── .gitignore              # Git ignore rules
-├── biome.json              # Linter config
-├── tsconfig.json           # TypeScript config
+│   └── settings.json         # VS Code settings
+├── .env                      # Environment variables
+├── .env.example              # Environment variables template
+├── .gitignore                # Git ignore rules
+├── biome.json                # Linter config
+├── tsconfig.json             # TypeScript config
 └── package.json`}
       />
 
@@ -315,26 +368,46 @@ console.log(env.PORT); // number (defaulted)`}
       </Heading>
       <CodeBlock
         code={`# Install Prisma driver
-bun add @buntok/prisma
+bun add @buntok/prisma prisma @prisma/client
 
 # Initialize Prisma
 bunx prisma init`}
       />
 
       <CodeBlock
-        code={`// src/database.ts
+        code={`// src/lib/prisma.ts
 import { PrismaClient } from "@prisma/client";
 
-export const prisma = new PrismaClient();
+export const prisma = new PrismaClient();`}
+      />
 
-// Use in your services
-export class UserService {
-  async findAll() {
-    return prisma.user.findMany();
+      <CodeBlock
+        code={`// src/repositories/user.repository.ts
+import { BaseRepository } from "@buntok/prisma";
+import { prisma } from "@/lib/prisma";
+import type { User, PrismaClient, Prisma } from "@prisma/client";
+
+export class UserRepository extends BaseRepository<
+  User,
+  PrismaClient,
+  Prisma.UserCreateInput,
+  Prisma.UserUpdateInput
+> {
+  constructor() {
+    super(prisma, "user");
   }
+}`}
+      />
 
-  async findById(id: string) {
-    return prisma.user.findUnique({ where: { id } });
+      <CodeBlock
+        code={`// src/services/user.service.ts
+import { BaseService } from "@buntok/core";
+import { UserRepository } from "@/repositories/user.repository";
+import type { User } from "@prisma/client";
+
+export class UserService extends BaseService<User> {
+  constructor(private userRepository: UserRepository) {
+    super(userRepository);
   }
 }`}
       />

@@ -18,7 +18,7 @@ export type {
 	WSHandler,
 	ZodCtx,
 } from "./app";
-export { App } from "./app";
+export { App, type ApiDocsOptions, type StaticOptions } from "./app";
 // Auth
 export { JwtService, requireAuth } from "./auth";
 // OAuth
@@ -134,7 +134,17 @@ export {
 	sha512,
 } from "./helpers/crypto";
 // Date helpers
-export { formatDate, timeAgo } from "./helpers/date";
+export {
+	addDays,
+	daysBetween,
+	endOfDay,
+	formatDate,
+	formatDuration,
+	isAfter,
+	isBefore,
+	startOfDay,
+	timeAgo,
+} from "./helpers/date";
 // Timezone helpers
 export {
 	formatGroupLabel,
@@ -261,6 +271,7 @@ export {
 export { Router } from "./router";
 // Scheduler / CronJob
 export {
+	BunCronSchedulerDriver,
 	CronJob,
 	MemorySchedulerDriver,
 	Scheduler,
@@ -272,6 +283,7 @@ export type { SSEMessage, SSEOptions } from "./sse";
 export { createSSE, SSE, SSEBroadcaster } from "./sse";
 // Upload
 export type {
+	ImageUploadedFile,
 	ParseUploadResult,
 	StorageDriver,
 	UploadedFile,

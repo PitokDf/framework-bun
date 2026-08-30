@@ -76,6 +76,7 @@ export async function makeDocsCommand() {
 			);
 		}
 
+		const docsConfig = appInstance._apiDocsConfig;
 		const registry = new OpenAPIRegistry();
 
 		let skipped = 0;
@@ -138,9 +139,9 @@ export async function makeDocsCommand() {
 		const document = generator.generateDocument({
 			openapi: "3.0.0",
 			info: {
-				version: "1.0.0",
-				title: "Buntok API Documentation",
-				description: "Auto-generated OpenAPI docs from Zod schemas",
+				version: docsConfig?.version ?? "1.0.0",
+				title: docsConfig?.title ?? "Buntok API Documentation",
+				description: docsConfig?.description ?? "Auto-generated OpenAPI docs from Zod schemas",
 			},
 		});
 

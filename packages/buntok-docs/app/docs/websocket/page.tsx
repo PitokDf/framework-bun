@@ -157,6 +157,34 @@ app.listen(1212);`}
 });`}
       />
 
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        wsAuth Helper
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>wsAuth</code> for a composable auth pattern — it returns a{" "}
+        <code>WSHandler</code> with the <code>open</code> callback wired up:
+      </p>
+      <CodeBlock
+        code={`import { wsAuth } from "@buntok/core";
+
+app.ws("/chat", {
+  ...wsAuth(async (ws) => {
+    const url = new URL(ws.data.ctx.request.url);
+    const token = url.searchParams.get("token");
+    if (!token) return null;
+    const user = await verifyToken(token);
+    return user ? { user } : null;
+  }),
+  message: (ws, msg) => {
+    // ws.data.auth is available here
+    const { user } = ws.data.auth as { user: User };
+  },
+});`}
+      />
+
       {/* ──────────────── MESSAGE VALIDATION ──────────────── */}
       <Heading
         level={2}
@@ -254,6 +282,56 @@ app.ws("/chat", {
   },
 });`}
       />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Room API
+      </Heading>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Method
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["room.join(ws)", "Add a WebSocket to the room"],
+              ["room.leave(ws)", "Remove a WebSocket from the room"],
+              [
+                "room.broadcast(message, exclude?)",
+                "Send to all members except sender",
+              ],
+              ["room.sendAll(message)", "Send to all members including sender"],
+              ["room.getMembers()", "Get all WebSocket members as an array"],
+              ["room.size", "Number of members in the room"],
+              ["room.isEmpty", "Check if the room has no members"],
+              ["room.has(ws)", "Check if a WebSocket is in the room"],
+              [
+                "room.closeAll()",
+                "Close all connections and clear the room",
+              ],
+            ].map(([method, desc]) => (
+              <tr
+                key={method}
+                className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors"
+              >
+                <td className="px-4 py-2 font-mono text-accent text-xs">
+                  {method}
+                </td>
+                <td className="px-4 py-2">{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* ──────────────── HEARTBEAT ──────────────── */}
       <Heading

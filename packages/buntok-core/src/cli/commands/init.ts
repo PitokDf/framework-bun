@@ -65,6 +65,7 @@ const BIOME_CONFIG = {
 	},
 };
 
+
 const TSCONFIG_TEMPLATE = {
 	compilerOptions: {
 		// Environment setup & latest features
@@ -86,7 +87,7 @@ const TSCONFIG_TEMPLATE = {
 		strict: true,
 		noUncheckedIndexedAccess: true,
 		exactOptionalPropertyTypes: true,
-		noImplicitOverride: false,
+		noImplicitOverride: true,
 		noFallthroughCasesInSwitch: true,
 		isolatedModules: true,
 		skipLibCheck: true,
@@ -97,7 +98,7 @@ const TSCONFIG_TEMPLATE = {
 		},
 	},
 	include: ["src/**/*"],
-	exclude: ["node_modules", "dist"],
+	exclude: ["node_modules", ".buntok"],
 };
 
 const VSCODE_SETTINGS = {
@@ -109,28 +110,26 @@ const VSCODE_SETTINGS = {
 	},
 };
 
-const INDEX_TEMPLATE = `import { App, z, zResponse, zValidator, asyncHandler } from "@buntok/core";
+const INDEX_TEMPLATE = `import { App } from "@buntok/core";
+import { env } from "./env";
 
 export const app = new App();
-app.static("/docs", "./public/docs");
 
-app.validateEnv({
-	PORT: z.string().length(4)
-})
+app.get("/", (ctx) => {
+  return ctx.json({ message: "Hello from Buntok!" });
+});
 
-app.get("/welcome/:name",
-	zValidator("params", z.object({
-		name: z.string()
-	}),
-		{ contentType: "application/json" }
-	),
-	zResponse(200, { name: z.string() }),
-	asyncHandler(async (ctx) => {
-		return ctx.success({ name: "Hello " + ctx.params.name })
-	})
-);
+app.listen(env.PORT);
+`;
 
-app.listen();
+const ENV_TS_TEMPLATE = `import { App, z } from "@buntok/core";
+
+export const env = App.validateEnv({
+	PORT: z.coerce.number().default(1212),
+	AUTH_STORE: z.enum(["header", "cookie"]).default("header"),
+	AUTH_COOKIE: z.string().default("session"),
+	NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+});
 `;
 
 function findSkillMdSource(): string | null {
@@ -305,6 +304,24 @@ function createIndexFile(projectRoot: string): boolean {
 	return true;
 }
 
+function createEnvTsFile(projectRoot: string): boolean {
+	const srcDir = join(projectRoot, "src");
+	const envTsPath = join(srcDir, "env.ts");
+
+	if (existsSync(envTsPath)) {
+		console.log("\x1b[90m• src/env.ts: already exists, skipping\x1b[0m");
+		return false;
+	}
+
+	if (!existsSync(srcDir)) {
+		mkdirSync(srcDir, { recursive: true });
+	}
+
+	writeFileSync(envTsPath, ENV_TS_TEMPLATE, "utf-8");
+	console.log("\x1b[32m✓ Created\x1b[0m src/env.ts");
+	return true;
+}
+
 function setupVscode(projectRoot: string): boolean {
 	const vscodeDir = join(projectRoot, ".vscode");
 	const settingsPath = join(vscodeDir, "settings.json");
@@ -449,6 +466,7 @@ export async function initCommand() {
 	setupTsconfig(projectRoot);
 	setupBiome(projectRoot);
 	setupVscode(projectRoot);
+	createEnvTsFile(projectRoot);
 	createIndexFile(projectRoot);
 	createEnvFiles(projectRoot);
 	createGitignore(projectRoot);

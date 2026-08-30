@@ -36,6 +36,47 @@ export class MemorySchedulerDriver implements SchedulerDriver {
 	}
 }
 
+/**
+ * Scheduler driver that uses Bun's native `Bun.cron()` API.
+ *
+ * Jobs are registered with the OS scheduler (crontab on Linux, launchd on
+ * macOS, Task Scheduler on Windows) — they survive process restarts and
+ * don't rely on an in-memory timer.
+ *
+ * Requires Bun >= 1.3.11.
+ *
+ * @example
+ * import { Scheduler, BunCronSchedulerDriver } from "@buntok/core";
+ *
+ * const scheduler = new Scheduler(new BunCronSchedulerDriver());
+ * scheduler.schedule("0 0 * * *", () => cleanup());
+ */
+export class BunCronSchedulerDriver implements SchedulerDriver {
+	private jobs: { stop(): void }[] = [];
+
+	schedule(
+		pattern: string,
+		handler: () => void | Promise<void>,
+		_options?: unknown,
+	) {
+		const job = Bun.cron(pattern, async () => {
+			try {
+				await handler();
+			} catch (err) {
+				console.error("[Scheduler] Job failed:", err);
+			}
+		});
+		this.jobs.push(job);
+		return job;
+	}
+
+	stopAll() {
+		for (const job of this.jobs) {
+			job.stop();
+		}
+	}
+}
+
 // Global default driver for the decorator
 export let defaultSchedulerDriver: SchedulerDriver =
 	new MemorySchedulerDriver();

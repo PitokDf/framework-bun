@@ -1,6 +1,7 @@
 import { BaseOAuthProvider } from "../provider";
 import { OAuthTokenError, OAuthProviderError } from "../types";
 import { createOAuth2AuthorizationURL, decodeIdToken } from "../helpers";
+import { generateCodeChallenge } from "../pkce";
 import type {
   AppleProviderConfig,
   OAuth2Tokens,
@@ -137,16 +138,17 @@ export class AppleProvider extends BaseOAuthProvider {
     );
   }
 
-  createAuthorizationURL(state: string, codeVerifier: string): string {
+  async createAuthorizationURL(state: string, codeVerifier: string): Promise<string> {
     // Apple uses a space-separated scope (not comma)
     const scopes = this.config.scopes?.join(" ") ?? "name email";
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
 
     return createOAuth2AuthorizationURL(AUTHORIZATION_ENDPOINT, {
       clientId: this.config.clientId,
       redirectURI: this.config.redirectURI,
       scopes: [scopes],
       state,
-      codeChallenge: codeVerifier,
+      codeChallenge,
       additionalParams: {
         response_mode: "form_post",
       },

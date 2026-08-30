@@ -76,6 +76,7 @@ export async function makeDocsCommand() {
 			);
 		}
 
+		const docsConfig = appInstance._apiDocsConfig;
 		const registry = new OpenAPIRegistry();
 
 		let skipped = 0;
@@ -138,9 +139,9 @@ export async function makeDocsCommand() {
 		const document = generator.generateDocument({
 			openapi: "3.0.0",
 			info: {
-				version: "1.0.0",
-				title: "Buntok API Documentation",
-				description: "Auto-generated OpenAPI docs from Zod schemas",
+				version: docsConfig?.version ?? "1.0.0",
+				title: docsConfig?.title ?? "Buntok API Documentation",
+				description: docsConfig?.description ?? "Auto-generated OpenAPI docs from Zod schemas",
 			},
 		});
 
@@ -151,46 +152,21 @@ export async function makeDocsCommand() {
 		const swaggerPath = resolve(docsDir, "swagger.json");
 		writeFileSync(swaggerPath, JSON.stringify(document, null, 2));
 		console.log(
-			`\x1b[32m✔ OpenAPI JSON generated at public/docs/swagger.json\x1b[0m`,
+			`\x1b[32m✔ swagger.json generated at public/docs/swagger.json\x1b[0m`,
 		);
-
-		// Scalar UI — index.html so app.static("/docs", "./public/docs") just works
-		const htmlPath = resolve(docsDir, "index.html");
-		const html = `<!doctype html>
-<html>
-  <head>
-    <title>API Reference</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-  </head>
-  <body>
-    <script id="api-reference" data-url="/docs/swagger.json"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
-  </body>
-</html>`;
-		writeFileSync(htmlPath, html);
-		console.log(
-			`\x1b[32m✔ Scalar UI generated at public/docs/index.html\x1b[0m`,
-		);
-
-		if (skipped > 0) {
-			console.log(
-				`\x1b[33m  ${skipped} route(s) were skipped due to unsupported schema types.\x1b[0m`,
-			);
-			console.log(
-				`\x1b[33m  Tip: annotate unsupported types with .openapi({ ... }) from @asteasolutions/zod-to-openapi.\x1b[0m`,
-			);
-		}
 
 		console.log(`\n\x1b[36mNext steps:\x1b[0m`);
 		console.log(
-			`  1. Serve the docs directory: \x1b[90mapp.static("/docs", "./public/docs")\x1b[0m`,
+			`\x1b[90m  Add app.apiDocs() to your src/index.ts:\x1b[0m`,
 		);
 		console.log(
-			`  2. Visit \x1b[90mhttp://localhost:1212/docs\x1b[0m to view your API documentation`,
+			`\x1b[90m    app.apiDocs({ path: "/docs", title: "My API" });\x1b[0m`,
 		);
+		console.log();
+		process.exit(0);
 	} catch (error) {
 		console.error("\x1b[31mFailed to generate docs:\x1b[0m");
 		console.error(error);
+		process.exit(1);
 	}
 }

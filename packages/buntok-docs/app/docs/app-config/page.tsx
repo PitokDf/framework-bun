@@ -34,22 +34,26 @@ export default function AppConfigPage() {
         <code>process.env</code> against a schema and exits with formatted
         errors if validation fails.
       </p>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The <code>buntok init</code> command generates a{" "}
+        <code>src/env.ts</code> file with a default schema. You can extend it
+        as needed:
+      </p>
       <CodeBlock
         code={`import { App, z } from "@buntok/core";
-import { z } from "@buntok/core";
 
-const app = new App();
-
-const env = app.validateEnv({
+export const env = App.validateEnv({
+  PORT: z.coerce.number().default(1212),
+  AUTH_STORE: z.enum(["header", "cookie"]).default("header"),
+  AUTH_COOKIE: z.string().default("session"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
-  PORT: z.coerce.number().default(1212),
-  NODE_ENV: z.enum(["development", "production", "test"]),
 });
 
 // env is fully typed!
-console.log(env.DATABASE_URL);
-console.log(env.PORT); // number (defaulted)`}
+console.log(env.PORT); // number (defaulted)
+console.log(env.DATABASE_URL); // string (required)`}
       />
 
       <Callout type="warning">

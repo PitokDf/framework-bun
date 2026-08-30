@@ -328,6 +328,11 @@ const result = await handleUploads(ctx, {
                 "(originalName, file) => { name, ext }",
                 "Filename generator (overrides global)",
               ],
+              [
+                "outputFormat",
+                '"webp" | "png" | "jpeg" | "avif"',
+                "Force image conversion on upload",
+              ],
             ].map(([field, type, desc]) => (
               <tr
                 key={field}
@@ -343,6 +348,37 @@ const result = await handleUploads(ctx, {
           </tbody>
         </table>
       </div>
+
+      {/* ──────────────── IMAGE CONVERSION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Image Conversion
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>outputFormat</code> to automatically convert uploaded images.
+        The result is an <code>ImageUploadedFile</code> with metadata like width,
+        height, and format:
+      </p>
+      <CodeBlock
+        code={`const result = await handleUploads(ctx, {
+  storage: new LocalDiskStorage("./uploads"),
+  fields: {
+    avatar: {
+      required: true,
+      outputFormat: "webp", // Convert to WebP
+    },
+  },
+});
+
+// result.fields.avatar is ImageUploadedFile
+const avatar = result.fields.avatar;
+if (avatar.kind === "image") {
+  console.log(avatar.width, avatar.height, avatar.format);
+  // avatar.originalType / avatar.originalExt if format changed
+}`}
+      />
 
       {/* ──────────────── VALIDATION ──────────────── */}
       <Heading

@@ -167,6 +167,29 @@ class UserController {
         </table>
       </div>
 
+      {/* ──────────────── @QUERY ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        @Query
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Bun-specific HTTP method — like GET but with a request body (RFC 9110).
+        Useful for complex search queries that don&apos;t fit in query params.
+      </p>
+      <CodeBlock
+        code={`@Controller("/search")
+class SearchController {
+  @Query("/")
+  async search(ctx) {
+    const body = await ctx.body(); // { filters: [...], sort: "date" }
+    const results = await db.search(body);
+    return ctx.json(results);
+  }
+}`}
+      />
+
       {/* ──────────────── @USE ──────────────── */}
       <Heading
         level={2}
@@ -424,10 +447,8 @@ class Logger {
       <CodeBlock
         code={`@Controller("/users")
 class UserController {
-  constructor(
-    @Inject(UserService) private userService: UserService,
-    @Inject(UserRepository) private userRepo: UserRepository,
-  ) {}
+  @Inject(UserService) private userService: UserService;
+  @Inject(UserRepository) private userRepo: UserRepository;
 
   @Get("/")
   async list(ctx) {
@@ -505,7 +526,7 @@ class UserController {
       <CodeBlock
         code={`import {
   App, Controller, Get, Post, Use, UseGuard,
-  Injectable, Inject, zValidator, z
+  Injectable, Inject, Container, zValidator, z
 } from "@buntok/core";
 
 // Service
@@ -538,9 +559,7 @@ const createUserSchema = z.object({
 // Controller
 @Controller("/users")
 class UserController {
-  constructor(
-    @Inject(UserService) private service: UserService,
-  ) {}
+  @Inject(UserService) private service: UserService;
 
   @Get("/")
   async list(ctx) {

@@ -179,6 +179,86 @@ class TaskController {
         <code>this</code> and injected services work correctly.
       </Callout>
 
+      {/* ──────────────── DRIVERS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Drivers
+      </Heading>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Driver
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                MemorySchedulerDriver
+              </td>
+              <td className="px-4 py-2">
+                In-memory cron via <code>croner</code> (default)
+              </td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
+                BunCronSchedulerDriver
+              </td>
+              <td className="px-4 py-2">
+                OS-level cron via <code>Bun.cron()</code> — survives restarts
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        BunCronSchedulerDriver
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Uses Bun&apos;s native <code>Bun.cron()</code> API to register jobs
+        with the OS scheduler (crontab on Linux, launchd on macOS, Task
+        Scheduler on Windows). Jobs survive process restarts. Requires Bun
+        &gt;= 1.3.11.
+      </p>
+      <CodeBlock
+        code={`import { Scheduler, BunCronSchedulerDriver } from "@buntok/core";
+
+const scheduler = new Scheduler(new BunCronSchedulerDriver());
+
+scheduler.schedule("0 0 * * *", async () => {
+  await dailyCleanup();
+});`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Setting Default Driver for @CronJob
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>setDefaultSchedulerDriver</code> to make the{" "}
+        <code>@CronJob</code> decorator use <code>BunCronSchedulerDriver</code>{" "}
+        instead of the in-memory driver:
+      </p>
+      <CodeBlock
+        code={`import { setDefaultSchedulerDriver, BunCronSchedulerDriver } from "@buntok/core";
+
+// Call before any @CronJob classes are instantiated
+setDefaultSchedulerDriver(new BunCronSchedulerDriver());`}
+      />
+
       {/* ──────────────── FULL EXAMPLE ──────────────── */}
       <Heading
         level={2}

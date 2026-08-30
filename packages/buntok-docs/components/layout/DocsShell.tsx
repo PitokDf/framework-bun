@@ -4,12 +4,16 @@ import { useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TableOfContents } from "@/components/layout/TableOfContents";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { PrevNext } from "@/components/ui/PrevNext";
+import { SearchDialog } from "@/components/ui/SearchDialog";
 
 export function DocsShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SearchDialog />
       <Header
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
@@ -20,7 +24,11 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           onClose={() => setIsSidebarOpen(false)}
         />
         <main className="flex-1 min-w-0 p-4">
-          <div className="max-w-4xl mx-auto">{children}</div>
+          <div className="max-w-4xl mx-auto">
+            <Breadcrumbs />
+            {children}
+            <PrevNext />
+          </div>
         </main>
         <TableOfContents />
       </div>

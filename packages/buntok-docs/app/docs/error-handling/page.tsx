@@ -137,19 +137,19 @@ app.post("/users", async (ctx) => {
         Override the default error handler to customize error responses:
       </p>
       <CodeBlock
-        code={`const app = new App({
-  customErrorHandler: (error, ctx) => {
-    console.error(error);
+        code={`const app = new App();
 
-    // Custom error format
-    return ctx.json({
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-      },
-    }, error instanceof HttpError ? error.status : 500);
-  },
+app.onError((error, ctx) => {
+  console.error(error);
+
+  // Custom error format
+  return ctx.json({
+    error: {
+      name: error.name,
+      message: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    },
+  }, error instanceof HttpError ? error.status : 500);
 });`}
       />
 

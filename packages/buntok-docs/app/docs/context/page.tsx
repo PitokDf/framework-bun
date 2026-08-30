@@ -60,8 +60,8 @@ export default function ContextPage() {
               ],
               [
                 "ctx.user",
-                "Record<string, unknown>",
-                "JWT payload (after auth)",
+                "Record<string, unknown> | null",
+                "JWT payload (null before auth)",
               ],
               ["ctx.ip", "string", "Client IP (reads X-Forwarded-For)"],
               [
@@ -332,11 +332,11 @@ app.get("/search", zValidator("query", searchSchema), (ctx) => {
                 "Success envelope: { success, message, data }",
               ],
               [
-                "ctx.paginate(data, total, page, limit, ...)",
+                "ctx.paginate(data, total, page, limit, message?, status?)",
                 "Offset-based pagination with meta",
               ],
               [
-                "ctx.cursorPaginate(data, nextCursor, ...)",
+                "ctx.cursorPaginate(data, nextCursor, message?, status?)",
                 "Cursor-based pagination (infinite scroll)",
               ],
               [
@@ -449,6 +449,27 @@ return ctx.redirect("/login");
 
 // 301 permanent redirect
 return ctx.redirect("/new-url", 301);`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Post-Response Hooks
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Register hooks that run after the response is sent — useful for logging, metrics, or response transformation:
+      </p>
+      <CodeBlock
+        code={`app.get("/api", (ctx) => {
+  ctx.onAfterResponse((res) => {
+    console.log("Response status:", res.status);
+    // Return modified response, or undefined to keep original
+    return res;
+  });
+
+  return ctx.json({ data: "hello" });
+});`}
       />
 
       {/* ──────────────── SERVER-SENT EVENTS ──────────────── */}

@@ -101,9 +101,9 @@ app.static("/files", "./assets");`}
           <code>Cache-Control: public, max-age=3600</code> (1 hour)
         </li>
         <li>
-          <strong>ETag support</strong> - If the client sends{" "}
-          <code>If-None-Match</code> and the ETag matches, the server returns{" "}
-          <code>304 Not Modified</code>
+          <strong>ETag support</strong> - Server sends{" "}
+          <code>ETag</code> header on <code>304 Not Modified</code> responses.
+          Clients should send <code>If-None-Match</code> to leverage caching.
         </li>
       </ul>
 

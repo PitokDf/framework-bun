@@ -49,12 +49,11 @@ const token = await jwt.sign(
       <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Verify Token</Heading>
       <CodeBlock
         code={`const payload = await jwt.verify(token);
-// { userId: 1, role: "admin", exp: 1700000000 }
+// { userId: 1, role: "admin", exp: 1700000000 } or null if invalid
 
 // Handle expired/invalid token
-try {
-  const payload = await jwt.verify(token);
-} catch (error) {
+const payload = await jwt.verify(token);
+if (!payload) {
   // Token is invalid or expired
 }`}
       />
@@ -94,7 +93,7 @@ AUTH_COOKIE=session`}
 
       <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Login Flow</Heading>
       <CodeBlock
-        code={`import { App, JwtService, setCookie } from "@buntok/core";
+        code={`import { App, JwtService, setCookie, deleteCookie } from "@buntok/core";
 
 const jwt = new JwtService(process.env.JWT_SECRET!);
 

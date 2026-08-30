@@ -55,8 +55,7 @@ const google = createOAuth.google({ ... });
 app.get("/auth/google", async (ctx) => {
   const state = crypto.randomUUID();
   const codeVerifier = generateCodeVerifier();
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
-  const url = google.createAuthorizationURL(state, codeVerifier);
+  const url = await google.createAuthorizationURL(state, codeVerifier);
 
   // Framework handles state + codeVerifier storage in HttpOnly cookies
   let response = ctx.redirect(url);
@@ -78,8 +77,8 @@ app.get("/auth/google", async (ctx) => {
   clearOAuthCookies } from "@buntok/core";
 
 app.get("/auth/google/callback", async (ctx) => {
-  const code = ctx.req.query("code")!;
-  const state = ctx.req.query("state")!;
+  const code = ctx.query.code;
+  const state = ctx.query.state;
 
   // Verify state (CSRF protection)
   if (!verifyOAuthState(ctx.request, state)) {
@@ -91,7 +90,7 @@ app.get("/auth/google/callback", async (ctx) => {
 
   // Exchange code for tokens
   const tokens = await google.validateAuthorizationCode(
-    code, ctx.req.url, codeVerifier
+    code, "http://localhost:1212/auth/google/callback", codeVerifier
   );
 
   // Get user info
@@ -279,7 +278,7 @@ app.get("/auth/discord", async (ctx) => {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-  const url = createOAuth2AuthorizationURL(DISCORD_AUTH, {
+  const url = await createOAuth2AuthorizationURL(DISCORD_AUTH, {
     clientId: process.env.DISCORD_CLIENT_ID!,
     redirectURI: "http://localhost:1212/auth/discord/callback",
     scopes: ["identify", "email"],
@@ -293,8 +292,8 @@ app.get("/auth/discord", async (ctx) => {
 });
 
 app.get("/auth/discord/callback", async (ctx) => {
-  const code = ctx.req.query("code")!;
-  const state = ctx.req.query("state")!;
+  const code = ctx.query.code;
+  const state = ctx.query.state;
 
   if (!verifyOAuthState(ctx.request, state)) {
     return ctx.json({ error: "Invalid state" }, 400);
@@ -354,13 +353,15 @@ app.get("/auth/discord/callback", async (ctx) => {
       </p>
 
       <CodeBlock
-        code={`import { BaseOAuthProvider, createOAuth2AuthorizationURL } from "@buntok/core";
+        code={`import { BaseOAuthProvider, createOAuth2AuthorizationURL,
+  generateCodeChallenge } from "@buntok/core";
 import type { OAuth2Tokens, OAuthUser } from "@buntok/core";
 
 class SpotifyProvider extends BaseOAuthProvider {
-  readonly id = "spotify";
+  override readonly id = "spotify";
 
-  createAuthorizationURL(state: string, codeVerifier: string): string {
+  override async createAuthorizationURL(state: string, codeVerifier: string): Promise<string> {
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
     return createOAuth2AuthorizationURL(
       "https://accounts.spotify.com/authorize",
       {
@@ -368,18 +369,18 @@ class SpotifyProvider extends BaseOAuthProvider {
         redirectURI: this.config.redirectURI,
         scopes: this.config.scopes,
         state,
-        codeChallenge: codeVerifier,
+        codeChallenge,
       }
     );
   }
 
-  async validateAuthorizationCode(
+  override async validateAuthorizationCode(
     code: string, redirectURI: string, codeVerifier?: string
   ): Promise<OAuth2Tokens> {
     // ... implement token exchange
   }
 
-  async getUserInfo(tokens: OAuth2Tokens): Promise<OAuthUser> {
+  override async getUserInfo(tokens: OAuth2Tokens): Promise<OAuthUser> {
     // ... implement user info fetch
   }
 }`}

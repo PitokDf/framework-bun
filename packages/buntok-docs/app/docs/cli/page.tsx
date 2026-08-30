@@ -47,6 +47,7 @@ export default function CLIPage() {
 ✓ Installed @biomejs/biome
 ✓ Created biome.json
 ✓ Created .vscode/settings.json
+✓ Created src/env.ts
 ✓ Created src/index.ts
 ✓ Created .env
 ✓ Created .env.example
@@ -55,6 +56,28 @@ export default function CLIPage() {
 ? Do you want to deploy to Vercel? (y/N): y
 ✓ Created vercel.json`}
       />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Generated <code>env.ts</code>
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The <code>src/env.ts</code> file contains a type-safe environment schema using <code>validateEnv()</code>.
+        All variables have sensible defaults and are validated at startup.
+      </p>
+      <CodeBlock
+        code={`import { App, z } from "@buntok/core";
+
+export const env = App.validateEnv({
+  PORT: z.coerce.number().default(1212),
+  AUTH_STORE: z.enum(["header", "cookie"]).default("header"),
+  AUTH_COOKIE: z.string().default("session"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+});`}
+      />
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Add more variables as needed (e.g., <code>DATABASE_URL</code>, <code>JWT_SECRET</code>).
+        The server will exit with a clear error if any required variable is missing or invalid.
+      </p>
 
       {/* ──────────────── BUILD ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
@@ -186,7 +209,7 @@ export class UserController {
         Partial Generation
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Use flags to generate only specific files:
+        Use flags to generate only specific files. Flags can be <strong>combined</strong>:
       </p>
       <CodeBlock
         code={`# Generate only the repository
@@ -196,17 +219,11 @@ bunx buntok create user --repo
 bunx buntok create user --service
 
 # Generate only the controller
-bunx buntok create user --controller`}
-      />
+bunx buntok create user --controller
 
-      {/* ──────────────── DEV ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
-        dev
-      </Heading>
-      <p className="my-3 text-text-secondary leading-relaxed">
-        Start the development server with hot reload.
-      </p>
-      <CodeBlock code={`bunx buntok dev`} />
+# Combined (repo + service)
+bunx buntok create user --repo --service`}
+      />
 
       {/* ──────────────── DB ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
@@ -216,8 +233,9 @@ bunx buntok create user --controller`}
         Database management commands.
       </p>
       <CodeBlock
-        code={`# Run pending migrations
+        code={`# Run pending migrations (optional name)
 bunx buntok db migrate
+bunx buntok db migrate add-users-table
 
 # Reset database (drop all tables)
 bunx buntok db reset
@@ -226,8 +244,17 @@ bunx buntok db reset
 bunx buntok db seed
 
 # Generate migration from schema changes
-bunx buntok db generate`}
+bunx buntok db generate
+
+# Open studio (Prisma Studio / Drizzle Studio)
+bunx buntok db studio
+
+# Show migration status
+bunx buntok db status`}
       />
+      <Callout type="info">
+        Auto-detects ORM (<code>@buntok/prisma</code>, <code>@buntok/drizzle</code>, <code>@buntok/typeorm</code>) via <code>detectOrm()</code>. <code>migrate [name]</code> accepts optional migration name.
+      </Callout>
 
       {/* ──────────────── MAKE:DOCS ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
@@ -249,6 +276,7 @@ bunx buntok db generate`}
         code={`my-app/
 ├── src/
 │   ├── index.ts
+│   ├── env.ts
 │   ├── controllers/
 │   │   └── user.controller.ts
 │   ├── services/

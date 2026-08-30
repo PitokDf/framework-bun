@@ -5,48 +5,12 @@ export function generateService(
 ): string {
 	if (withRepo) {
 		return `import { BaseService } from "@buntok/core";
-import { ${pascalName}Repository } from "../repositories/${entityName}.repository";
-import type { ${pascalName} } from "../types/${entityName}";
-import { NotFoundError } from "@buntok/core";
+import { ${pascalName}Repository } from "@/repositories/${entityName}.repository";
+import type { ${pascalName} } from "@prisma/client";
 
 export class ${pascalName}Service extends BaseService<${pascalName}> {
-  private repository: ${pascalName}Repository;
-
-  constructor() {
-    super();
-    this.repository = new ${pascalName}Repository();
-  }
-
-  async getAll(): Promise<${pascalName}[]> {
-    return this.repository.findAll();
-  }
-
-  async getById(id: string): Promise<${pascalName}> {
-    const ${entityName} = await this.repository.findById(id);
-    if (!${entityName}) {
-      throw new NotFoundError("${pascalName} not found");
-    }
-    return ${entityName};
-  }
-
-  async create(data: ${pascalName}): Promise<${pascalName}> {
-    return this.repository.create(data);
-  }
-
-  async update(id: string, data: Partial<${pascalName}>): Promise<${pascalName}> {
-    const ${entityName} = await this.repository.update(id, data);
-    if (!${entityName}) {
-      throw new NotFoundError("${pascalName} not found");
-    }
-    return ${entityName};
-  }
-
-  async delete(id: string): Promise<boolean> {
-    const deleted = await this.repository.delete(id);
-    if (!deleted) {
-      throw new NotFoundError("${pascalName} not found");
-    }
-    return true;
+  constructor(private readonly ${entityName}Repository: ${pascalName}Repository) {
+    super(${entityName}Repository);
   }
 }
 `;

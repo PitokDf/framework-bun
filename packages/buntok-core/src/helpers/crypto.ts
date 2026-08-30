@@ -19,23 +19,25 @@ function toHex(buffer: Uint8Array): string {
 
 // ── Hash ─────────────────────────────────────────────────────────────
 
-export async function hash(
+export function hash(
 	data: string | ArrayBuffer | Uint8Array,
 	algorithm: "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512" = "SHA-256",
-): Promise<string> {
-	const digest = await crypto.subtle.digest(algorithm, toBuffer(data));
-	return toHex(new Uint8Array(digest));
+): string {
+	const algo = algorithm.toLowerCase().replace("-", "") as
+		| "sha1"
+		| "sha256"
+		| "sha384"
+		| "sha512";
+	const hasher = new Bun.CryptoHasher(algo);
+	hasher.update(toBuffer(data));
+	return hasher.digest("hex");
 }
 
-export async function sha256(
-	data: string | ArrayBuffer | Uint8Array,
-): Promise<string> {
+export function sha256(data: string | ArrayBuffer | Uint8Array): string {
 	return hash(data, "SHA-256");
 }
 
-export async function sha512(
-	data: string | ArrayBuffer | Uint8Array,
-): Promise<string> {
+export function sha512(data: string | ArrayBuffer | Uint8Array): string {
 	return hash(data, "SHA-512");
 }
 
@@ -144,7 +146,7 @@ export async function hashVerify(
 	expected: string,
 	algorithm: "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512" = "SHA-256",
 ): Promise<boolean> {
-	const actual = await hash(data, algorithm);
+	const actual = hash(data, algorithm);
 	if (actual.length !== expected.length) return false;
 	let result = 0;
 	for (let i = 0; i < actual.length; i++) {

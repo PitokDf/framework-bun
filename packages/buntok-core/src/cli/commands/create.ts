@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import { join } from "node:path";
 import { generateController } from "../generators/controller.js";
@@ -146,6 +146,74 @@ export async function createCommand(entityName: string, args: string[]) {
 		}
 	}
 
+	// Auto-register in src/index.ts
+	const indexPath = join("src", "index.ts");
+	if (existsSync(indexPath)) {
+		const indexContent = readFileSync(indexPath, "utf-8");
+
+		// Build imports
+		const imports: string[] = [];
+		const instantiations: string[] = [];
+
+		// Only register repo + service if full chain (they're needed by controller)
+		if (options.repo && options.service) {
+			imports.push(`import { ${pascalName}Repository } from "@/repositories/${entityName}.repository";`);
+			instantiations.push(`const ${entityName}Repository = new ${pascalName}Repository();`);
+		}
+
+		if (options.service) {
+			const repoArg = options.repo ? `(${entityName}Repository)` : "";
+			instantiations.push(`const ${entityName}Service = new ${pascalName}Service${repoArg};`);
+			if (!options.repo) {
+				imports.push(`import { ${pascalName}Service } from "@/services/${entityName}.service";`);
+			}
+		}
+
+		// Always register controller
+		{
+			imports.push(`import { ${pascalName}Controller } from "@/controllers/${entityName}.controller";`);
+			const serviceArg = options.service ? `(${entityName}Service)` : "";
+			instantiations.push(`app.registerController(new ${pascalName}Controller${serviceArg});`);
+		}
+
+		const importBlock = imports.join("\n");
+		const instantiationBlock = instantiations.join("\n");
+
+		if (!indexContent.includes(importBlock)) {
+			const lines = indexContent.split("\n");
+
+			// Find the last import line and insert after it
+			let lastImportIndex = -1;
+			for (let i = 0; i < lines.length; i++) {
+				if (lines[i]?.startsWith("import ")) {
+					lastImportIndex = i;
+				}
+			}
+
+			if (lastImportIndex !== -1) {
+				lines.splice(lastImportIndex + 1, 0, importBlock);
+			} else {
+				lines.unshift(importBlock);
+			}
+
+			// Find app.registerController or app.listen and insert before it
+			const content = lines.join("\n");
+			const updatedContent = content.replace(
+				/(app\.(registerController|listen)\s*\()/,
+				`${instantiationBlock}\n\n$1`,
+			);
+
+			await fs.writeFile(indexPath, updatedContent);
+			console.log(
+				`\x1b[32m✔ Registered ${pascalName} in src/index.ts\x1b[0m`,
+			);
+		} else {
+			console.log(
+				`\x1b[90m• src/index.ts: ${pascalName} already registered\x1b[0m`,
+			);
+		}
+	}
+
 	// Print results
 	console.log("\x1b[32mGenerated files:\x1b[0m");
 	for (const result of results.sort()) {
@@ -154,9 +222,6 @@ export async function createCommand(entityName: string, args: string[]) {
 
 	console.log(`
 \x1b[36mNext steps:\x1b[0m
-  1. Register your controller in src/index.ts:
-     \x1b[32mimport { ${pascalName}Controller } from "./controllers/${entityName}.controller";\x1b[0m
-     \x1b[32mapp.registerController(${pascalName}Controller);\x1b[0m
-  2. Start dev server: \x1b[33mbun run dev\x1b[0m
+  1. Start dev server: \x1b[33mbun run dev\x1b[0m
 `);
 }

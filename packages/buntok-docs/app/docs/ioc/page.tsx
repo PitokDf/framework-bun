@@ -40,18 +40,24 @@ class UserRepository {
 
 @Injectable()
 class UserService {
-  constructor(@Inject(UserRepository) private repo: UserRepository) {}
+  @Inject(UserRepository) private repo: UserRepository;
   getUsers() { return this.repo.findAll(); }
 }
 
 // 2. Register and resolve
 const container = new Container();
-container.register(UserRepository, { useClass: UserRepository });
-container.register(UserService, { useClass: UserService });
+container
+  .register(UserRepository, { useClass: UserRepository })
+  .register(UserService, { useClass: UserService });
 
 const userService = container.resolve(UserService);
 const users = userService.getUsers();`}
       />
+
+      <Callout type="info">
+        <code>container.register()</code> returns <code>this</code>, so you can
+        chain multiple registrations:
+      </Callout>
 
       {/* ──────────────── PROVIDERS ──────────────── */}
       <Heading
@@ -196,18 +202,22 @@ class EmailService {
   send(to: string, body: string) { /* ... */ }
 }
 
-// @Inject declares dependencies via constructor
+// @Inject declares dependencies via fields
 @Injectable()
 class UserService {
-  constructor(
-    @Inject(EmailService) private email: EmailService
-  ) {}
+  @Inject(EmailService) private email: EmailService;
+}
+
+// Set scope via decorator option (alternative to container.registerClass)
+@Injectable({ scope: "transient" })
+class RequestLogger {
+  log(msg: string) { console.log(msg); }
 }
 
 // When container resolves UserService:
 // 1. Creates UserService instance
 // 2. Resolves EmailService from container
-// 3. Injects EmailService into constructor`}
+// 3. Injects EmailService into the field`}
       />
 
       {/* ──────────────── CONTAINER API ──────────────── */}
@@ -302,7 +312,7 @@ class UserRepository {
 
 @Injectable()
 class UserService {
-  constructor(@Inject(UserRepository) private repo: UserRepository) {}
+  @Inject(UserRepository) private repo: UserRepository;
   getUsers() { return this.repo.findAll(); }
   getUser(id: string) { return this.repo.findById(id); }
 }
@@ -317,7 +327,7 @@ app.setContainer(container);
 // Controller uses DI
 @Controller("/users")
 class UserController {
-  constructor(@Inject(UserService) private userService: UserService) {}
+  @Inject(UserService) private userService: UserService;
 
   @Get("/")
   async list(ctx: Context) {

@@ -39,6 +39,7 @@ const navigation: NavItem[] = [
     items: [
       { title: "App Configuration", href: "/docs/app-config" },
       { title: "IoC Container", href: "/docs/ioc" },
+      { title: "Logger", href: "/docs/logger" },
       { title: "SSE", href: "/docs/sse" },
       { title: "WebSocket", href: "/docs/websocket" },
       { title: "Static Files", href: "/docs/static-files" },
@@ -62,6 +63,7 @@ const navigation: NavItem[] = [
       { title: "Helpers", href: "/docs/helpers" },
       { title: "Timezone", href: "/docs/timezone" },
       { title: "AI Module", href: "/docs/ai" },
+      { title: "Vector Search", href: "/docs/vector-search" },
       { title: "API Docs", href: "/docs/api-docs" },
       { title: "Repository", href: "/docs/repository" },
       { title: "Audit Log", href: "/docs/audit-log" },
@@ -93,7 +95,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-border-primary bg-bg-primary
+          fixed top-14 left-0 z-40 h-[calc(100vh-3.5rem)] w-64 overflow-y-auto border-r border-border-primary bg-bg-primary
           transition-transform duration-200 ease-in-out
           lg:sticky lg:translate-x-0 lg:block
           ${isOpen ? "translate-x-0" : "-translate-x-full"}

@@ -5,7 +5,7 @@ import { Callout } from "@/components/ui/Callout";
 export const metadata = {
   title: "API Documentation",
   description:
-    "Generate OpenAPI docs and serve Scalar UI for interactive API exploration.",
+    "Generate OpenAPI docs and serve an interactive API client for exploring your endpoints.",
 };
 
 export default function ApiDocsPage() {
@@ -19,35 +19,22 @@ export default function ApiDocsPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Auto-generate OpenAPI 3.0 documentation from your Zod validation
-        schemas. One command, zero config.
+        schemas and serve a full-featured interactive API client.
       </p>
 
-      {/* ──────────────── HOW IT WORKS ──────────────── */}
+      {/* ──────────────── QUICK START ──────────────── */}
       <Heading
         level={2}
         className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
       >
-        How It Works
+        Quick Start
       </Heading>
-      <p className="my-3 text-text-secondary leading-relaxed">
-        Buntok automatically collects metadata from <code>zValidator</code> and{" "}
-        <code>zResponse</code> middlewares on every registered route. When you
-        run the CLI command, it generates:
-      </p>
-      <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
-        <li>
-          <code>public/docs/swagger.json</code> - OpenAPI 3.0 spec
-        </li>
-        <li>
-          <code>public/docs/index.html</code> - Scalar API Reference UI
-        </li>
-      </ul>
 
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Generate Docs
+        1. Generate swagger.json
       </Heading>
       <CodeBlock code={`buntok make:docs`} />
 
@@ -55,19 +42,76 @@ export default function ApiDocsPage() {
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Serve Docs
+        2. Enable docs in your app
       </Heading>
       <CodeBlock
-        code={`import { App, z } from "@buntok/core";
+        code={`import { App } from "@buntok/core";
 
 const app = new App();
 
-// Serve the generated docs
-app.static("/docs", "./public/docs");
+app.apiDocs({
+  path: "/docs",
+  title: "My API",
+  version: "1.0.0",
+  description: "My awesome API documentation",
+  safeOnProduction: true, // hides docs when NODE_ENV=production
+});
 
 app.listen(1212);
 // Visit http://localhost:1212/docs`}
       />
+
+      {/* ──────────────── OPTIONS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Options
+      </Heading>
+      <div className="my-3 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary">
+          <thead>
+            <tr className="border-b border-border-primary text-left">
+              <th className="py-2 pr-4 font-semibold">Option</th>
+              <th className="py-2 pr-4 font-semibold">Type</th>
+              <th className="py-2 pr-4 font-semibold">Default</th>
+              <th className="py-2 font-semibold">Description</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-primary">
+            <tr>
+              <td className="py-2 pr-4 font-mono text-xs text-accent">path</td>
+              <td className="py-2 pr-4 font-mono text-xs">string</td>
+              <td className="py-2 pr-4 font-mono text-xs">"/docs"</td>
+              <td className="py-2">URL path for the docs UI</td>
+            </tr>
+            <tr>
+              <td className="py-2 pr-4 font-mono text-xs text-accent">title</td>
+              <td className="py-2 pr-4 font-mono text-xs">string</td>
+              <td className="py-2 pr-4 font-mono text-xs">"API Documentation"</td>
+              <td className="py-2">API title shown in the docs UI and swagger.json</td>
+            </tr>
+            <tr>
+              <td className="py-2 pr-4 font-mono text-xs text-accent">version</td>
+              <td className="py-2 pr-4 font-mono text-xs">string</td>
+              <td className="py-2 pr-4 font-mono text-xs">"1.0.0"</td>
+              <td className="py-2">API version shown in the docs UI and swagger.json</td>
+            </tr>
+            <tr>
+              <td className="py-2 pr-4 font-mono text-xs text-accent">description</td>
+              <td className="py-2 pr-4 font-mono text-xs">string</td>
+              <td className="py-2 pr-4 font-mono text-xs">undefined</td>
+              <td className="py-2">API description shown in the docs UI and swagger.json</td>
+            </tr>
+            <tr>
+              <td className="py-2 pr-4 font-mono text-xs text-accent">safeOnProduction</td>
+              <td className="py-2 pr-4 font-mono text-xs">boolean</td>
+              <td className="py-2 pr-4 font-mono text-xs">false</td>
+              <td className="py-2">When <code>true</code>, docs routes are not registered when <code>NODE_ENV=production</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       {/* ──────────────── ANNOTATION ──────────────── */}
       <Heading
@@ -149,7 +193,6 @@ app.get(
       </Heading>
       <CodeBlock
         code={`
-
 const UserSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -180,7 +223,7 @@ app.get(
       </Heading>
       <CodeBlock
         code={`
-import { z } from "@buntok/core";
+import { App, z } from "@buntok/core";
 
 const app = new App();
 
@@ -232,13 +275,45 @@ app.get(
   }
 );
 
-// ─── Serve docs ────────────────────────────────────
-app.static("/docs", "./public/docs");
+// ─── Enable API docs ───────────────────────────────
+app.apiDocs({
+  path: "/docs",
+  title: "User Management API",
+  version: "1.0.0",
+  safeOnProduction: true,
+});
+
 app.listen(1212);
 
 // Run: buntok make:docs
 // Visit: http://localhost:1212/docs`}
       />
+
+      {/* ──────────────── PRODUCTION ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Production Safety
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>safeOnProduction: true</code> to automatically hide the docs UI
+        when <code>NODE_ENV=production</code>. This prevents exposing your API
+        documentation in production environments.
+      </p>
+      <CodeBlock
+        code={`app.apiDocs({
+  path: "/docs",
+  title: "My API",
+  safeOnProduction: true, // disabled when NODE_ENV=production
+});`}
+      />
+
+      <Callout type="warning">
+        When <code>safeOnProduction</code> is <code>true</code> and{" "}
+        <code>NODE_ENV=production</code>, the docs routes return 404. Make sure
+        your deployment sets <code>NODE_ENV=production</code>.
+      </Callout>
 
       {/* ──────────────── TIPS ──────────────── */}
       <Heading
@@ -262,8 +337,8 @@ app.listen(1212);
           envelope: <code>{"{ success, message, data }"}</code>
         </li>
         <li>
-          The Scalar UI renders a beautiful, interactive API reference from{" "}
-          <code>swagger.json</code>
+          The interactive docs UI includes request testing, code snippet
+          generation, cookie management, and schema-powered body previews
         </li>
       </ul>
 

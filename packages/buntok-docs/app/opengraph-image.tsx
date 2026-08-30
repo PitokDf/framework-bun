@@ -154,7 +154,7 @@ export default async function Image() {
           fontFamily: "sans-serif",
         }}
       >
-        <span>buntok.dev</span>
+        <span>buntok.pitok.my.id</span>
       </div>
     </div>,
     { ...size },

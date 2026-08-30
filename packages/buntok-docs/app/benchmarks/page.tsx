@@ -11,7 +11,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { BenchmarkChartsLoader } from "@/components/landing/BenchmarkChartsLoader";
-import { Header } from "@/components/landing/header";
+import { Header } from "@/components/layout/Header";
 
 export const metadata: Metadata = {
   title: "Benchmarks | Buntok Framework Performance",
@@ -125,7 +125,7 @@ function BenchmarkPage({ data }: { data: BenchmarkData }) {
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
       <Header />
-      <div className="max-w-6xl space-y-4 mx-auto px-4 pt-24 pb-12">
+      <div className="max-w-6xl space-y-4 mx-auto px-4 pt-14 pb-12">
         {/* ── SEO Structured Data ── */}
         <script
           type="application/ld+json"
@@ -577,7 +577,7 @@ function BenchmarkPage({ data }: { data: BenchmarkData }) {
             href="/docs/routing"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#f97316] text-white font-semibold hover:bg-[#ea580c] transition-colors"
           >
-            Mulai pakai Buntok sekarang <TrendingUp className="w-4 h-4" />
+            Start using Buntok now <TrendingUp className="w-4 h-4" />
           </a>
         </div>
       </div>

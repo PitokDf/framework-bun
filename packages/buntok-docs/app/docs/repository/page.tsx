@@ -237,7 +237,7 @@ export default function RepositoryPage() {
 
 // Prisma
 class UserRepository extends BaseRepository<User, PrismaClient> {
-  protected $hidden = ["passwordHash", "resetToken"] as const;
+  protected override $hidden = ["passwordHash", "resetToken"] as const;
 
   constructor(prisma: PrismaClient) {
     super(prisma, "user");
@@ -246,12 +246,12 @@ class UserRepository extends BaseRepository<User, PrismaClient> {
 
 // Drizzle
 class UserRepository extends BaseRepository<typeof users, CreateInput, UpdateInput> {
-  protected $hidden = ["passwordHash", "resetToken"] as const;
+  protected override $hidden = ["passwordHash", "resetToken"] as const;
 }
 
 // TypeORM
 class UserRepository extends BaseRepository<User, CreateInput, UpdateInput> {
-  protected $hidden = ["passwordHash", "resetToken"] as const;
+  protected override $hidden = ["passwordHash", "resetToken"] as const;
 }
 
 // Now ALL responses automatically exclude passwordHash and resetToken:
@@ -274,7 +274,7 @@ await userRepo.update(id, data);// same`}
       <CodeBlock
         code={`class UserRepository extends BaseRepository<User, PrismaClient> {
   // Only return id, name, email — everything else is excluded
-  protected $visible = ["id", "name", "email"] as const;
+  protected override $visible = ["id", "name", "email"] as const;
 
   constructor(prisma: PrismaClient) {
     super(prisma, "user");
@@ -355,12 +355,12 @@ class UserRepository extends BaseRepository<User, PrismaClient, Prisma.UserCreat
     super(prisma, "user");
   }
 
-  protected async beforeCreate(data: Prisma.UserCreateInput) {
+  protected override async beforeCreate(data: Prisma.UserCreateInput) {
     data.email = data.email.toLowerCase();
     return data;
   }
 
-  protected async afterCreate(user: User) {
+  protected override async afterCreate(user: User) {
     console.log("User created:", user.id);
   }
 }`}
@@ -460,21 +460,73 @@ class UserRepository extends BaseRepository<User, CreateUserInput, UpdateUserInp
         Service Layer
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        The service adapts repository method names to match{" "}
-        <code>BaseController</code>'s expected interface:
+        Use <code>BaseService</code> to avoid writing boilerplate. It adapts
+        repository method names to match <code>BaseController</code>&apos;s
+        expected interface:
       </p>
       <CodeBlock
-        code={`// BaseController expects: getAll, getById, create, update, delete
-// BaseRepository provides: findAll, findById, create, update, delete
+        code={`import { BaseService } from "@buntok/core";
+import { UserRepository } from "@/repositories/user.repository";
+import type { User } from "@prisma/client";
 
-class UserService {
-  constructor(private repo: UserRepository) {}
+export class UserService extends BaseService<User> {
+  constructor(private readonly userRepository: UserRepository) {
+    super(userRepository);
+  }
+}
 
-  getAll()     { return this.repo.findAll(); }
-  getById(id)  { return this.repo.findById(id); }
-  create(data) { return this.repo.create(data); }
-  update(id, data) { return this.repo.update(id, data); }
-  delete(id)   { return this.repo.delete(id); }
+// BaseService provides these methods automatically:
+// getAll()     → repository.findAll()
+// getById(id)  → repository.findById(id) + NotFoundError
+// create(data) → repository.create(data)
+// update(id, data) → repository.update(id, data)
+// delete(id)   → repository.delete(id)
+// count()      → repository.count()`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Overriding Service Methods
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Override any method to add custom business logic:
+      </p>
+      <CodeBlock
+        code={`import { BaseService, NotFoundError } from "@buntok/core";
+import { UserRepository } from "@/repositories/user.repository";
+import type { User } from "@prisma/client";
+
+export class UserService extends BaseService<User> {
+  constructor(private readonly userRepository: UserRepository) {
+    super(userRepository);
+  }
+
+  // Override getAll — add filtering, sorting, etc.
+  async getAll(): Promise<User[]> {
+    const users = await this.userRepository.findAll();
+    return users.filter((u) => u.active);
+  }
+
+  // Override getById — custom error message
+  async getById(id: string | number): Promise<User> {
+    const user = await this.userRepository.findById(id);
+    if (!user) throw new NotFoundError("User not found");
+    return user;
+  }
+
+  // Override create — add validation or side effects
+  async create(data: any): Promise<User> {
+    const existing = await this.userRepository.findByEmail(data.email);
+    if (existing) throw new Error("Email already taken");
+    return super.create(data);
+  }
+
+  // Override delete — soft delete instead of hard delete
+  async delete(id: string | number): Promise<User> {
+    return this.userRepository.update(id, { deletedAt: new Date() });
+  }
 }`}
       />
 
@@ -509,38 +561,41 @@ class UserController extends BaseController<User> {
         Complete Example (Prisma)
       </Heading>
       <CodeBlock
-        code={`import { App, Controller, BaseController } from "@buntok/core";
+        code={`import { App, BaseController } from "@buntok/core";
+import { BaseService } from "@buntok/core";
 import { BaseRepository } from "@buntok/prisma";
-import type { PrismaClient } from "../prisma/generated/client";
+import { prisma } from "@/lib/prisma";
+import type { User, PrismaClient, Prisma } from "@prisma/client";
 
 // 1. Repository - data access
-class UserRepository extends BaseRepository<User, PrismaClient> {
-  constructor(prisma: PrismaClient) {
+class UserRepository extends BaseRepository<
+  User, PrismaClient, Prisma.UserCreateInput, Prisma.UserUpdateInput
+> {
+  constructor() {
     super(prisma, "user");
   }
 }
 
-// 2. Service - adapt method names for BaseController
-class UserService {
-  constructor(private repo: UserRepository) {}
-  getAll()     { return this.repo.findAll(); }
-  getById(id)  { return this.repo.findById(id); }
-  create(data) { return this.repo.create(data); }
-  update(id, data) { return this.repo.update(id, data); }
-  delete(id)   { return this.repo.delete(id); }
+// 2. Service - business logic
+class UserService extends BaseService<User> {
+  constructor(private readonly userRepository: UserRepository) {
+    super(userRepository);
+  }
 }
 
 // 3. Controller - auto CRUD routes
 @Controller("/users")
 class UserController extends BaseController<User> {
-  constructor(private userService: UserService) {
+  constructor(private readonly userService: UserService) {
     super(userService);
   }
 }
 
 // 4. Register
 const app = new App();
-app.registerController(UserController);
+const userRepository = new UserRepository();
+const userService = new UserService(userRepository);
+app.registerController(new UserController(userService));
 app.listen(1212);`}
       />
 

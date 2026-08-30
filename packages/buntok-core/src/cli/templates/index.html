@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scalar API Reference & Interactive Client</title>
+  <script src="./tailwind.js"></script>
+  <link href="./font-googles.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --border-primary: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --accent: #f97316;
+      --accent-muted: rgba(249, 115, 22, 0.12);
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    html.dark {
+      --bg-primary: #09090b;
+      --bg-secondary: #121215;
+      --bg-tertiary: #18181b;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --border-primary: #27272a;
+      --border-hover: #3f3f46;
+      --accent: #f97316;
+      --accent-muted: rgba(249, 115, 22, 0.15);
+    }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .font-mono { font-family: var(--font-mono); }
+    
+    .badge-get { background: rgba(34, 197, 94, 0.12); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.25); }
+    .badge-post { background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25); }
+    .badge-put { background: rgba(234, 179, 8, 0.12); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.25); }
+    .badge-delete { background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); }
+    .badge-patch { background: rgba(168, 85, 247, 0.12); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.25); }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+    .hl-key { color: #f97316; }
+    .hl-string { color: #22c55e; }
+    .hl-number { color: #3b82f6; }
+    .hl-boolean { color: #a855f7; }
+    .hl-null { color: #71717a; }
+
+    /* Loading Overlay */
+    #loading-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--bg-primary); gap: 16px; transition: opacity 0.3s;
+    }
+    #loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+    .loading-spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border-primary);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .skeleton-line {
+      height: 12px; border-radius: 4px; background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--border-primary) 50%, var(--bg-tertiary) 75%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Error Banner */
+    #error-banner {
+      display: none; position: fixed; top: 56px; left: 0; right: 0; z-index: 50;
+      padding: 10px 16px; background: rgba(239, 68, 68, 0.12); border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444; font-size: 12px; display: flex; align-items: center; justify-content: space-between;
+    }
+    #error-banner.hidden { display: none; }
+
+    /* Toast */
+    #toast-container {
+      position: fixed; bottom: 20px; right: 20px; z-index: 200;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 500;
+      pointer-events: auto; animation: toastIn 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .toast-success { background: #065f46; color: #a7f3d0; border: 1px solid #10b981; }
+    .toast-error { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+    .toast-info { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Deprecation badge */
+    .badge-deprecated {
+      background: rgba(234, 179, 8, 0.12); color: #eab308;
+      border: 1px solid rgba(234, 179, 8, 0.25); text-decoration: line-through;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col h-screen overflow-hidden selection:bg-[var(--accent-muted)] selection:text-[var(--accent)]">
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <span class="text-xs text-[var(--text-secondary)]">Loading API specification...</span>
+  </div>
+
+  <!-- Error Banner -->
+  <div id="error-banner" class="hidden">
+    <div class="flex items-center gap-2">
+      <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="error-message">Failed to load API specification.</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="refreshSwaggerSpec()" class="px-2 py-1 rounded text-[10px] font-bold bg-red-500/20 hover:bg-red-500/30 transition">Retry</button>
+      <button onclick="openEditorModal()" class="px-2 py-1 rounded text-[10px] font-bold bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] transition border border-[var(--border-primary)]">Paste JSON</button>
+      <button onclick="document.getElementById('error-banner').classList.add('hidden')" class="px-2 py-1 rounded text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">✕</button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="h-14 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] px-4 lg:px-6 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center gap-3">
+      <img class="h-7 w-7 rounded " src="/favicon.ico" alt="buntok-icon">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-sm tracking-tight text-[var(--text-primary)]" id="header-api-title">Scalar API Reference</span>
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border border-[var(--border-primary)] text-[var(--text-secondary)]" id="header-api-version">v1.0.0</span>
+      </div>
+      
+      <!-- Server Selector -->
+      <div class="hidden md:flex items-center ml-2">
+        <select id="server-select" onchange="handleServerChange(this.value)" class="text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-md px-2.5 py-1 text-[var(--text-secondary)] focus:outline-none focus:border-[#f97316]">
+        </select>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2 text-xs">
+      <!-- Search Trigger -->
+      <button onclick="openSearchModal()" class="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[var(--border-hover)] text-[var(--text-secondary)] transition">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Search</span>
+        <kbd class="text-[10px] font-mono bg-[var(--bg-tertiary)] px-1 rounded border border-[var(--border-primary)]">⌘K</kbd>
+      </button>
+
+      <!-- Refresh Swagger Spec -->
+      <button onclick="refreshSwaggerSpec()" id="btn-refresh" title="Reload swagger.json" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[#f97316] text-[var(--text-primary)] transition">
+        <svg id="refresh-icon" class="w-3.5 h-3.5 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+        <span class="hidden md:inline font-medium">Refresh Docs</span>
+      </button>
+
+      <!-- Auth Trigger -->
+      <button onclick="openAuthModal()" id="btn-auth" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[#f97316] text-[var(--text-primary)] transition">
+        <svg class="w-3.5 h-3.5 text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span class="font-medium">Auth</span>
+        <span id="auth-indicator" class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
+      </button>
+
+      <!-- Raw Spec Editor Trigger -->
+      <button onclick="openEditorModal()" title="View or paste raw Swagger Spec" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[var(--hover-border)] text-[var(--text-primary)] transition">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span class="hidden lg:inline font-medium">JSON Spec</span>
+      </button>
+
+      <!-- MP13: Environment Variables -->
+      <button onclick="openEnvModal()" title="Environment Variables" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[#f97316] text-[var(--text-primary)] transition">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17V7l8-4 8 4v10"/><path d="M4 12h16"/><path d="M4 17l8 4 8-4"/></svg>
+        <span class="hidden lg:inline font-medium">Env</span>
+      </button>
+
+      <!-- Theme Switcher -->
+      <button onclick="toggleTheme()" title="Toggle Dark/Light Mode" class="p-2 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[var(--border-hover)] text-[var(--text-primary)] transition">
+        <svg id="theme-sun" class="w-3.5 h-3.5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <svg id="theme-moon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= BODY WORKSPACE ================= -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-72 border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col shrink-0 h-full overflow-hidden">
+      <!-- Search Filter in Sidebar -->
+      <div class="p-3 border-b border-[var(--border-primary)]">
+        <div class="relative">
+          <input type="text" id="sidebar-search" oninput="handleSidebarSearch(this.value)" placeholder="Filter endpoints..." class="w-full text-xs pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+          <svg class="w-3.5 h-3.5 absolute left-2.5 top-2 text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+      </div>
+
+      <!-- Endpoints List Grouped by Tags -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-4 text-xs" id="sidebar-content">
+        <!-- Injected via JS -->
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 lg:p-8 h-full">
+      
+      <!-- OVERVIEW VIEW -->
+      <div id="view-overview" class="max-w-4xl mx-auto space-y-8">
+        <div class="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <img class="h-10 w-10 rounded-lg" src="/favicon.ico" alt="buntok-icon">
+            <div>
+              <h1 class="text-xl font-bold text-[var(--text-primary)]" id="overview-title">Scalar API Reference</h1>
+              <p class="text-xs text-[var(--text-secondary)] font-mono" id="overview-version">v1.0.0 • OpenAPI 3.0.0</p>
+            </div>
+          </div>
+          <p class="text-sm text-[var(--text-secondary)] leading-relaxed" id="overview-desc">Welcome to the interactive API Reference.</p>
+          
+          <!-- MP24: License/Contact info -->
+          <p class="text-[10px] text-[var(--text-secondary)] hidden" id="overview-info-footer"></p>
+          
+          <div class="pt-4 border-t border-[var(--border-primary)] grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-primary)]">
+              <span class="text-[10px] text-[var(--text-secondary)] uppercase font-semibold">Total Endpoints</span>
+              <p class="text-lg font-bold text-[var(--text-primary)] mt-1" id="overview-count">0</p>
+            </div>
+            <div class="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-primary)]">
+              <span class="text-[10px] text-[var(--text-secondary)] uppercase font-semibold">Active Server</span>
+              <p class="text-xs font-mono text-[var(--text-primary)] mt-2 truncate" id="overview-server">-</p>
+            </div>
+            <div class="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-primary)] flex items-center justify-between">
+              <div>
+                <span class="text-[10px] text-[var(--text-secondary)] uppercase font-semibold">Authentication</span>
+                <p class="text-xs font-medium text-[var(--text-primary)] mt-1" id="overview-auth-status">None configured</p>
+              </div>
+              <button onclick="openAuthModal()" class="text-xs text-[#f97316] hover:underline font-medium">Configure</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tag Summary Cards -->
+        <div class="space-y-4">
+          <h2 class="text-sm font-semibold uppercase tracking-wider text-[var(--text-secondary)]">API Resource Categories</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="overview-tags-grid">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ENDPOINT DETAIL & CONSOLE VIEW (Split Grid) -->
+      <div id="view-endpoint" class="hidden grid grid-cols-1 xl:grid-cols-12 gap-8 max-w-7xl mx-auto">
+        
+        <!-- Documentation Column -->
+        <div class="xl:col-span-7 space-y-6">
+          <!-- Endpoint Header -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span id="doc-badge" class="px-2 py-0.5 rounded text-xs font-bold font-mono uppercase badge-get">GET</span>
+              <span id="doc-tag" class="text-xs px-2 py-0.5 rounded bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[var(--text-secondary)]">Tag</span>
+              <span id="doc-deprecated-badge" class="hidden text-[10px] px-2 py-0.5 rounded font-bold badge-deprecated">DEPRECATED</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-[var(--text-primary)]" id="doc-summary">Endpoint Title</h1>
+            
+            <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] font-mono text-xs">
+              <span class="text-[var(--text-primary)] font-semibold" id="doc-path">/path</span>
+              <button onclick="copyToClipboard(document.getElementById('doc-path').innerText, 'Path copied!')" class="text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Copy</button>
+            </div>
+
+            <p class="text-xs text-[var(--text-secondary)] leading-relaxed" id="doc-desc">Endpoint description goes here.</p>
+          </div>
+
+          <!-- Parameters Section -->
+          <div id="doc-params-section" class="space-y-3 pt-4 border-t border-[var(--border-primary)]">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Parameters</h3>
+            <div class="rounded-lg border border-[var(--border-primary)] overflow-hidden">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] text-[10px] text-[var(--text-secondary)] uppercase">
+                  <tr>
+                    <th class="p-2.5">Name</th>
+                    <th class="p-2.5">Type / Location</th>
+                    <th class="p-2.5">Description</th>
+                    <th class="p-2.5 w-36">Test Value</th>
+                  </tr>
+                </thead>
+                <tbody id="doc-params-tbody" class="divide-y divide-[var(--border-primary)]">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Request Body Section with Multi-Format Support -->
+          <div id="doc-body-section" class="space-y-3 pt-4 border-t border-[var(--border-primary)]">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Request Body</h3>
+              <!-- Format Selector Buttons -->
+              <div class="flex items-center gap-1 bg-[var(--bg-primary)] p-0.5 rounded border border-[var(--border-primary)]" id="doc-body-type-selector">
+                <button onclick="setBodyType('json')" id="doc-btn-type-json" class="px-2 py-0.5 rounded text-[10px] font-mono bg-[#f97316] text-black font-bold">json</button>
+                <button onclick="setBodyType('form-data')" id="doc-btn-type-form-data" class="px-2 py-0.5 rounded text-[10px] font-mono bg-transparent text-[var(--text-secondary)]">form-data</button>
+                <button onclick="setBodyType('x-www-form-urlencoded')" id="doc-btn-type-x-www-form-urlencoded" class="px-2 py-0.5 rounded text-[10px] font-mono bg-transparent text-[var(--text-secondary)]">urlencoded</button>
+                <button onclick="setBodyType('raw')" id="doc-btn-type-raw" class="px-2 py-0.5 rounded text-[10px] font-mono bg-transparent text-[var(--text-secondary)]">raw</button>
+                <button onclick="setBodyType('xml')" id="doc-btn-type-xml" class="px-2 py-0.5 rounded text-[10px] font-mono bg-transparent text-[var(--text-secondary)]">xml</button>
+                <button onclick="setBodyType('none')" id="doc-btn-type-none" class="px-2 py-0.5 rounded text-[10px] font-mono bg-transparent text-[var(--text-secondary)]">none</button>
+              </div>
+            </div>
+
+            <!-- Schema Property Table (auto-populated from OpenAPI spec) -->
+            <div id="doc-body-schema-table" class="hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] overflow-hidden">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-[var(--bg-primary)] text-[10px] text-[var(--text-secondary)] border-b border-[var(--border-primary)]">
+                  <tr>
+                    <th class="p-2">Name</th>
+                    <th class="p-2">Type</th>
+                    <th class="p-2">Description</th>
+                  </tr>
+                </thead>
+                <tbody id="doc-body-schema-tbody" class="divide-y divide-[var(--border-primary)]">
+                </tbody>
+              </table>
+            </div>
+
+            <!-- JSON Body Container -->
+            <div id="doc-body-container-json" class="rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-3">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] text-[var(--text-secondary)] font-semibold">JSON Schema / Sample Payload:</span>
+                <div class="flex gap-2">
+                  <button onclick="prettifyClientBody()" class="text-[10px] text-[#f97316] hover:underline">Format JSON</button>
+                  <button onclick="formatAndCopyBody()" class="text-[10px] text-[var(--accent)] hover:underline">Copy Body</button>
+                </div>
+              </div>
+              <textarea id="doc-body-input" oninput="syncBodyToClient(this.value)" rows="6" class="w-full p-2.5 text-xs font-mono rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]"></textarea>
+            </div>
+
+            <!-- Form Data Key-Value Table Container -->
+            <div id="doc-body-container-form-data" class="hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-3 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-[var(--text-secondary)] font-semibold">Multipart Form-Data Key-Value Pairs:</span>
+                <button onclick="addFormDataRow()" class="text-[10px] text-[#f97316] hover:underline font-medium">+ Add Field</button>
+              </div>
+              <div class="border border-[var(--border-primary)] rounded overflow-hidden">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-[var(--bg-primary)] text-[10px] text-[var(--text-secondary)] border-b border-[var(--border-primary)]">
+                    <tr>
+                      <th class="p-1.5 w-6 text-center">✓</th>
+                      <th class="p-1.5 w-1/3">Key</th>
+                      <th class="p-1.5 w-24">Type</th>
+                      <th class="p-1.5">Value / File</th>
+                      <th class="p-1.5 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="form-data-tbody" class="divide-y divide-[var(--border-primary)]">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- x-www-form-urlencoded Table Container -->
+            <div id="doc-body-container-urlencoded" class="hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-3 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-[var(--text-secondary)] font-semibold">URL-Encoded Form Data:</span>
+                <button onclick="addUrlEncodedRow()" class="text-[10px] text-[#f97316] hover:underline font-medium">+ Add Parameter</button>
+              </div>
+              <div class="border border-[var(--border-primary)] rounded overflow-hidden">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-[var(--bg-primary)] text-[10px] text-[var(--text-secondary)] border-b border-[var(--border-primary)]">
+                    <tr>
+                      <th class="p-1.5 w-6 text-center">✓</th>
+                      <th class="p-1.5 w-2/5">Key</th>
+                      <th class="p-1.5">Value</th>
+                      <th class="p-1.5 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="urlencoded-tbody" class="divide-y divide-[var(--border-primary)]">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Raw Text Container -->
+            <div id="doc-body-container-raw" class="hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-3">
+              <span class="text-[10px] text-[var(--text-secondary)] font-semibold block mb-2">Raw Text Payload:</span>
+              <textarea id="raw-body-input" oninput="handleRawBodyChange(this.value)" rows="5" placeholder="Enter raw body content..." class="w-full p-2.5 text-xs font-mono rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]"></textarea>
+            </div>
+
+            <!-- XML Container -->
+            <div id="doc-body-container-xml" class="hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-3">
+              <span class="text-[10px] text-[var(--text-secondary)] font-semibold block mb-2">XML Payload (application/xml):</span>
+              <textarea id="xml-body-input" oninput="handleXmlBodyChange(this.value)" rows="6" placeholder="<request>&#10;  <item>value</item>&#10;</request>" class="w-full p-2.5 text-xs font-mono rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]"></textarea>
+            </div>
+
+            <!-- None Container -->
+            <div id="doc-body-container-none" class="hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 text-center text-xs text-[var(--text-secondary)]">
+              This request does not have or require a body payload.
+            </div>
+          </div>
+
+          <!-- Responses Section -->
+          <div id="doc-responses-section" class="space-y-3 pt-4 border-t border-[var(--border-primary)]">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Responses</h3>
+            <div class="space-y-2" id="doc-responses-list">
+              <!-- Injected via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Postman-style Interactive Client Console -->
+        <div class="xl:col-span-5 space-y-4 xl:sticky xl:top-0">
+          <div class="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 space-y-4 shadow-sm">
+            
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">API Client Console</span>
+              </div>
+              <span class="text-[10px] font-mono text-[var(--text-secondary)]" id="console-mode">Direct / Live</span>
+            </div>
+
+            <!-- URL Bar -->
+            <div class="flex gap-2">
+              <span id="client-method-badge" class="px-2.5 py-1.5 rounded text-xs font-mono font-bold uppercase badge-get flex items-center">GET</span>
+              <input type="text" id="client-url-input" class="flex-1 text-xs font-mono p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+              <button onclick="executeLiveRequest()" id="btn-send-request" class="bg-[#f97316] hover:bg-orange-600 text-black px-4 py-2 rounded text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <span>Send</span>
+              </button>
+            </div>
+
+            <!-- Client Tabs -->
+            <div class="border-b border-[var(--border-primary)] flex gap-4 text-xs font-medium">
+              <button onclick="setClientTab('headers')" id="tab-btn-headers" class="pb-2 border-b-2 border-[var(--text-secondary)] hover:text-[var(--text-primary)]">Headers</button>
+              <button onclick="setClientTab('cookies')" id="tab-btn-cookies" class="pb-2 border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Cookies</button>
+              <button onclick="setClientTab('snippets')" id="tab-btn-snippets" class="pb-2 border-b-2 border-[var(--text-secondary)] hover:text-[var(--text-primary)]">Code Snippets</button>
+              <button onclick="setClientTab('res-headers')" id="tab-btn-res-headers" class="pb-2 border-b-2 border-[#f97316] text-[#f97316]">Res Headers</button>
+            </div>
+
+            <!-- Tab: Headers -->
+            <div id="client-tab-headers" class="hidden space-y-2 text-xs font-mono">
+              <div class="p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] space-y-1">
+                <div class="flex justify-between text-[11px]"><span class="text-[var(--text-secondary)]">Content-Type:</span> <span id="client-header-content-type">application/json</span></div>
+                <div class="flex justify-between text-[11px]"><span class="text-[var(--text-secondary)]">Authorization:</span> <span id="client-header-auth" class="text-zinc-500">None</span></div>
+                <div class="flex justify-between text-[11px]"><span class="text-[var(--text-secondary)]">X-API-KEY:</span> <span id="client-header-apikey" class="text-zinc-500">None</span></div>
+              </div>
+              <button onclick="openAuthModal()" class="w-full py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-xs text-[#f97316] hover:bg-[var(--bg-tertiary)] font-sans">
+                Manage Auth Headers
+              </button>
+            </div>
+
+            <!-- Tab: Cookies -->
+            <div id="client-tab-cookies" class="hidden space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] text-[var(--text-secondary)]">Cookies sent with request</span>
+                <button onclick="addCookieRow()" class="text-[10px] text-[#f97316] hover:underline">+ Add</button>
+              </div>
+              <div class="border border-[var(--border-primary)] rounded overflow-hidden">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-[var(--bg-primary)] text-[10px] text-[var(--text-secondary)] border-b border-[var(--border-primary)]">
+                    <tr>
+                      <th class="p-1.5 w-6 text-center">✓</th>
+                      <th class="p-1.5 w-2/5">Name</th>
+                      <th class="p-1.5">Value</th>
+                      <th class="p-1.5 w-6"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="cookie-tbody" class="divide-y divide-[var(--border-primary)]">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tab: Code Snippets -->
+            <div id="client-tab-snippets" class="hidden space-y-2">
+              <div class="flex gap-1.5 text-[10px] flex-wrap">
+                <button onclick="generateSnippet('curl')" id="snip-curl" class="px-2 py-1 rounded bg-[#f97316] text-black font-bold">cURL</button>
+                <button onclick="generateSnippet('fetch')" id="snip-fetch" class="px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)]">Fetch JS</button>
+                <button onclick="generateSnippet('python')" id="snip-python" class="px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)]">Python</button>
+                <button onclick="generateSnippet('go')" id="snip-go" class="px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)]">Go</button>
+                <button onclick="generateSnippet('php')" id="snip-php" class="px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)]">PHP</button>
+              </div>
+              <pre class="p-2.5 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[11px] font-mono overflow-x-auto text-[var(--text-primary)] max-h-48" id="snippet-output"><code></code></pre>
+            </div>
+
+            <!-- Tab: Response Headers -->
+            <div id="client-tab-res-headers" class="space-y-2">
+              <div id="res-headers-box" class="p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[10px] font-mono max-h-48 overflow-y-auto space-y-0.5">
+                <span class="text-zinc-500">No response yet. Send a request to see headers.</span>
+              </div>
+            </div>
+
+            <!-- Response Panel -->
+            <div class="pt-3 border-t border-[var(--border-primary)] space-y-2">
+              <div class="flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
+                <span class="font-bold uppercase">Response</span>
+                <div class="flex items-center gap-2 font-mono">
+                  <span id="res-status" class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">---</span>
+                  <span id="res-time">0 ms</span>
+                </div>
+              </div>
+              <pre id="client-response-box" class="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[11px] font-mono overflow-x-auto max-h-60 text-[var(--text-primary)]"><code>Ready. Click "Send" to test API.</code></pre>
+              <div class="flex justify-end">
+                <button onclick="copyResponseData()" class="text-[10px] text-[#f97316] hover:underline">Copy Response</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ================= AUTH MODAL ================= -->
+  <div id="modal-auth" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-md rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-[var(--text-primary)]">Authentication Configuration</h3>
+        <button onclick="closeAuthModal()" class="text-zinc-500 hover:text-[var(--text-primary)]">✕</button>
+      </div>
+
+      <!-- HP5: Security warning -->
+      <div class="flex items-start gap-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/30 text-[10px] text-yellow-400">
+        <svg class="w-3.5 h-3.5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span>Credentials are stored in your browser's localStorage. Do not use production tokens on shared computers.</span>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-[var(--text-primary)] mb-1">Bearer Token (JWT)</label>
+          <input type="text" id="auth-bearer-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full p-2 font-mono rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+          <p class="text-[10px] text-[var(--text-secondary)] mt-1">Attached as <code>Authorization: Bearer &lt;token&gt;</code></p>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-[var(--text-primary)] mb-1">API Key Header</label>
+          <input type="text" id="auth-apikey-input" placeholder="sec_live_99214a..." class="w-full p-2 font-mono rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+          <p class="text-[10px] text-[var(--text-secondary)] mt-1">Attached as <code>X-API-KEY: &lt;key&gt;</code></p>
+        </div>
+
+        <!-- MP10: Basic Auth -->
+        <div class="pt-2 border-t border-[var(--border-primary)]">
+          <label class="block font-semibold text-[var(--text-primary)] mb-1">Basic Auth</label>
+          <div class="flex gap-2">
+            <input type="text" id="auth-basic-user" placeholder="username" class="flex-1 p-2 font-mono rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+            <input type="password" id="auth-basic-pass" placeholder="password" class="flex-1 p-2 font-mono rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+          </div>
+          <p class="text-[10px] text-[var(--text-secondary)] mt-1">Attached as <code>Authorization: Basic &lt;base64&gt;</code></p>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2">
+        <button onclick="fillDemoAuth()" class="text-xs text-[#f97316] hover:underline">Use Demo Token</button>
+        <div class="flex gap-2">
+          <button onclick="closeAuthModal()" class="px-3 py-1.5 rounded text-xs border border-[var(--border-primary)] hover:bg-[var(--bg-tertiary)]">Cancel</button>
+          <button onclick="saveAuthModal()" class="px-4 py-1.5 rounded text-xs bg-[#f97316] text-black font-bold hover:bg-orange-600">Save Credentials</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ENVIRONMENT VARIABLES MODAL ================= -->
+  <div id="modal-env" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-lg rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-[var(--text-primary)]">Environment Variables</h3>
+          <p class="text-xs text-[var(--text-secondary)]">Define <code>{{variable}}</code> placeholders for URLs, headers, and body.</p>
+        </div>
+        <button onclick="closeEnvModal()" class="text-zinc-500 hover:text-[var(--text-primary)]">✕</button>
+      </div>
+      <textarea id="env-editor" rows="10" class="w-full p-3 font-mono text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316] resize-none" placeholder='{ "baseUrl": "http://localhost:3000", "token": "my-jwt-token" }'></textarea>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeEnvModal()" class="px-3 py-1.5 rounded text-xs border border-[var(--border-primary)]">Cancel</button>
+        <button onclick="saveEnvModal()" class="px-4 py-1.5 rounded text-xs bg-[#f97316] text-black font-bold hover:bg-orange-600">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SWAGGER JSON EDITOR MODAL ================= -->
+  <div id="modal-editor" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-3xl rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-4 shadow-2xl flex flex-col h-[85vh]">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-[var(--text-primary)]">Swagger / OpenAPI JSON Specification</h3>
+          <p class="text-xs text-[var(--text-secondary)]">View, modify, or load custom OpenAPI 3.0 / Swagger 2.0 specs.</p>
+        </div>
+        <button onclick="closeEditorModal()" class="text-zinc-500 hover:text-[var(--text-primary)]">✕</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="file" id="spec-file-input" accept=".json" onchange="handleFileUpload(event)" class="hidden">
+        <button onclick="document.getElementById('spec-file-input').click()" class="px-2.5 py-1 rounded text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[#f97316]">
+          Upload JSON File
+        </button>
+        <button onclick="exportJsonFile()" class="px-2.5 py-1 rounded text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] hover:border-[var(--border-hover)]">
+          Download JSON
+        </button>
+      </div>
+
+      <textarea id="spec-raw-editor" class="flex-1 w-full p-3 font-mono text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316] resize-none"></textarea>
+
+      <div class="flex justify-between items-center">
+        <span id="editor-error" class="text-xs text-red-500"></span>
+        <div class="flex gap-2">
+          <button onclick="closeEditorModal()" class="px-3 py-1.5 rounded text-xs border border-[var(--border-primary)]">Close</button>
+          <button onclick="applyEditedSpec()" class="px-4 py-1.5 rounded text-xs bg-[#f97316] text-black font-bold hover:bg-orange-600">Apply & Render</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SEARCH MODAL ================= -->
+  <div id="modal-search" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-xs p-4">
+    <div class="w-full max-w-xl rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 space-y-3 shadow-2xl">
+      <div class="relative">
+        <input type="text" id="search-dialog-input" oninput="handleSearchDialogInput(this.value)" placeholder="Search operations, paths, summaries, tags..." class="w-full text-sm pl-9 pr-4 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+        <svg class="w-4 h-4 absolute left-3 top-2.5 text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
+      <div id="search-dialog-results" class="max-h-80 overflow-y-auto space-y-1 text-xs">
+        <!-- Results Injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SWAGGER SPEC & ENGINE ================= -->
+  <script>
+    // Dynamic Swagger Specification (Loaded dynamically from API or JSON file)
+    let specData = {
+      "openapi": "3.0.0",
+      "info": {
+        "title": "API Documentation",
+        "version": "1.0.0",
+        "description": "Loading API specification..."
+      },
+      "servers": [],
+      "tags": [],
+      "paths": {}
+    };
+
+    let selectedEndpoint = null;
+    let selectedServer = '';
+    let bearerToken = localStorage.getItem('scalar_bearer_token') || '';
+    let apiKey = localStorage.getItem('scalar_api_key') || '';
+    let currentParamValues = {};
+    let activeBodyType = 'json';
+    let currentSnippetLang = 'curl';
+    
+    let formDataRows = [];
+    let urlEncodedRows = [];
+    let cookieRows = JSON.parse(localStorage.getItem('scalar_cookie_rows') || '[]');
+    let rawBodyText = '';
+    let xmlBodyText = '';
+    let specLoadError = false;
+    let searchDebounceTimer = null;
+
+    // === Utility Functions ===
+
+    function escapeHtml(str) {
+      if (typeof str !== 'string') return String(str);
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; }, 2500);
+      setTimeout(() => toast.remove(), 2800);
+    }
+
+    function showLoading() {
+      document.getElementById('loading-overlay').classList.remove('hidden', 'fade-out');
+    }
+    function hideLoading() {
+      const el = document.getElementById('loading-overlay');
+      el.classList.add('fade-out');
+      setTimeout(() => el.classList.add('hidden'), 300);
+    }
+    function showError(msg) {
+      specLoadError = true;
+      document.getElementById('error-message').textContent = msg;
+      document.getElementById('error-banner').classList.remove('hidden');
+    }
+    function hideError() {
+      specLoadError = false;
+      document.getElementById('error-banner').classList.add('hidden');
+    }
+
+    function debounce(fn, ms) {
+      let timer;
+      return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), ms);
+      };
+    }
+
+    function resolveRef(ref) {
+      if (!ref || !ref.startsWith('#/')) return null;
+      const parts = ref.replace(/^#\//, '').split('/');
+      let current = specData;
+      for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+          current = current[part];
+        } else {
+          return null;
+        }
+      }
+      return current;
+    }
+
+    function resolveSchema(schema, visited = new Set()) {
+      if (!schema || typeof schema !== 'object') return schema;
+      if (schema.$ref) {
+        if (visited.has(schema.$ref)) return { type: 'object', description: '(circular ref)' };
+        visited.add(schema.$ref);
+        const resolved = resolveRef(schema.$ref);
+        if (resolved) return resolveSchema(resolved, visited);
+        return schema;
+      }
+      if (schema.allOf) {
+        const merged = { properties: {}, required: [], type: 'object' };
+        for (const sub of schema.allOf) {
+          const resolved = resolveSchema(sub, new Set(visited));
+          if (resolved?.properties) Object.assign(merged.properties, resolved.properties);
+          if (resolved?.required) merged.required.push(...resolved.required);
+        }
+        return merged;
+      }
+      if (schema.oneOf || schema.anyOf) {
+        return resolveSchema(schema.oneOf?.[0] || schema.anyOf?.[0], visited);
+      }
+      return schema;
+    }
+
+    // MP12: Request History
+    function saveRequestToHistory(method, url, status, duration) {
+      try {
+        const history = JSON.parse(localStorage.getItem('scalar_request_history') || '[]');
+        history.unshift({ method, url, status, duration, timestamp: Date.now() });
+        if (history.length > 50) history.length = 50;
+        localStorage.setItem('scalar_request_history', JSON.stringify(history));
+      } catch (e) { /* ignore */ }
+    }
+
+    // MP13: Environment Variables
+    let envVars = {};
+    try { envVars = JSON.parse(localStorage.getItem('scalar_env_vars') || '{}'); } catch (e) { envVars = {}; }
+
+    // Response persistence per endpoint
+    let endpointResponses = {};
+    try { endpointResponses = JSON.parse(localStorage.getItem('scalar_endpoint_responses') || '{}'); } catch (e) { endpointResponses = {}; }
+
+    function saveEndpointResponse(epId, statusText, statusOk, duration, bodyHtml, headers) {
+      endpointResponses[epId] = {
+        statusText,
+        statusOk,
+        duration,
+        bodyHtml,
+        headers,
+        timestamp: Date.now()
+      };
+      // Keep only last 20 responses
+      const keys = Object.keys(endpointResponses);
+      if (keys.length > 20) {
+        for (let i = 0; i < keys.length - 20; i++) {
+          delete endpointResponses[keys[i]];
+        }
+      }
+      localStorage.setItem('scalar_endpoint_responses', JSON.stringify(endpointResponses));
+    }
+
+    function getSavedResponse(epId) {
+      return endpointResponses[epId] || null;
+    }
+
+    function substituteEnvVars(str) {
+      return str.replace(/\{\{(\w+)\}\}/g, (match, key) => envVars[key] ?? match);
+    }
+
+    function openEnvModal() {
+      const editor = document.getElementById('env-editor');
+      if (editor) {
+        editor.value = JSON.stringify(envVars, null, 2);
+        document.getElementById('modal-env').classList.remove('hidden');
+      }
+    }
+    function closeEnvModal() {
+      document.getElementById('modal-env')?.classList.add('hidden');
+    }
+    function saveEnvModal() {
+      try {
+        const raw = document.getElementById('env-editor').value;
+        envVars = JSON.parse(raw);
+        localStorage.setItem('scalar_env_vars', JSON.stringify(envVars));
+        closeEnvModal();
+        showToast('Environment variables saved', 'success');
+      } catch (e) {
+        showToast('Invalid JSON: ' + e.message, 'error');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      showLoading();
+      await loadSwaggerSpec();
+      initApp();
+      hideLoading();
+      setupShortcuts();
+    });
+
+    async function loadSwaggerSpec() {
+      hideError();
+      try {
+        let res = await fetch('/docs/swagger.json?t=' + Date.now());
+        if (!res.ok) res = await fetch('/data/swagger.json?t=' + Date.now());
+        if (!res.ok) res = await fetch('/api/swagger?t=' + Date.now());
+        if (res.ok) {
+          specData = await res.json();
+          return;
+        }
+      } catch (e) {
+        console.warn('Could not auto-fetch swagger spec:', e);
+      }
+      showError('Failed to load API specification from server. You can paste or upload a JSON spec manually.');
+    }
+
+    // Smart OpenAPI Schema Sample Generator
+    function generateSampleFromSchema(schema) {
+      if (!schema) return {};
+      if (schema.example !== undefined) return schema.example;
+      if (schema.default !== undefined) return schema.default;
+      if (schema.enum && schema.enum.length > 0) return schema.enum[0];
+
+      // Handle nullable — alternate between value and null
+      if (schema.nullable && Math.random() > 0.5) return null;
+
+      // Handle $ref if present in components
+      if (schema.$ref && specData.components?.schemas) {
+        const refName = schema.$ref.split('/').pop();
+        if (refName && specData.components.schemas[refName]) {
+          return generateSampleFromSchema(specData.components.schemas[refName]);
+        }
+      }
+
+      const type = schema.type || (schema.properties ? 'object' : (schema.items ? 'array' : 'string'));
+
+      if (type === 'object' || schema.properties) {
+        const obj = {};
+        if (schema.properties) {
+          Object.entries(schema.properties).forEach(([key, prop]) => {
+            // Handle nullable per-property
+            if (prop.nullable && Math.random() > 0.7) { obj[key] = null; return; }
+
+            if (prop.example !== undefined) {
+              obj[key] = prop.example;
+            } else if (prop.default !== undefined) {
+              obj[key] = prop.default;
+            } else if (prop.enum && prop.enum.length > 0) {
+              obj[key] = prop.enum[0];
+            } else if (prop.type === 'number' || prop.type === 'integer') {
+              const min = prop.minimum ?? 1;
+              const max = prop.maximum;
+              obj[key] = max !== undefined ? Math.min(min + 1, max) : min;
+            } else if (prop.type === 'boolean') {
+              obj[key] = true;
+            } else if (prop.type === 'array' || prop.items) {
+              obj[key] = [generateSampleFromSchema(prop.items || {})];
+            } else if (prop.type === 'object' || prop.properties) {
+              obj[key] = generateSampleFromSchema(prop);
+            } else {
+              const kLower = key.toLowerCase();
+              let strVal = '';
+              if (prop.format === 'email' || kLower.includes('email')) {
+                strVal = 'user@example.com';
+              } else if (prop.format === 'password' || kLower.includes('password') || kLower.includes('pass')) {
+                strVal = 'SecretPass123!';
+              } else if (prop.format === 'date-time') {
+                strVal = new Date().toISOString();
+              } else if (prop.format === 'date') {
+                strVal = '2026-01-01';
+              } else if (prop.format === 'binary') {
+                strVal = '';
+              } else if (kLower === 'name' || kLower.includes('fullname') || kLower.includes('username')) {
+                strVal = 'John Doe';
+              } else if (kLower.includes('url') || kLower.includes('link') || kLower.includes('avatar')) {
+                strVal = 'https://example.com/image.png';
+              } else if (kLower.includes('id') || kLower.includes('uuid')) {
+                strVal = 'id_12345';
+              } else {
+                strVal = prop.description || 'sample_text';
+              }
+              // Apply maxLength constraint
+              if (prop.maxLength !== undefined && strVal.length > prop.maxLength) {
+                strVal = strVal.substring(0, prop.maxLength);
+              }
+              obj[key] = strVal;
+            }
+          });
+        }
+        return obj;
+      }
+
+      if (type === 'array' || schema.items) {
+        return [generateSampleFromSchema(schema.items || {})];
+      }
+
+      if (type === 'number' || type === 'integer') {
+        const min = schema.minimum ?? 1;
+        const max = schema.maximum;
+        return max !== undefined ? Math.min(min + 1, max) : min;
+      }
+
+      if (type === 'boolean') {
+        return true;
+      }
+
+      // String with maxLength constraint
+      if (schema.maxLength !== undefined) {
+        return 'a'.repeat(Math.min(8, schema.maxLength));
+      }
+      return '';
+    }
+
+    function initApp() {
+      document.getElementById('header-api-title').innerText = specData.info?.title || 'API Reference';
+      document.getElementById('header-api-version').innerText = 'v' + (specData.info?.version || '1.0.0');
+      
+      const serverSelect = document.getElementById('server-select');
+      serverSelect.innerHTML = '';
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const servers = specData.servers || [{ url: currentOrigin, description: 'Default Server' }];
+      
+      servers.forEach((srv) => {
+        const opt = document.createElement('option');
+        opt.value = srv.url;
+        opt.innerText = srv.description ? `${srv.description} (${srv.url})` : srv.url;
+        serverSelect.appendChild(opt);
+      });
+      selectedServer = servers[0]?.url || currentOrigin;
+
+      updateAuthIndicator();
+      renderSidebar();
+
+      // Restore endpoint from URL hash if present
+      const hash = window.location.hash.slice(1);
+      if (hash) {
+        const endpoints = getAllEndpoints();
+        const ep = endpoints.find(e => e.id === hash);
+        if (ep) {
+          selectEndpoint(ep);
+          return;
+        }
+      }
+      renderOverview();
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      document.getElementById('theme-sun').classList.toggle('hidden', isDark);
+      document.getElementById('theme-moon').classList.toggle('hidden', !isDark);
+      localStorage.setItem('scalar_theme', isDark ? 'dark' : 'light');
+    }
+
+    async function refreshSwaggerSpec() {
+      const btn = document.getElementById('btn-refresh');
+      const icon = document.getElementById('refresh-icon');
+      icon.classList.add('animate-spin');
+      hideError();
+
+      try {
+        let res = await fetch('/docs/swagger.json?t=' + Date.now());
+        if (!res.ok) res = await fetch('/data/swagger.json?t=' + Date.now());
+        if (!res.ok) res = await fetch('/api/swagger?t=' + Date.now());
+        if (res.ok) {
+          specData = await res.json();
+          showToast('API spec reloaded successfully', 'success');
+          initApp();
+        } else {
+          showError('Failed to refresh API spec. Check server connection.');
+        }
+      } catch (e) {
+        showError('Network error: ' + e.message);
+      } finally {
+        icon.classList.remove('animate-spin');
+      }
+    }
+
+    function getAllEndpoints() {
+      const list = [];
+      const paths = specData.paths || {};
+      Object.entries(paths).forEach(([path, methods]) => {
+        Object.entries(methods).forEach(([method, op]) => {
+          if (['get', 'post', 'put', 'delete', 'patch'].includes(method.toLowerCase()) && typeof op === 'object') {
+            const tags = op.tags && op.tags.length > 0 ? op.tags : [guessTagFromPath(path)];
+            list.push({
+              id: `${method.toUpperCase()}_${path}`,
+              path,
+              method: method.toUpperCase(),
+              summary: op.summary || `${method.toUpperCase()} ${path}`,
+              description: op.description || '',
+              tags,
+              parameters: op.parameters || [],
+              requestBody: op.requestBody,
+              responses: op.responses || {},
+              operationId: op.operationId || '',
+              deprecated: op.deprecated || false
+            });
+          }
+        });
+      });
+      return list;
+    }
+
+    function guessTagFromPath(path) {
+      const parts = path.replace(/^\/api\/v\d+\//, '').replace(/^\//, '').split('/');
+      if (parts[0]) {
+        return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+      }
+      return 'General';
+    }
+
+    function renderSidebar(filterText = '') {
+      const container = document.getElementById('sidebar-content');
+      container.innerHTML = '';
+
+      const overviewBtn = document.createElement('button');
+      overviewBtn.className = 'w-full text-left p-2 rounded-md hover:bg-[var(--bg-tertiary)] flex items-center gap-2 font-medium transition text-xs ' + (!selectedEndpoint ? 'bg-[var(--accent-muted)] text-[var(--accent)]' : 'text-[var(--text-secondary)]');
+      overviewBtn.innerHTML = `
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>API Overview</span>
+      `;
+      overviewBtn.onclick = () => showOverview();
+      container.appendChild(overviewBtn);
+
+      const endpoints = getAllEndpoints();
+      const tags = [...new Set(endpoints.flatMap(e => e.tags))];
+
+      tags.forEach(tag => {
+        const tagEndpoints = endpoints.filter(e => e.tags.includes(tag) && (
+          !filterText || e.summary.toLowerCase().includes(filterText.toLowerCase()) || e.path.toLowerCase().includes(filterText.toLowerCase())
+        ));
+
+        if (tagEndpoints.length === 0) return;
+
+        const section = document.createElement('div');
+        section.className = 'space-y-1';
+        
+        const tagHeader = document.createElement('div');
+        tagHeader.className = 'text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] px-2 py-1 flex items-center justify-between';
+        const tagDesc = specData.tags?.find(t => t.name === tag);
+        tagHeader.innerHTML = `<span>${escapeHtml(tag)}</span><span class="text-[9px] bg-[var(--bg-primary)] px-1.5 py-0.5 rounded border border-[var(--border-primary)]">${tagEndpoints.length}</span>`;
+        if (tagDesc?.description) {
+          tagHeader.title = tagDesc.description;
+        }
+        section.appendChild(tagHeader);
+
+        tagEndpoints.forEach(ep => {
+          const btn = document.createElement('button');
+          const isSelected = selectedEndpoint?.id === ep.id;
+          const isDeprecated = ep.deprecated;
+          btn.className = `w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition text-xs ${isSelected ? 'bg-[var(--accent-muted)] text-[var(--accent)] font-semibold' : 'hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]'}`;
+          btn.innerHTML = `
+            <span class="w-10 text-[9px] font-mono font-bold uppercase text-center py-0.5 rounded badge-${ep.method.toLowerCase()}">${ep.method}</span>
+            <span class="truncate flex-1 ${isDeprecated ? 'line-through opacity-60' : ''}">${escapeHtml(ep.summary)}</span>
+            ${isDeprecated ? '<span class="text-[8px] px-1 py-0.5 rounded badge-deprecated font-bold">DEPRECATED</span>' : ''}
+          `;
+          btn.onclick = () => selectEndpoint(ep);
+          section.appendChild(btn);
+        });
+
+        container.appendChild(section);
+      });
+    }
+
+    function renderOverview() {
+      const endpoints = getAllEndpoints();
+      document.getElementById('overview-title').innerText = specData.info?.title || 'API Reference';
+      document.getElementById('overview-version').innerText = `v${specData.info?.version || '1.0.0'} • OpenAPI ${specData.openapi || '3.0'}`;
+      document.getElementById('overview-desc').innerText = specData.info?.description || 'Interactive API documentation powered by Scalar UI.';
+      document.getElementById('overview-count').innerText = endpoints.length;
+      document.getElementById('overview-server').innerText = selectedServer;
+
+      // MP24: Show license/contact info
+      const infoFooter = document.getElementById('overview-info-footer');
+      if (infoFooter) {
+        const parts = [];
+        if (specData.info?.contact?.name) parts.push(`Contact: ${specData.info.contact.name}`);
+        if (specData.info?.contact?.email) parts.push(`<a href="mailto:${specData.info.contact.email}" class="text-[var(--accent)] hover:underline">${specData.info.contact.email}</a>`);
+        if (specData.info?.license?.name) parts.push(`License: ${specData.info.license.name}`);
+        if (specData.info?.termsOfService) parts.push(`<a href="${specData.info.termsOfService}" target="_blank" class="text-[var(--accent)] hover:underline">Terms of Service</a>`);
+        if (parts.length > 0) {
+          infoFooter.innerHTML = parts.join(' · ');
+          infoFooter.classList.remove('hidden');
+        } else {
+          infoFooter.classList.add('hidden');
+        }
+      }
+
+      const grid = document.getElementById('overview-tags-grid');
+      grid.innerHTML = '';
+      const tags = [...new Set(endpoints.flatMap(e => e.tags))];
+      if (tags.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full p-8 rounded-lg bg-[var(--bg-secondary)] border border-dashed border-[var(--border-primary)] text-center space-y-3">
+            <p class="text-xs text-[var(--text-secondary)]">No API endpoints currently defined.</p>
+            <div class="flex justify-center gap-2">
+              <button onclick="refreshSwaggerSpec()" class="px-3 py-1.5 rounded-md text-xs bg-[#f97316] text-black font-bold hover:bg-orange-600 transition">Fetch Live Spec</button>
+              <button onclick="openEditorModal()" class="px-3 py-1.5 rounded-md text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] hover:border-[#f97316] transition">Paste or Upload JSON</button>
+            </div>
+          </div>
+        `;
+      } else {
+        tags.forEach(tagName => {
+          const count = endpoints.filter(e => e.tags.includes(tagName)).length;
+          const tagDef = specData.tags?.find(t => t.name === tagName);
+          const card = document.createElement('div');
+          card.className = 'p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] hover:border-[#f97316] transition cursor-pointer';
+          card.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+              <h4 class="font-bold text-xs text-[var(--text-primary)]">${escapeHtml(tagName)}</h4>
+              <span class="text-[10px] font-mono text-[var(--accent)] bg-[var(--accent-muted)] px-1.5 py-0.5 rounded">${count} endpoints</span>
+            </div>
+            <p class="text-xs text-[var(--text-secondary)] line-clamp-2">${escapeHtml(tagDef?.description || 'Endpoints for ' + tagName.toLowerCase() + ' operations.')}</p>
+          `;
+          card.onclick = () => {
+            const first = endpoints.find(e => e.tags.includes(tagName));
+            if (first) selectEndpoint(first);
+          };
+          grid.appendChild(card);
+        });
+      }
+    }
+
+    function showOverview() {
+      selectedEndpoint = null;
+      document.getElementById('view-overview').classList.remove('hidden');
+      document.getElementById('view-endpoint').classList.add('hidden');
+      window.location.hash = '';
+      renderSidebar();
+    }
+
+    function selectEndpoint(ep) {
+      selectedEndpoint = ep;
+      document.getElementById('view-overview').classList.add('hidden');
+      document.getElementById('view-endpoint').classList.remove('hidden');
+      renderSidebar();
+
+      // Update URL hash for persistence across refresh
+      window.location.hash = ep.id;
+
+      document.getElementById('doc-badge').className = `px-2 py-0.5 rounded text-xs font-bold font-mono uppercase badge-${ep.method.toLowerCase()}`;
+      document.getElementById('doc-badge').innerText = ep.method;
+      document.getElementById('doc-tag').innerText = ep.tags[0] || 'API';
+      document.getElementById('doc-summary').innerText = ep.summary;
+      document.getElementById('doc-path').innerText = ep.path;
+      document.getElementById('doc-desc').innerText = ep.description || 'No description provided for this endpoint.';
+
+      // MP11: Show deprecation badge
+      const deprBadge = document.getElementById('doc-deprecated-badge');
+      if (deprBadge) deprBadge.classList.toggle('hidden', !ep.deprecated);
+
+      currentParamValues = {};
+      const paramsTbody = document.getElementById('doc-params-tbody');
+      paramsTbody.innerHTML = '';
+      if (ep.parameters.length === 0) {
+        document.getElementById('doc-params-section').classList.add('hidden');
+      } else {
+        document.getElementById('doc-params-section').classList.remove('hidden');
+        ep.parameters.forEach(p => {
+          const tr = document.createElement('tr');
+          const resolvedSchema = resolveSchema(p.schema);
+          const defaultVal = resolvedSchema?.example ?? resolvedSchema?.default ?? (p.in === 'path' ? 'usr_01' : '');
+          currentParamValues[p.name] = String(defaultVal);
+
+          const nameCell = document.createElement('td');
+          nameCell.className = 'p-2.5 font-mono text-[var(--accent)] font-semibold';
+          nameCell.innerHTML = `${escapeHtml(p.name)} ${p.required ? '<span class="text-red-500 text-[10px]">*</span>' : ''}`;
+
+          const typeCell = document.createElement('td');
+          typeCell.className = 'p-2.5 text-[var(--text-secondary)]';
+          typeCell.innerHTML = `<span class="bg-[var(--bg-primary)] px-1.5 py-0.5 rounded border border-[var(--border-primary)]">${escapeHtml(p.in)}</span> <span class="text-[10px]">(${escapeHtml(resolvedSchema?.type || 'string')})</span>`;
+
+          const descCell = document.createElement('td');
+          descCell.className = 'p-2.5 text-[var(--text-secondary)]';
+          // Build constraint hints
+          const paramHints = [];
+          if (resolvedSchema?.minLength !== undefined || resolvedSchema?.maxLength !== undefined) {
+            const parts = [];
+            if (resolvedSchema.minLength !== undefined) parts.push(`min: ${resolvedSchema.minLength}`);
+            if (resolvedSchema.maxLength !== undefined) parts.push(`max: ${resolvedSchema.maxLength}`);
+            paramHints.push(`Length: ${parts.join(' - ')}`);
+          }
+          if (resolvedSchema?.minimum !== undefined || resolvedSchema?.maximum !== undefined) {
+            const parts = [];
+            if (resolvedSchema.minimum !== undefined) parts.push(resolvedSchema.minimum);
+            if (resolvedSchema.maximum !== undefined) parts.push(resolvedSchema.maximum);
+            paramHints.push(`Range: ${parts.join(' - ')}`);
+          }
+          if (resolvedSchema?.pattern) paramHints.push(`Pattern: ${resolvedSchema.pattern}`);
+          descCell.innerHTML = `${escapeHtml(p.description || '-')} ${resolvedSchema?.enum ? `<div class="text-[10px] text-[var(--text-secondary)] mt-0.5">Enum: ${resolvedSchema.enum.map(e => escapeHtml(String(e))).join(', ')}</div>` : ''} ${paramHints.length > 0 ? `<div class="text-[10px] text-[var(--text-secondary)] mt-0.5 opacity-70">${paramHints.map(h => escapeHtml(h)).join(' · ')}</div>` : ''} ${resolvedSchema?.example !== undefined ? `<div class="text-[10px] text-[var(--accent)] mt-0.5">Example: ${escapeHtml(String(resolvedSchema.example))}</div>` : ''}`;
+
+          const inputCell = document.createElement('td');
+          inputCell.className = 'p-2.5';
+
+          // MP14: Render enum params as dropdown
+          if (resolvedSchema?.enum && resolvedSchema.enum.length > 0) {
+            const select = document.createElement('select');
+            select.className = 'w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]';
+            resolvedSchema.enum.forEach(val => {
+              const opt = document.createElement('option');
+              opt.value = String(val);
+              opt.textContent = String(val);
+              if (String(val) === String(defaultVal)) opt.selected = true;
+              select.appendChild(opt);
+            });
+            select.oninput = (e) => updateParamValue(p.name, e.target.value);
+            inputCell.appendChild(select);
+          } else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = defaultVal;
+            input.className = 'w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]';
+            input.oninput = (e) => updateParamValue(p.name, e.target.value);
+            inputCell.appendChild(input);
+          }
+
+          tr.appendChild(nameCell);
+          tr.appendChild(typeCell);
+          tr.appendChild(descCell);
+          tr.appendChild(inputCell);
+          paramsTbody.appendChild(tr);
+        });
+      }
+
+      // Detect body content format from OpenAPI spec if defined
+      const bodySection = document.getElementById('doc-body-section');
+      const bodyInput = document.getElementById('doc-body-input');
+      const hasBody = ep.requestBody && ['POST', 'PUT', 'PATCH'].includes(ep.method);
+
+      if (hasBody) {
+        bodySection.classList.remove('hidden');
+        const content = ep.requestBody.content || {};
+        let initialType = 'json';
+        if (content['multipart/form-data']) initialType = 'form-data';
+        else if (content['application/x-www-form-urlencoded']) initialType = 'x-www-form-urlencoded';
+        else if (content['application/xml'] || content['text/xml']) initialType = 'xml';
+        else if (content['text/plain']) initialType = 'raw';
+        
+        const jsonSchema = content['application/json']?.schema;
+        const multipartSchema = content['multipart/form-data']?.schema;
+        const urlEncodedSchema = content['application/x-www-form-urlencoded']?.schema;
+        
+        const activeSchema = jsonSchema || multipartSchema || urlEncodedSchema;
+        const samplePayload = generateSampleFromSchema(activeSchema);
+        bodyInput.value = samplePayload && Object.keys(samplePayload).length > 0 ? JSON.stringify(samplePayload, null, 2) : (jsonSchema ? '{}' : '');
+        
+        if (multipartSchema?.properties) {
+          formDataRows = Object.entries(multipartSchema.properties).map(([k, v]) => ({
+            key: k,
+            value: v.example || (v.format === 'binary' ? '' : (v.default ?? '')),
+            type: v.format === 'binary' ? 'file' : 'text',
+            enabled: true
+          }));
+        } else if (content['multipart/form-data']) {
+          formDataRows = [{ key: 'file', value: '', type: 'file', enabled: true }];
+        } else {
+          formDataRows = [];
+        }
+
+        if (urlEncodedSchema?.properties) {
+          urlEncodedRows = Object.entries(urlEncodedSchema.properties).map(([k, v]) => ({
+            key: k,
+            value: v.example || (v.default ?? (v.enum ? v.enum[0] : '')),
+            enabled: true
+          }));
+        } else {
+          urlEncodedRows = [];
+        }
+
+        setBodyType(initialType);
+        renderBodySchemaTable(activeSchema);
+      } else {
+        if (['POST', 'PUT', 'PATCH'].includes(ep.method)) {
+          bodySection.classList.remove('hidden');
+          setBodyType('none');
+        } else {
+          bodySection.classList.add('hidden');
+        }
+        bodyInput.value = '';
+        formDataRows = [];
+        urlEncodedRows = [];
+        document.getElementById('doc-body-schema-table')?.classList.add('hidden');
+      }
+
+      renderFormDataTable();
+      renderUrlEncodedTable();
+      renderCookieTable();
+
+      // MP9: Display response schema with property table + collapsible JSON
+      const resList = document.getElementById('doc-responses-list');
+      resList.innerHTML = '';
+      Object.entries(ep.responses).forEach(([code, r]) => {
+        const card = document.createElement('div');
+        const isOk = code.startsWith('2');
+        card.className = `p-3 rounded-lg border text-xs ${isOk ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-[var(--border-primary)] bg-[var(--bg-secondary)]'}`;
+
+        let schemaHtml = '';
+        const respSchema = r.content?.['application/json']?.schema;
+        if (respSchema) {
+          const resolvedResp = resolveSchema(respSchema);
+          const sample = generateSampleFromSchema(resolvedResp);
+
+          // Build property table if schema has properties
+          if (resolvedResp?.properties && Object.keys(resolvedResp.properties).length > 0) {
+            const required = resolvedResp.required || [];
+            let tableHtml = '<table class="w-full text-left mt-2"><thead class="text-[10px] text-[var(--text-secondary)]"><tr><th class="p-1">Name</th><th class="p-1">Type</th><th class="p-1">Description</th><th class="p-1">Example</th></tr></thead><tbody class="divide-y divide-[var(--border-primary)]">';
+            Object.entries(resolvedResp.properties).forEach(([name, prop]) => {
+              const resolvedProp = resolveSchema(prop);
+              const isReq = required.includes(name);
+              const type = resolvedProp?.type || 'string';
+              const desc = resolvedProp?.description || '-';
+              const example = resolvedProp?.example ?? (sample && typeof sample === 'object' ? sample[name] : undefined);
+
+              const hints = [];
+              if (resolvedProp?.minLength !== undefined || resolvedProp?.maxLength !== undefined) {
+                const parts = [];
+                if (resolvedProp.minLength !== undefined) parts.push(`min: ${resolvedProp.minLength}`);
+                if (resolvedProp.maxLength !== undefined) parts.push(`max: ${resolvedProp.maxLength}`);
+                hints.push(`Length: ${parts.join(' - ')}`);
+              }
+              if (resolvedProp?.minimum !== undefined || resolvedProp?.maximum !== undefined) {
+                const parts = [];
+                if (resolvedProp.minimum !== undefined) parts.push(resolvedProp.minimum);
+                if (resolvedProp.maximum !== undefined) parts.push(resolvedProp.maximum);
+                hints.push(`Range: ${parts.join(' - ')}`);
+              }
+
+              tableHtml += `<tr class="hover:bg-[var(--bg-primary)]">
+                <td class="p-1 font-mono text-[var(--accent)]">${escapeHtml(name)}${isReq ? ' <span class="text-red-500 text-[10px]">*</span>' : ''}</td>
+                <td class="p-1 text-[var(--text-secondary)]"><span class="bg-[var(--bg-primary)] px-1 py-0.5 rounded border border-[var(--border-primary)] text-[10px]">${escapeHtml(type)}</span></td>
+                <td class="p-1 text-[var(--text-secondary)]">${escapeHtml(desc)}${hints.length > 0 ? `<div class="text-[10px] opacity-70 mt-0.5">${hints.map(h => escapeHtml(h)).join(' · ')}</div>` : ''}</td>
+                <td class="p-1 text-[var(--accent)] font-mono text-[10px]">${example !== undefined ? escapeHtml(String(example)) : '-'}</td>
+              </tr>`;
+            });
+            tableHtml += '</tbody></table>';
+            schemaHtml = tableHtml;
+          }
+
+          // Collapsible JSON sample
+          if (sample && Object.keys(sample).length > 0) {
+            schemaHtml += `<details class="mt-2"><summary class="text-[10px] text-[var(--text-secondary)] cursor-pointer hover:text-[var(--accent)]">JSON Sample</summary><pre class="mt-1 p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[10px] font-mono overflow-x-auto text-[var(--text-secondary)]">${escapeHtml(JSON.stringify(sample, null, 2))}</pre></details>`;
+          }
+        }
+
+        card.innerHTML = `
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-1.5 py-0.5 rounded font-mono font-bold text-[10px] ${isOk ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">${escapeHtml(code)}</span>
+            <span class="font-medium text-[var(--text-primary)]">${escapeHtml(r.description || 'Response')}</span>
+          </div>
+          ${schemaHtml}
+        `;
+        resList.appendChild(card);
+      });
+
+      updateClientUrl();
+      document.getElementById('client-method-badge').className = `px-2.5 py-1.5 rounded text-xs font-mono font-bold uppercase badge-${ep.method.toLowerCase()}`;
+      document.getElementById('client-method-badge').innerText = ep.method;
+      document.getElementById('doc-body-input').value = bodyInput.value;
+
+      // Restore saved response if available
+      const savedRes = getSavedResponse(ep.id);
+      const resBox = document.getElementById('client-response-box');
+      const statusBadge = document.getElementById('res-status');
+      const timeBadge = document.getElementById('res-time');
+      const resHeadersBox = document.getElementById('res-headers-box');
+
+      if (savedRes) {
+        resBox.innerHTML = savedRes.bodyHtml;
+        statusBadge.innerText = savedRes.statusText;
+        statusBadge.className = savedRes.statusOk
+          ? 'px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/20 text-emerald-400'
+          : 'px-1.5 py-0.5 rounded font-mono font-bold bg-red-500/20 text-red-400';
+        timeBadge.innerText = `${savedRes.duration} ms`;
+        if (savedRes.headers && Object.keys(savedRes.headers).length > 0) {
+          const headersHtml = Object.entries(savedRes.headers).map(([k, v]) =>
+            `<div class="flex gap-2"><span class="text-[var(--accent)] font-mono">${escapeHtml(k)}</span><span class="text-[var(--text-secondary)]">${escapeHtml(v)}</span></div>`
+          ).join('');
+          resHeadersBox.innerHTML = headersHtml;
+        } else {
+          resHeadersBox.innerHTML = '<span class="text-zinc-500">No response headers.</span>';
+        }
+      } else {
+        resBox.innerHTML = '<code>Ready. Click "Send" to execute request.</code>';
+        statusBadge.innerText = '---';
+        statusBadge.className = 'px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400';
+        timeBadge.innerText = '0 ms';
+        resHeadersBox.innerHTML = '<span class="text-zinc-500">No response yet. Send a request to see headers.</span>';
+      }
+
+      generateSnippet(currentSnippetLang);
+    }
+
+    function setBodyType(type) {
+      activeBodyType = type;
+      ['json', 'form-data', 'x-www-form-urlencoded', 'raw', 'xml', 'none'].forEach(t => {
+        const btn = document.getElementById('doc-btn-type-' + t);
+        if (btn) {
+          if (t === type) {
+            btn.className = 'px-2 py-0.5 rounded text-[10px] font-mono bg-[#f97316] text-black font-bold';
+          } else {
+            btn.className = 'px-2 py-0.5 rounded text-[10px] font-mono bg-transparent text-[var(--text-secondary)]';
+          }
+        }
+      });
+
+      document.getElementById('doc-body-container-json').classList.toggle('hidden', type !== 'json');
+      document.getElementById('doc-body-container-form-data').classList.toggle('hidden', type !== 'form-data');
+      document.getElementById('doc-body-container-urlencoded').classList.toggle('hidden', type !== 'x-www-form-urlencoded');
+      document.getElementById('doc-body-container-raw').classList.toggle('hidden', type !== 'raw');
+      document.getElementById('doc-body-container-xml').classList.toggle('hidden', type !== 'xml');
+      document.getElementById('doc-body-container-none').classList.toggle('hidden', type !== 'none');
+
+      const contentTypeHeader = document.getElementById('client-header-content-type');
+      if (contentTypeHeader) {
+        if (type === 'json') contentTypeHeader.innerText = 'application/json';
+        else if (type === 'form-data') contentTypeHeader.innerText = 'multipart/form-data';
+        else if (type === 'x-www-form-urlencoded') contentTypeHeader.innerText = 'application/x-www-form-urlencoded';
+        else if (type === 'raw') contentTypeHeader.innerText = 'text/plain';
+        else if (type === 'xml') contentTypeHeader.innerText = 'application/xml';
+        else contentTypeHeader.innerText = 'None';
+      }
+
+      if (type === 'none') {
+        document.getElementById('doc-body-input').value = '';
+      }
+
+      generateSnippet(currentSnippetLang);
+    }
+
+    function renderFormDataTable() {
+      const tbody = document.getElementById('form-data-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      formDataRows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-1.5 text-center"><input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="toggleFormDataRow(${idx}, this.checked)" class="accent-[#f97316]"></td>
+          <td class="p-1.5"><input type="text" value="${row.key}" oninput="updateFormDataKey(${idx}, this.value)" placeholder="Field name" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
+          <td class="p-1.5">
+            <select onchange="updateFormDataType(${idx}, this.value)" class="w-full text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded p-1 text-[var(--text-secondary)]">
+              <option value="text" ${row.type === 'text' ? 'selected' : ''}>Text</option>
+              <option value="file" ${row.type === 'file' ? 'selected' : ''}>File</option>
+            </select>
+          </td>
+          <td class="p-1.5">
+            ${row.type === 'file' ? `
+              <div class="flex items-center gap-1.5">
+                <input type="file" onchange="handleFormDataFileUpload(${idx}, event)" class="text-xs text-[var(--text-secondary)] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border file:border-[var(--border-primary)] file:text-xs file:bg-[var(--bg-tertiary)] file:text-[var(--text-primary)]">
+                ${row.fileInfo ? `<span class="text-[10px] text-emerald-400 font-mono">(${row.fileInfo.name})</span>` : ''}
+              </div>
+            ` : `
+              <input type="text" value="${row.value}" oninput="updateFormDataValue(${idx}, this.value)" placeholder="Field value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]">
+            `}
+          </td>
+          <td class="p-1.5 text-center"><button onclick="deleteFormDataRow(${idx})" class="text-zinc-500 hover:text-red-500">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function addFormDataRow() {
+      formDataRows.push({ key: '', value: '', type: 'text', enabled: true });
+      renderFormDataTable();
+      setBodyType('form-data');
+    }
+    function deleteFormDataRow(idx) {
+      formDataRows.splice(idx, 1);
+      renderFormDataTable();
+      setBodyType('form-data');
+    }
+    function toggleFormDataRow(idx, checked) {
+      formDataRows[idx].enabled = checked;
+      setBodyType('form-data');
+    }
+    function updateFormDataKey(idx, val) {
+      formDataRows[idx].key = val;
+      setBodyType('form-data');
+    }
+    function updateFormDataType(idx, val) {
+      formDataRows[idx].type = val;
+      renderFormDataTable();
+      setBodyType('form-data');
+    }
+    function updateFormDataValue(idx, val) {
+      formDataRows[idx].value = val;
+      setBodyType('form-data');
+    }
+    function handleFormDataFileUpload(idx, event) {
+      const file = event.target.files[0];
+      if (file) {
+        formDataRows[idx].fileInfo = { name: file.name, size: file.size, type: file.type };
+        formDataRows[idx].fileObject = file;
+        renderFormDataTable();
+        setBodyType('form-data');
+      }
+    }
+
+    function renderUrlEncodedTable() {
+      const tbody = document.getElementById('urlencoded-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      urlEncodedRows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-1.5 text-center"><input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="toggleUrlEncodedRow(${idx}, this.checked)" class="accent-[#f97316]"></td>
+          <td class="p-1.5"><input type="text" value="${row.key}" oninput="updateUrlEncodedKey(${idx}, this.value)" placeholder="Parameter" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
+          <td class="p-1.5"><input type="text" value="${row.value}" oninput="updateUrlEncodedValue(${idx}, this.value)" placeholder="Value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
+          <td class="p-1.5 text-center"><button onclick="deleteUrlEncodedRow(${idx})" class="text-zinc-500 hover:text-red-500">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function addUrlEncodedRow() {
+      urlEncodedRows.push({ key: '', value: '', enabled: true });
+      renderUrlEncodedTable();
+      setBodyType('x-www-form-urlencoded');
+    }
+    function deleteUrlEncodedRow(idx) {
+      urlEncodedRows.splice(idx, 1);
+      renderUrlEncodedTable();
+      setBodyType('x-www-form-urlencoded');
+    }
+    function toggleUrlEncodedRow(idx, checked) {
+      urlEncodedRows[idx].enabled = checked;
+      setBodyType('x-www-form-urlencoded');
+    }
+    function updateUrlEncodedKey(idx, val) {
+      urlEncodedRows[idx].key = val;
+      setBodyType('x-www-form-urlencoded');
+    }
+    function updateUrlEncodedValue(idx, val) {
+      urlEncodedRows[idx].value = val;
+      setBodyType('x-www-form-urlencoded');
+    }
+
+    // Cookie CRUD
+    function renderCookieTable() {
+      const tbody = document.getElementById('cookie-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      cookieRows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-1.5 text-center"><input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="toggleCookieRow(${idx}, this.checked)" class="accent-[#f97316]"></td>
+          <td class="p-1.5"><input type="text" value="${escapeHtml(row.key)}" oninput="updateCookieKey(${idx}, this.value)" placeholder="Name" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
+          <td class="p-1.5"><input type="text" value="${escapeHtml(row.value)}" oninput="updateCookieValue(${idx}, this.value)" placeholder="Value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
+          <td class="p-1.5 text-center"><button onclick="deleteCookieRow(${idx})" class="text-zinc-500 hover:text-red-500">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    function addCookieRow() {
+      cookieRows.push({ key: '', value: '', enabled: true });
+      renderCookieTable();
+    }
+    function deleteCookieRow(idx) {
+      cookieRows.splice(idx, 1);
+      renderCookieTable();
+    }
+    function toggleCookieRow(idx, checked) {
+      cookieRows[idx].enabled = checked;
+    }
+    function updateCookieKey(idx, val) {
+      cookieRows[idx].key = val;
+    }
+    function updateCookieValue(idx, val) {
+      cookieRows[idx].value = val;
+    }
+    function saveCookiesToStorage() {
+      localStorage.setItem('scalar_cookie_rows', JSON.stringify(cookieRows));
+    }
+
+    // Render request body schema property table
+    function renderBodySchemaTable(schema) {
+      const container = document.getElementById('doc-body-schema-table');
+      const tbody = document.getElementById('doc-body-schema-tbody');
+      if (!container || !tbody) return;
+      tbody.innerHTML = '';
+
+      const resolved = resolveSchema(schema);
+      const props = resolved?.properties;
+      const required = resolved?.required || [];
+
+      if (!props || Object.keys(props).length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+
+      Object.entries(props).forEach(([name, prop]) => {
+        const resolvedProp = resolveSchema(prop);
+        const isRequired = required.includes(name);
+        const type = resolvedProp?.type || 'string';
+        const desc = resolvedProp?.description || '';
+        const example = resolvedProp?.example;
+        const enumVals = resolvedProp?.enum;
+
+        // Build constraint hints inline
+        const hints = [];
+        if (resolvedProp?.minLength !== undefined || resolvedProp?.maxLength !== undefined) {
+          const parts = [];
+          if (resolvedProp.minLength !== undefined) parts.push(`min: ${resolvedProp.minLength}`);
+          if (resolvedProp.maxLength !== undefined) parts.push(`max: ${resolvedProp.maxLength}`);
+          hints.push(`Length: ${parts.join(' - ')}`);
+        }
+        if (resolvedProp?.minimum !== undefined || resolvedProp?.maximum !== undefined) {
+          const parts = [];
+          if (resolvedProp.minimum !== undefined) parts.push(resolvedProp.minimum);
+          if (resolvedProp.maximum !== undefined) parts.push(resolvedProp.maximum);
+          hints.push(`Range: ${parts.join(' - ')}`);
+        }
+        if (resolvedProp?.pattern) hints.push(`Pattern: ${resolvedProp.pattern}`);
+        if (enumVals && enumVals.length > 0) hints.push(`Enum: ${enumVals.join(', ')}`);
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-[var(--bg-primary)]';
+        tr.innerHTML = `
+          <td class="p-2 font-mono text-[var(--accent)]">
+            ${escapeHtml(name)}${isRequired ? ' <span class="text-red-500 text-[10px]">*</span>' : ''}
+          </td>
+          <td class="p-2 text-[var(--text-secondary)]">
+            <span class="bg-[var(--bg-primary)] px-1.5 py-0.5 rounded border border-[var(--border-primary)] text-[10px]">${escapeHtml(type)}</span>
+          </td>
+          <td class="p-2 text-[var(--text-secondary)] text-[11px]">
+            ${escapeHtml(desc || '-')}
+            ${hints.length > 0 ? `<div class="text-[10px] text-[var(--text-secondary)] mt-0.5 opacity-70">${hints.map(h => escapeHtml(h)).join(' · ')}</div>` : ''}
+            ${example !== undefined ? `<div class="text-[10px] text-[var(--accent)] mt-0.5">Example: ${escapeHtml(String(example))}</div>` : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function handleRawBodyChange(val) {
+      rawBodyText = val;
+      if (activeBodyType === 'raw') {
+        generateSnippet(currentSnippetLang);
+      }
+    }
+
+    function handleXmlBodyChange(val) {
+      xmlBodyText = val;
+      if (activeBodyType === 'xml') {
+        generateSnippet(currentSnippetLang);
+      }
+    }
+
+    function updateParamValue(name, val) {
+      currentParamValues[name] = val;
+      updateClientUrl();
+      generateSnippet(currentSnippetLang);
+    }
+
+    function updateClientUrl() {
+      if (!selectedEndpoint) return;
+      let finalPath = selectedEndpoint.path;
+      const queryParams = new URLSearchParams();
+
+      selectedEndpoint.parameters.forEach(p => {
+        const val = currentParamValues[p.name] ?? '';
+        if (p.in === 'path') {
+          finalPath = finalPath.replace(`{${p.name}}`, encodeURIComponent(val));
+        } else if (p.in === 'query' && val) {
+          queryParams.append(p.name, val);
+        }
+      });
+
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      const fullUrl = `${selectedServer.replace(/\/$/, '')}${finalPath}${queryString}`;
+      document.getElementById('client-url-input').value = fullUrl;
+    }
+
+    function syncBodyToClient(val) {
+      generateSnippet(currentSnippetLang);
+    }
+
+    function prettifyClientBody() {
+      try {
+        const raw = document.getElementById('doc-body-input').value;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const pretty = JSON.stringify(parsed, null, 2);
+          document.getElementById('doc-body-input').value = pretty;
+        }
+      } catch (e) {
+        showToast('Invalid JSON: ' + e.message, 'error');
+      }
+    }
+
+    async function executeLiveRequest() {
+      if (!selectedEndpoint) return;
+      const url = document.getElementById('client-url-input').value;
+      const method = selectedEndpoint.method;
+      const resBox = document.getElementById('client-response-box');
+      const statusBadge = document.getElementById('res-status');
+      const timeBadge = document.getElementById('res-time');
+      const resHeadersBox = document.getElementById('res-headers-box');
+
+      // HP8: Validate required params before send
+      const missingParams = [];
+      selectedEndpoint.parameters.forEach(p => {
+        if (p.required && (!currentParamValues[p.name] || currentParamValues[p.name].trim() === '')) {
+          missingParams.push(p.name);
+        }
+      });
+      if (missingParams.length > 0) {
+        showToast(`Missing required parameters: ${missingParams.join(', ')}`, 'error');
+        return;
+      }
+
+      resBox.innerHTML = '<span class="text-zinc-500 animate-pulse">Executing request to ' + escapeHtml(url) + '...</span>';
+      if (resHeadersBox) resHeadersBox.innerHTML = '';
+      const startTime = performance.now();
+
+      try {
+        const headers = {};
+        if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
+        if (apiKey) headers['X-API-KEY'] = apiKey;
+        // MP10: Basic Auth
+        if (basicAuthUser) {
+          const encoded = btoa(`${basicAuthUser}:${basicAuthPass}`);
+          headers['Authorization'] = `Basic ${encoded}`;
+        }
+
+        // HP6: Support header params
+        selectedEndpoint.parameters.forEach(p => {
+          if (p.in === 'header' && currentParamValues[p.name]) {
+            headers[p.name] = currentParamValues[p.name];
+          }
+        });
+
+        // Cookie header from cookie rows
+        const enabledCookies = cookieRows.filter(r => r.enabled && r.key);
+        if (enabledCookies.length > 0) {
+          headers['Cookie'] = enabledCookies.map(r => `${r.key}=${r.value}`).join('; ');
+        }
+
+        let reqBody = null;
+        if (['POST', 'PUT', 'PATCH'].includes(method)) {
+          if (activeBodyType === 'json') {
+            headers['Content-Type'] = 'application/json';
+            reqBody = document.getElementById('doc-body-input').value;
+          } else if (activeBodyType === 'form-data') {
+            const formData = new FormData();
+            formDataRows.filter(r => r.enabled && r.key).forEach(r => {
+              if (r.type === 'file' && r.fileObject) {
+                formData.append(r.key, r.fileObject);
+              } else {
+                formData.append(r.key, r.value || 'test');
+              }
+            });
+            reqBody = formData;
+          } else if (activeBodyType === 'x-www-form-urlencoded') {
+            headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            const params = new URLSearchParams();
+            urlEncodedRows.filter(r => r.enabled && r.key).forEach(r => {
+              params.append(r.key, r.value);
+            });
+            reqBody = params.toString();
+          } else if (activeBodyType === 'xml') {
+            headers['Content-Type'] = 'application/xml';
+            reqBody = xmlBodyText;
+          } else if (activeBodyType === 'raw') {
+            headers['Content-Type'] = 'text/plain';
+            reqBody = rawBodyText;
+          }
+        }
+
+        const options = { method, headers };
+        if (reqBody) options.body = reqBody;
+
+        const response = await fetch(url, options);
+        const duration = Math.round(performance.now() - startTime);
+        timeBadge.innerText = `${duration} ms`;
+
+        statusBadge.innerText = `${response.status} ${response.statusText}`;
+        statusBadge.className = `px-1.5 py-0.5 rounded font-mono font-bold ${response.ok ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`;
+
+        // MP16: Display response headers in Res Headers tab
+        if (resHeadersBox) {
+          const headersHtml = [];
+          response.headers.forEach((value, key) => {
+            headersHtml.push(`<div class="flex gap-2"><span class="text-[var(--accent)] font-mono">${escapeHtml(key)}</span><span class="text-[var(--text-secondary)]">${escapeHtml(value)}</span></div>`);
+          });
+          resHeadersBox.innerHTML = headersHtml.join('');
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        let bodyHtml = '';
+        if (contentType.includes('application/json')) {
+          const json = await response.json();
+          bodyHtml = syntaxHighlightJson(json);
+        } else {
+          const text = await response.text();
+          bodyHtml = escapeHtml(text);
+        }
+        resBox.innerHTML = bodyHtml;
+
+        // Save response headers
+        const responseHeaders = {};
+        response.headers.forEach((value, key) => {
+          responseHeaders[key] = value;
+        });
+
+        // Save response for persistence
+        saveEndpointResponse(
+          selectedEndpoint.id,
+          `${response.status} ${response.statusText}`,
+          response.ok,
+          duration,
+          bodyHtml,
+          responseHeaders
+        );
+
+        // Store in request history (MP12)
+        saveRequestToHistory(method, url, response.status, duration);
+      } catch (err) {
+        // HP3: Show actual error instead of fake "200 OK"
+        const duration = Math.round(performance.now() - startTime);
+        timeBadge.innerText = `${duration} ms`;
+        statusBadge.innerText = 'Error';
+        statusBadge.className = 'px-1.5 py-0.5 rounded font-mono font-bold bg-red-500/20 text-red-400';
+
+        let errorMsg = err.message || 'Unknown error';
+        if (err.name === 'TypeError' && errorMsg.includes('fetch')) {
+          errorMsg = 'Network Error — possibly CORS blocked or server unreachable';
+        }
+        const errorHtml = `<div class="space-y-2">
+          <div class="text-red-400 font-bold text-xs">REQUEST FAILED</div>
+          <div class="text-[var(--text-secondary)] text-xs">${escapeHtml(errorMsg)}</div>
+          <div class="text-[10px] text-[var(--text-secondary)] mt-2">Tip: This may be a CORS issue. The server must include <code class="bg-[var(--bg-tertiary)] px-1 rounded">Access-Control-Allow-Origin</code> headers.</div>
+        </div>`;
+        resBox.innerHTML = errorHtml;
+
+        // Save error response for persistence
+        saveEndpointResponse(
+          selectedEndpoint.id,
+          'Error',
+          false,
+          duration,
+          errorHtml,
+          {}
+        );
+
+        if (resHeadersBox) resHeadersBox.innerHTML = '<span class="text-zinc-500">No response headers.</span>';
+      }
+    }
+
+    function generateMockResponse(ep) {
+      if (ep.responses?.['200']?.content?.['application/json']?.schema) {
+        return generateSampleFromSchema(resolveSchema(ep.responses['200'].content['application/json'].schema));
+      }
+      if (ep.responses?.['201']?.content?.['application/json']?.schema) {
+        return generateSampleFromSchema(resolveSchema(ep.responses['201'].content['application/json'].schema));
+      }
+      return { success: true, message: `Mock ${ep.method} processed successfully`, data: { id: "usr_99218a", status: "active" }, timestamp: new Date().toISOString() };
+    }
+
+    function syntaxHighlightJson(json) {
+      const str = typeof json !== 'string' ? JSON.stringify(json, null, 2) : json;
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+          let cls = 'hl-number';
+          if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+              cls = 'hl-key';
+            } else {
+              cls = 'hl-string';
+            }
+          } else if (/true|false/.test(match)) {
+            cls = 'hl-boolean';
+          } else if (/null/.test(match)) {
+            cls = 'hl-null';
+          }
+          return '<span class="' + cls + '">' + match + '</span>';
+        });
+    }
+
+    function setClientTab(tab) {
+      ['headers', 'cookies', 'snippets', 'res-headers'].forEach(t => {
+        document.getElementById(`client-tab-${t}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tab) {
+          btn.className = 'pb-2 border-b-2 border-[#f97316] text-[#f97316]';
+        } else {
+          btn.className = 'pb-2 border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]';
+        }
+      });
+      if (tab === 'headers') {
+        document.getElementById('client-header-auth').innerText = bearerToken ? `Bearer ${bearerToken.substring(0, 12)}...` : 'None';
+        document.getElementById('client-header-apikey').innerText = apiKey ? `${apiKey.substring(0, 10)}...` : 'None';
+      }
+    }
+
+    function generateSnippet(lang) {
+      currentSnippetLang = lang;
+      ['curl', 'fetch', 'python', 'go', 'php'].forEach(l => {
+        const btn = document.getElementById('snip-' + l);
+        if (btn) {
+          if (l === lang) {
+            btn.className = 'px-2 py-1 rounded bg-[#f97316] text-black font-bold';
+          } else {
+            btn.className = 'px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)]';
+          }
+        }
+      });
+
+      if (!selectedEndpoint) return;
+      const url = document.getElementById('client-url-input')?.value || selectedServer + selectedEndpoint.path;
+      const method = selectedEndpoint.method;
+      const isMutation = ['POST', 'PUT', 'PATCH'].includes(method);
+      let code = '';
+
+      if (lang === 'curl') {
+        code = `curl --request ${method} \\\n  --url "${url}"`;
+        if (bearerToken) code += ` \\\n  --header "Authorization: Bearer ${bearerToken}"`;
+        if (apiKey) code += ` \\\n  --header "X-API-KEY: ${apiKey}"`;
+        const enabledCookiesForSnippet = cookieRows.filter(r => r.enabled && r.key);
+        if (enabledCookiesForSnippet.length > 0) {
+          const cookieStr = enabledCookiesForSnippet.map(r => `${r.key}=${r.value}`).join('; ');
+          code += ` \\\n  --header "Cookie: ${cookieStr}"`;
+        }
+
+        if (isMutation) {
+          if (activeBodyType === 'json') {
+            const body = document.getElementById('doc-body-input')?.value || '{}';
+            const escapedBody = body.replace(/'/g, "'\\''").replace(/\n/g, ' ');
+            code += ` \\\n  --header "Content-Type: application/json" \\\n  --data '${escapedBody}'`;
+          } else if (activeBodyType === 'form-data') {
+            formDataRows.filter(r => r.enabled && r.key).forEach(r => {
+              code += ` \\\n  --form '${r.key}=${r.type === 'file' ? '@path/to/file' : r.value.replace(/'/g, "'\\''")}'`;
+            });
+          } else if (activeBodyType === 'x-www-form-urlencoded') {
+            code += ` \\\n  --header "Content-Type: application/x-www-form-urlencoded"`;
+            urlEncodedRows.filter(r => r.enabled && r.key).forEach(r => {
+              code += ` \\\n  --data-urlencode '${r.key}=${r.value.replace(/'/g, "'\\''")}'`;
+            });
+          } else if (activeBodyType === 'xml') {
+            const escapedXml = xmlBodyText.replace(/'/g, "'\\''").replace(/\n/g, ' ');
+            code += ` \\\n  --header "Content-Type: application/xml" \\\n  --data '${escapedXml}'`;
+          } else if (activeBodyType === 'raw') {
+            const escapedRaw = rawBodyText.replace(/'/g, "'\\''");
+            code += ` \\\n  --header "Content-Type: text/plain" \\\n  --data '${escapedRaw}'`;
+          }
+        }
+      } else if (lang === 'fetch') {
+        let bodySection = '';
+        let contentTypeLine = '"Content-Type": "application/json",\n    ';
+        if (isMutation) {
+          if (activeBodyType === 'json') {
+            const body = document.getElementById('doc-body-input')?.value || '{}';
+            bodySection = `body: JSON.stringify(${body.replace(/\n/g, '')}),\n  `;
+          } else if (activeBodyType === 'form-data') {
+            contentTypeLine = '';
+            bodySection = `body: formData,\n  `;
+          } else if (activeBodyType === 'x-www-form-urlencoded') {
+            contentTypeLine = '"Content-Type": "application/x-www-form-urlencoded",\n    ';
+            bodySection = `body: new URLSearchParams({${urlEncodedRows.filter(r => r.enabled).map(r => `"${r.key}": "${r.value}"`).join(', ')}}),\n  `;
+          }
+        }
+        code = `const response = await fetch("${url}", {\n  method: "${method}",\n  headers: {\n    ${contentTypeLine}${bearerToken ? `"Authorization": "Bearer ${bearerToken}",\n    ` : ''}${apiKey ? `"X-API-KEY": "${apiKey}",\n    ` : ''}},\n  ${bodySection}});\nconst data = await response.json();\nconsole.log(data);`;
+      } else if (lang === 'python') {
+        let pyBody = '';
+        if (isMutation) {
+          if (activeBodyType === 'json') pyBody = `, json=${document.getElementById('doc-body-input')?.value || '{}'}`;
+          else if (activeBodyType === 'form-data') pyBody = `, data={${formDataRows.filter(r => r.enabled).map(r => `"${r.key}": "${r.value}"`).join(', ')}}`;
+          else if (activeBodyType === 'x-www-form-urlencoded') pyBody = `, data={${urlEncodedRows.filter(r => r.enabled).map(r => `"${r.key}": "${r.value}"`).join(', ')}}`;
+        }
+        code = `import requests\n\nurl = "${url}"\nheaders = {\n${bearerToken ? `    "Authorization": "Bearer ${bearerToken}",\n` : ''}${apiKey ? `    "X-API-KEY": "${apiKey}",\n` : ''}}\n\nresponse = requests.${method.toLowerCase()}(url, headers=headers${pyBody})\nprint(response.json())`;
+      } else if (lang === 'go') {
+        code = `package main\n\nimport (\n\t"fmt"\n\t"net/http"\n\t"io"\n)\n\nfunc main() {\n\treq, _ := http.NewRequest("${method}", "${url}", nil)\n${bearerToken ? `\treq.Header.Add("Authorization", "Bearer ${bearerToken}")\n` : ''}\tres, _ := http.DefaultClient.Do(req)\n\tbody, _ := io.ReadAll(res.Body)\n\tfmt.Println(string(body))\n}`;
+      } else if (lang === 'php') {
+        code = `<?php\n$curl = curl_init();\ncurl_setopt_array($curl, array(\n  CURLOPT_URL => '${url}',\n  CURLOPT_RETURNTRANSFER => true,\n  CURLOPT_CUSTOMREQUEST => '${method}',\n  CURLOPT_HTTPHEADER => array(\n    'Content-Type: application/json'\n  ),\n));\n$response = curl_exec($curl);\ncurl_close($curl);\necho $response;`;
+      }
+
+      document.getElementById('snippet-output').innerText = code;
+    }
+
+    let basicAuthUser = localStorage.getItem('scalar_basic_user') || '';
+    let basicAuthPass = localStorage.getItem('scalar_basic_pass') || '';
+
+    function openAuthModal() {
+      document.getElementById('auth-bearer-input').value = bearerToken;
+      document.getElementById('auth-apikey-input').value = apiKey;
+      document.getElementById('auth-basic-user').value = basicAuthUser;
+      document.getElementById('auth-basic-pass').value = basicAuthPass;
+      document.getElementById('modal-auth').classList.remove('hidden');
+    }
+    function closeAuthModal() {
+      document.getElementById('modal-auth').classList.add('hidden');
+    }
+    function saveAuthModal() {
+      bearerToken = document.getElementById('auth-bearer-input').value.trim();
+      apiKey = document.getElementById('auth-apikey-input').value.trim();
+      basicAuthUser = document.getElementById('auth-basic-user').value.trim();
+      basicAuthPass = document.getElementById('auth-basic-pass').value;
+      localStorage.setItem('scalar_bearer_token', bearerToken);
+      localStorage.setItem('scalar_api_key', apiKey);
+      localStorage.setItem('scalar_basic_user', basicAuthUser);
+      localStorage.setItem('scalar_basic_pass', basicAuthPass);
+      updateAuthIndicator();
+      closeAuthModal();
+      generateSnippet(currentSnippetLang);
+      showToast('Credentials saved', 'success');
+    }
+    function fillDemoAuth() {
+      document.getElementById('auth-bearer-input').value = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo_token_user_99218a';
+      document.getElementById('auth-apikey-input').value = 'sec_live_99214a88b1';
+    }
+    function updateAuthIndicator() {
+      const ind = document.getElementById('auth-indicator');
+      const status = document.getElementById('overview-auth-status');
+      if (bearerToken || apiKey) {
+        ind.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+        if (status) status.innerText = 'Active (Token/Key set)';
+      } else {
+        ind.className = 'w-1.5 h-1.5 rounded-full bg-zinc-500';
+        if (status) status.innerText = 'None configured';
+      }
+    }
+
+    function openEditorModal() {
+      document.getElementById('spec-raw-editor').value = JSON.stringify(specData, null, 2);
+      document.getElementById('editor-error').innerText = '';
+      document.getElementById('modal-editor').classList.remove('hidden');
+    }
+    function closeEditorModal() {
+      document.getElementById('modal-editor').classList.add('hidden');
+    }
+    function applyEditedSpec() {
+      try {
+        const raw = document.getElementById('spec-raw-editor').value;
+        const parsed = JSON.parse(raw);
+        specData = parsed;
+        initApp();
+        closeEditorModal();
+      } catch (err) {
+        document.getElementById('editor-error').innerText = 'Invalid JSON: ' + err.message;
+      }
+    }
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        document.getElementById('spec-raw-editor').value = event.target.result;
+      };
+      reader.readAsText(file);
+    }
+    function exportJsonFile() {
+      const blob = new Blob([JSON.stringify(specData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'swagger.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function openSearchModal() {
+      searchSelectedIdx = -1;
+      document.getElementById('modal-search').classList.remove('hidden');
+      document.getElementById('search-dialog-input').focus();
+      handleSearchDialogInput('');
+    }
+    function closeSearchModal() {
+      document.getElementById('modal-search').classList.add('hidden');
+    }
+    function handleSearchDialogInput(q) {
+      const container = document.getElementById('search-dialog-results');
+      container.innerHTML = '';
+      const endpoints = getAllEndpoints().filter(e => 
+        !q || e.summary.toLowerCase().includes(q.toLowerCase()) || e.path.toLowerCase().includes(q.toLowerCase()) || e.tags.some(t => t.toLowerCase().includes(q.toLowerCase()))
+      );
+
+      if (endpoints.length === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-zinc-500">No matching endpoints found</div>';
+        return;
+      }
+
+      endpoints.forEach(ep => {
+        const item = document.createElement('div');
+        item.className = 'p-2 rounded-lg hover:bg-[var(--bg-tertiary)] flex items-center justify-between cursor-pointer border border-transparent hover:border-[var(--border-primary)]';
+        item.innerHTML = `
+          <div class="flex items-center gap-2 truncate">
+            <span class="w-10 text-[9px] font-mono font-bold uppercase text-center py-0.5 rounded badge-${ep.method.toLowerCase()}">${ep.method}</span>
+            <span class="font-medium text-[var(--text-primary)] truncate">${ep.summary}</span>
+          </div>
+          <span class="text-[10px] font-mono text-[var(--text-secondary)] shrink-0">${ep.path}</span>
+        `;
+        item.onclick = () => {
+          selectEndpoint(ep);
+          closeSearchModal();
+        };
+        container.appendChild(item);
+      });
+    }
+
+    let searchSelectedIdx = -1;
+
+    function setupShortcuts() {
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          const modal = document.getElementById('modal-search');
+          if (modal.classList.contains('hidden')) openSearchModal();
+          else closeSearchModal();
+        }
+        if (e.key === 'Escape') {
+          closeAuthModal();
+          closeEditorModal();
+          closeSearchModal();
+          closeEnvModal();
+        }
+        // MP20: Keyboard navigation in search
+        const searchModal = document.getElementById('modal-search');
+        if (!searchModal.classList.contains('hidden')) {
+          const items = document.querySelectorAll('#search-dialog-results > div[class*="cursor-pointer"]');
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            searchSelectedIdx = Math.min(searchSelectedIdx + 1, items.length - 1);
+            items.forEach((el, i) => el.classList.toggle('bg-[var(--bg-tertiary)]', i === searchSelectedIdx));
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            searchSelectedIdx = Math.max(searchSelectedIdx - 1, 0);
+            items.forEach((el, i) => el.classList.toggle('bg-[var(--bg-tertiary)]', i === searchSelectedIdx));
+          } else if (e.key === 'Enter' && searchSelectedIdx >= 0 && items[searchSelectedIdx]) {
+            e.preventDefault();
+            items[searchSelectedIdx].click();
+          }
+        }
+      });
+    }
+
+    function handleSidebarSearch(val) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => renderSidebar(val), 200);
+    }
+    function handleServerChange(val) {
+      selectedServer = val;
+      updateClientUrl();
+    }
+    function copyToClipboard(text, msg) {
+      navigator.clipboard.writeText(text);
+      showToast(msg || 'Copied to clipboard', 'success');
+    }
+    function copyResponseData() {
+      const res = document.getElementById('client-response-box').innerText;
+      copyToClipboard(res, 'Response copied to clipboard!');
+    }
+    function formatAndCopyBody() {
+      const body = document.getElementById('doc-body-input').value;
+      copyToClipboard(body, 'Request body copied!');
+    }
+  </script>
+</body>
+</html>

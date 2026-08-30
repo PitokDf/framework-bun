@@ -15,7 +15,6 @@ export function TableOfContents() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Wait for DOM to update after navigation
     const timer = setTimeout(() => {
       const elements = document.querySelectorAll("h1, h2, h3, h4");
       const items: TocItem[] = Array.from(elements).map((el) => ({
@@ -44,7 +43,6 @@ export function TableOfContents() {
       { rootMargin: "-80px 0px -80% 0px" }
     );
 
-    // Small delay to ensure DOM elements exist
     const timer = setTimeout(() => {
       headings.forEach((h) => {
         const el = document.getElementById(h.id);
@@ -58,6 +56,13 @@ export function TableOfContents() {
     };
   }, [headings]);
 
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   if (headings.length === 0) return null;
 
   return (
@@ -66,27 +71,28 @@ export function TableOfContents() {
         <h4 className="font-semibold text-sm text-text-primary mb-3">
           On this page
         </h4>
-        <ul className="space-y-2 text-sm">
-          {headings.map((heading, index) => (
-            <li
-              key={`${heading.id}-${index}`}
-              style={{ paddingLeft: `${(heading.level - 2) * 12}px` }}
-            >
-              <a
-                href={`#${heading.id}`}
-                className={`
-                  block py-1 transition-colors
-                  ${
-                    activeId === heading.id
-                      ? "text-accent font-medium"
-                      : "text-text-secondary hover:text-text-primary"
-                  }
-                `}
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
+        <ul className="space-y-1 text-sm">
+          {headings.map((heading, index) => {
+            const isActive = activeId === heading.id;
+
+            return (
+              <li key={`${heading.id}-${index}`}>
+                <button
+                  onClick={() => scrollTo(heading.id)}
+                  className={`
+                    w-full text-left block py-1 px-2 rounded transition-colors border-l-2
+                    ${
+                      isActive
+                        ? "border-accent text-accent font-medium bg-accent-muted"
+                        : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
+                    }
+                  `}
+                >
+                  {heading.text}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </nav>

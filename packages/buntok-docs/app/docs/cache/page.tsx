@@ -41,8 +41,8 @@ export default function CachePage() {
 
 const cache = new Cache();
 
-// Set with TTL (milliseconds)
-cache.set("key", "value", 60_000); // 1 minute
+// Set with TTL (seconds)
+cache.set("key", "value", 60); // 1 minute
 
 // Get (returns undefined if expired)
 const value = cache.get("key");
@@ -77,24 +77,24 @@ cache.clear();`}
           </thead>
           <tbody>
             {[
-              ["cache.get(key)", "T | null", "Get value (null if expired)"],
-              ["cache.set(key, value, ttl?)", "void", "Set value with optional TTL (seconds)"],
-              ["cache.delete(key)", "void", "Delete a key"],
-              ["cache.clear()", "void", "Clear all entries"],
-              ["cache.has(key)", "boolean", "Check if key exists and hasn't expired"],
+              ["cache.get(key)", "Promise<T | null>", "Get value (null if expired)"],
+              ["cache.set(key, value, ttl?)", "Promise<void>", "Set value with optional TTL (seconds)"],
+              ["cache.delete(key)", "Promise<void>", "Delete a key"],
+              ["cache.clear()", "Promise<void>", "Clear all entries"],
+              ["cache.has(key)", "Promise<boolean>", "Check if key exists and hasn't expired"],
               [
                 "cache.getOrSet(key, factory, ttl?)",
-                "T",
+                "Promise<T>",
                 "Get from cache or compute and cache",
               ],
               [
                 "cache.increment(key, amount?, ttl?)",
-                "number",
+                "Promise<number>",
                 "Increment numeric value (atomic)",
               ],
               [
                 "cache.decrement(key, amount?, ttl?)",
-                "number",
+                "Promise<number>",
                 "Decrement numeric value (atomic)",
               ],
               ["cache.mget(keys)", "(T | null)[]", "Get multiple keys at once"],
@@ -160,9 +160,10 @@ await cache.deletePattern("session:*");`}
         Cache for AI responses. Hashes messages to generate cache keys:
       </p>
       <CodeBlock
-        code={`import { AICache } from "@buntok/core";
+        code={`import { AICache, Cache, type CacheDriver } from "@buntok/core";
 
-const aiCache = new AICache({ ttl: 3600_000 }); // 1 hour
+const cacheDriver = new Cache();
+const aiCache = new AICache(cacheDriver);
 
 app.post("/chat", async (ctx) => {
   const { messages } = await ctx.body();
@@ -174,7 +175,7 @@ app.post("/chat", async (ctx) => {
   // Call AI
   const response = await callAI(messages);
 
-  // Cache the result
+  // Cache the result (default TTL: 3600s)
   await aiCache.set(messages, response);
 
   return ctx.json({ response });
@@ -184,6 +185,69 @@ app.post("/chat", async (ctx) => {
       <Callout type="info">
         <code>AICache</code> automatically generates cache keys by hashing the
         message array. Duplicate conversations are served from cache.
+      </Callout>
+
+      {/* ──────────────── CUSTOM DRIVERS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Custom Drivers
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The <code>Cache</code> class accepts any object implementing{" "}
+        <code>CacheDriver</code>. Here&apos;s an example using a custom Redis driver:
+      </p>
+      <CodeBlock
+        code={`import { Cache, type CacheDriver } from "@buntok/core";
+import { createClient } from "redis";
+
+class RedisCacheDriver implements CacheDriver {
+  private client: ReturnType<typeof createClient>;
+  private prefix: string;
+
+  constructor(url = "redis://localhost:6379", prefix = "cache:") {
+    this.client = createClient({ url });
+    this.prefix = prefix;
+  }
+
+  async get<T>(key: string): Promise<T | null> {
+    const raw = await this.client.get(this.prefix + key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  }
+
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    const serialized = JSON.stringify(value);
+    if (ttlSeconds) {
+      await this.client.setEx(this.prefix + key, ttlSeconds, serialized);
+    } else {
+      await this.client.set(this.prefix + key, serialized);
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.del(this.prefix + key);
+  }
+
+  async clear(): Promise<void> {
+    const keys = await this.client.keys(this.prefix + "*");
+    if (keys.length) await Promise.all(keys.map((k) => this.client.del(k)));
+  }
+
+  async keys(): Promise<string[]> {
+    const raw = await this.client.keys(this.prefix + "*");
+    return raw.map((k) => k.slice(this.prefix.length));
+  }
+}
+
+// Usage — drop-in replacement for the default memory driver
+const cache = new Cache(new RedisCacheDriver());
+await cache.set("user:1", userData, 3600); // TTL 1 hour
+const user = await cache.get<User>("user:1");`}
+      />
+
+      <Callout type="info">
+        Install <code>redis</code> via <code>bun add redis</code> for persistent caching.
       </Callout>
     </div>
   );

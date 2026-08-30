@@ -1,6 +1,6 @@
 {
 	"name": "@buntok/core",
-	"version": "2.1.2",
+	"version": "2.1.4",
 	"description": "Core HTTP framework for Bun, bring your own structure",
 	"module": "dist/core-exports.js",
 	"type": "module",
@@ -29,7 +29,7 @@
 	],
 	"scripts": {
 		"test": "bun --watch test/src/index.ts",
-		"build": "tsup && bun run build:types",
+		"build": "tsup && bun run build:types && mkdir -p dist/cli/templates && cp src/cli/templates/* dist/cli/templates/",
 		"build:types": "bunx tsc --project tsconfig.build.json",
 		"dev": "tsup --watch",
 		"typecheck": "tsc --noEmit",
@@ -57,6 +57,6 @@
 		"zod": "^4.4.3"
 	},
 	"peerDependencies": {
-		"bun": ">=1.0.0"
+		"bun": ">=1.2.0"
 	}
 }

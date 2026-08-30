@@ -121,8 +121,8 @@ const userMessages = [
 
 // Inject system prompt (prepends it, removes existing system messages)
 const messages = injectSystemPrompt(
-  "You are a helpful assistant. Be concise.",
-  userMessages
+  userMessages,
+  "You are a helpful assistant. Be concise."
 );
 // Result:
 // [
@@ -151,8 +151,7 @@ const messages = injectSystemPrompt(
       <CodeBlock
         code={`import { AICache, Cache } from "@buntok/core";
 
-const cacheDriver = new Cache();
-const aiCache = new AICache(cacheDriver);
+const aiCache = new AICache(new Cache());
 
 app.post("/chat", async (ctx) => {
   const { messages } = await ctx.body();

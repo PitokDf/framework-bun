@@ -237,6 +237,89 @@ app.post("/send-email", async (ctx) => {
 
 app.listen(1212);`}
       />
+
+      {/* ──────────────── CUSTOM DRIVERS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Custom Drivers (BullMQ)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        For production workloads with persistence, use a Redis-backed driver
+        like BullMQ. Install <code>bullmq</code> and implement the{" "}
+        <code>QueueDriver</code> interface:
+      </p>
+      <CodeBlock
+        code={`import { Queue as BullMQQueue, Worker as BullMQWorker } from "bullmq";
+import { type QueueDriver, type JobHandler } from "@buntok/core";
+
+class BullMQDriver<T> implements QueueDriver<T> {
+  private queue: BullMQQueue;
+  private worker: BullMQWorker | null = null;
+
+  constructor(name: string, redisUrl = "redis://localhost:6379") {
+    this.queue = new BullMQQueue(name, {
+      connection: { url: redisUrl },
+    });
+  }
+
+  async add(data: T, opts?: { priority?: number; delay?: number }): Promise<void> {
+    await this.queue.add("job", data, {
+      priority: opts?.priority,
+      delay: opts?.delay,
+    });
+  }
+
+  process(handler: JobHandler<T>): void {
+    this.worker = new BullMQWorker(
+      this.queue.name,
+      async (job) => {
+        await handler({
+          id: job.id!,
+          data: job.data as T,
+          priority: job.priority ?? 0,
+          delay: job.delay ?? 0,
+          attempt: job.attemptsMade,
+          createdAt: job.timestamp,
+        });
+      },
+      { connection: { url: "redis://localhost:6379" } },
+    );
+  }
+
+  // BullMQ requires async for count — return -1 as placeholder
+  size(): number { return -1; }
+
+  clear(): void { this.queue.drain(); }
+}
+
+// Usage — drop-in replacement for the default memory driver
+import { Queue } from "@buntok/core";
+
+const emailQueue = new Queue<EmailData>("emails", new BullMQDriver("emails"));`}
+      />
+
+      <Callout type="warning">
+        BullMQ&apos;s <code>getWaitingCount()</code> is async, but{" "}
+        <code>QueueDriver.size()</code> is sync. The example returns{" "}
+        <code>-1</code> as a placeholder. For accurate counts, use
+        BullMQ&apos;s API directly.
+      </Callout>
+
+      <Callout type="info">
+        BullMQ provides built-in support for concurrency, rate limiting,
+        repeatable jobs, and a monitoring dashboard. See{" "}
+        <a
+          href="https://docs.bullmq.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent hover:underline"
+        >
+          BullMQ docs
+        </a>{" "}
+        for details.
+      </Callout>
     </div>
   );
 }

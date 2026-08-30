@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "version": "1.0.0",
-    "title": "Buntok API Documentation",
-    "description": "Auto-generated OpenAPI docs from Zod schemas"
+    "version": "1.0.1",
+    "title": "API Documentation",
+    "description": "api docs for buntok test"
   },
   "components": {
     "schemas": {},
@@ -11,15 +11,6 @@
   },
   "paths": {
     "/favicon.ico": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/docs/*": {
       "get": {
         "responses": {
           "200": {
@@ -49,10 +40,14 @@
                     "type": "string",
                     "format": "binary",
                     "description": "Binary file"
+                  },
+                  "name": {
+                    "type": "string"
                   }
                 },
                 "required": [
-                  "avatar"
+                  "avatar",
+                  "name"
                 ]
               }
             }
@@ -70,7 +65,8 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 3
             },
             "required": true,
             "name": "name",
@@ -124,7 +120,8 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                   },
                   "role": {
                     "type": "string",

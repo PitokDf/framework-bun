@@ -33,7 +33,7 @@ export interface OAuthProviderConfig {
 
 export interface OAuthProvider {
   readonly id: string;
-  createAuthorizationURL(state: string, codeVerifier: string): string;
+  createAuthorizationURL(state: string, codeVerifier: string): Promise<string> | string;
   validateAuthorizationCode(
     code: string,
     redirectURI: string,
