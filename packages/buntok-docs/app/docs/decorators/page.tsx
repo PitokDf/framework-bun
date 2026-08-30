@@ -94,34 +94,36 @@ class UserController {
         decorator takes a path string as its first argument.
       </p>
       <CodeBlock
-        code={`@Controller("/users")
+        code={`import type { Context } from "@buntok/core";
+
+@Controller("/users")
 class UserController {
   @Get("/")
-  list(ctx) { /* GET /users */ }
+  list(ctx: Context) { /* GET /users */ }
 
   @Get("/:id")
-  detail(ctx) { /* GET /users/:id */ }
+  detail(ctx: Context) { /* GET /users/:id */ }
 
   @Post("/")
-  create(ctx) { /* POST /users */ }
+  create(ctx: Context) { /* POST /users */ }
 
   @Put("/:id")
-  update(ctx) { /* PUT /users/:id */ }
+  update(ctx: Context) { /* PUT /users/:id */ }
 
   @Patch("/:id")
-  patch(ctx) { /* PATCH /users/:id */ }
+  patch(ctx: Context) { /* PATCH /users/:id */ }
 
   @Delete("/:id")
-  remove(ctx) { /* DELETE /users/:id */ }
+  remove(ctx: Context) { /* DELETE /users/:id */ }
 
   @Options("/info")
-  options(ctx) { /* OPTIONS /users/info */ }
+  options(ctx: Context) { /* OPTIONS /users/info */ }
 
   @Head("/check")
-  check(ctx) { /* HEAD /users/check */ }
+  check(ctx: Context) { /* HEAD /users/check */ }
 
   @All("/health")
-  health(ctx) { /* All methods on /users/health */ }
+  health(ctx: Context) { /* All methods on /users/health */ }
 }`}
       />
 
@@ -179,10 +181,12 @@ class UserController {
         Useful for complex search queries that don&apos;t fit in query params.
       </p>
       <CodeBlock
-        code={`@Controller("/search")
+        code={`import type { Context } from "@buntok/core";
+
+@Controller("/search")
 class SearchController {
   @Query("/")
-  async search(ctx) {
+  async search(ctx: Context) {
     const body = await ctx.body(); // { filters: [...], sort: "date" }
     const results = await db.search(body);
     return ctx.json(results);
@@ -202,13 +206,15 @@ class SearchController {
         stack in declaration order.
       </p>
       <CodeBlock
-        code={`const auth = async (ctx, next) => {
+        code={`import type { Context } from "@buntok/core";
+
+const auth = async (ctx: Context, next) => {
   const token = ctx.getCookie("token");
   if (!token) return ctx.json({ error: "Unauthorized" }, 401);
   return next();
 };
 
-const log = async (ctx, next) => {
+const log = async (ctx: Context, next) => {
   console.log(ctx.request.method, ctx.request.url);
   return next();
 };
@@ -216,14 +222,14 @@ const log = async (ctx, next) => {
 @Controller("/users")
 class UserController {
   @Get("/public")
-  publicEndpoint(ctx) {
+  publicEndpoint(ctx: Context) {
     return ctx.json({ data: "public" });
   }
 
   @Get("/private")
   @Use(auth)
   @Use(log)
-  privateEndpoint(ctx) {
+  privateEndpoint(ctx: Context) {
     return ctx.json({ data: "private" });
   }
 }
@@ -269,6 +275,7 @@ class UserController {
       </Heading>
       <CodeBlock
         code={`import { zValidator, z } from "@buntok/core";
+import type { ZodCtx } from "@buntok/core";
 
 const userSchema = z.object({
   name: z.string().min(1),
@@ -279,14 +286,14 @@ const userSchema = z.object({
 class UserController {
   @Post("/")
   @Use(zValidator("body", userSchema))
-  async create(ctx) {
+  async create(ctx: ZodCtx<{ body: typeof userSchema }>) {
     const data = ctx.valid("body"); // Fully typed!
     return ctx.json({ created: true, ...data }, 201);
   }
 
   @Get("/search")
   @Use(zValidator("query", searchSchema))
-  search(ctx) {
+  search(ctx: ZodCtx<{ query: typeof searchSchema }>) {
     const { q } = ctx.valid("query");
     return ctx.json({ results: [] });
   }
@@ -308,10 +315,12 @@ class UserController {
         <code>403 Forbidden</code>.
       </p>
       <CodeBlock
-        code={`const isAdmin = (ctx) => ctx.user?.role === "admin";
-const isActive = (ctx) => ctx.user?.status === "active";
+        code={`import type { Context } from "@buntok/core";
 
-const hasApiKey = async (ctx) => {
+const isAdmin = (ctx: Context) => ctx.user?.role === "admin";
+const isActive = (ctx: Context) => ctx.user?.status === "active";
+
+const hasApiKey = async (ctx: Context) => {
   const key = ctx.request.headers.get("x-api-key");
   const valid = await validateApiKey(key);
   return valid;
@@ -321,19 +330,19 @@ const hasApiKey = async (ctx) => {
 class AdminController {
   @Get("/dashboard")
   @UseGuard(isAdmin)
-  dashboard(ctx) {
+  dashboard(ctx: Context) {
     return ctx.json({ secret: "admin data" });
   }
 
   @Get("/reports")
   @UseGuard(isAdmin, isActive)
-  reports(ctx) {
+  reports(ctx: Context) {
     return ctx.json({ reports: [] });
   }
 
   @Get("/api-data")
   @UseGuard(hasApiKey)
-  apiData(ctx) {
+  apiData(ctx: Context) {
     return ctx.json({ data: "sensitive" });
   }
 }`}
@@ -445,13 +454,15 @@ class Logger {
         class fields.
       </p>
       <CodeBlock
-        code={`@Controller("/users")
+        code={`import type { Context } from "@buntok/core";
+
+@Controller("/users")
 class UserController {
   @Inject(UserService) private userService: UserService;
   @Inject(UserRepository) private userRepo: UserRepository;
 
   @Get("/")
-  async list(ctx) {
+  async list(ctx: Context) {
     const users = await this.userService.findAll();
     return ctx.json(users);
   }
@@ -498,12 +509,14 @@ class UserController {
         last and captures all routes.
       </p>
       <CodeBlock
-        code={`@Controller("/users")          // 4. Captures all routes
+        code={`import type { Context } from "@buntok/core";
+
+@Controller("/users")          // 4. Captures all routes
 class UserController {
   @Get("/")                   // 3. Registers GET route
   @Use(auth)                  // 2. Attaches middleware
   @Use(log)                   // 1. Attaches middleware (runs first)
-  async list(ctx) {
+  async list(ctx: Context) {
     return ctx.json([]);
   }
 }
@@ -528,6 +541,7 @@ class UserController {
   App, Controller, Get, Post, Use, UseGuard,
   Injectable, Inject, Container, zValidator, z
 } from "@buntok/core";
+import type { Context, ZodCtx } from "@buntok/core";
 
 // Service
 @Injectable()
@@ -541,14 +555,14 @@ class UserService {
 }
 
 // Middleware
-const auth = async (ctx, next) => {
+const auth = async (ctx: Context, next) => {
   const token = ctx.getCookie("token");
   if (!token) return ctx.json({ error: "Unauthorized" }, 401);
   return next();
 };
 
 // Guards
-const isAdmin = (ctx) => ctx.user?.role === "admin";
+const isAdmin = (ctx: Context) => ctx.user?.role === "admin";
 
 // Schema
 const createUserSchema = z.object({
@@ -562,7 +576,7 @@ class UserController {
   @Inject(UserService) private service: UserService;
 
   @Get("/")
-  async list(ctx) {
+  async list(ctx: Context) {
     const users = await this.service.findAll();
     return ctx.json(users);
   }
@@ -571,7 +585,7 @@ class UserController {
   @Use(auth)
   @UseGuard(isAdmin)
   @Use(zValidator("body", createUserSchema))
-  async create(ctx) {
+  async create(ctx: ZodCtx<{ body: typeof createUserSchema }>) {
     const data = ctx.valid("body");
     const user = await this.service.create(data);
     return ctx.json({ created: true, ...user }, 201);

@@ -36,22 +36,23 @@ export default function ControllersPage() {
       </p>
       <CodeBlock
         code={`import { Controller, Get, Post } from "@buntok/core";
+import type { Context } from "@buntok/core";
 
 @Controller("/users")
 class UserController {
   @Get("/")
-  list(ctx) {
+  list(ctx: Context) {
     return ctx.json([{ id: 1, name: "John" }]);
   }
 
   @Get("/:id")
-  detail(ctx) {
+  detail(ctx: Context) {
     const { id } = ctx.params;
     return ctx.json({ id, name: "John" });
   }
 
   @Post("/")
-  async create(ctx) {
+  async create(ctx: Context) {
     const body = await ctx.body();
     return ctx.json({ created: true, ...body }, 201);
   }
@@ -156,8 +157,9 @@ app.listen(1212);`}
       <CodeBlock
         code={`import { Controller, Get, Use } from "@buntok/core";
 import { zValidator } from "@buntok/core";
+import type { Context, ZodCtx } from "@buntok/core";
 
-const auth = async (ctx, next) => {
+const auth = async (ctx: Context, next) => {
   const token = ctx.getCookie("token");
   if (!token) return ctx.json({ error: "Unauthorized" }, 401);
   return next();
@@ -166,19 +168,19 @@ const auth = async (ctx, next) => {
 @Controller("/users")
 class UserController {
   @Get("/public")
-  publicEndpoint(ctx) {
+  publicEndpoint(ctx: Context) {
     return ctx.json({ data: "public" });
   }
 
   @Get("/private")
   @Use(auth)
-  privateEndpoint(ctx) {
+  privateEndpoint(ctx: Context) {
     return ctx.json({ data: "private" });
   }
 
   @Get("/validated")
   @Use(zValidator("query", paginationSchema))
-  validatedEndpoint(ctx) {
+  validatedEndpoint(ctx: ZodCtx<{ query: typeof paginationSchema }>) {
     const { page, limit } = ctx.valid("query");
     return ctx.json({ page, limit });
   }
@@ -198,15 +200,16 @@ class UserController {
       </p>
       <CodeBlock
         code={`import { Controller, Get, UseGuard } from "@buntok/core";
+import type { Context } from "@buntok/core";
 
-const isAdmin = (ctx) => ctx.user?.role === "admin";
-const isActive = (ctx) => ctx.user?.status === "active";
+const isAdmin = (ctx: Context) => ctx.user?.role === "admin";
+const isActive = (ctx: Context) => ctx.user?.status === "active";
 
 @Controller("/admin")
 class AdminController {
   @Get("/dashboard")
   @UseGuard(isAdmin, isActive)
-  dashboard(ctx) {
+  dashboard(ctx: Context) {
     return ctx.json({ secret: "admin data" });
   }
 }`}
@@ -255,15 +258,17 @@ api.registerController(UserController);
         routes with the same method name.
       </p>
       <CodeBlock
-        code={`@Controller("/base")
+        code={`import type { Context } from "@buntok/core";
+
+@Controller("/base")
 class Base {
   @Get("/health")
-  health(ctx) {
+  health(ctx: Context) {
     return ctx.json({ ok: true });
   }
 
   @Get("/info")
-  info(ctx) {
+  info(ctx: Context) {
     return ctx.json({ version: "1.0" });
   }
 }
@@ -271,13 +276,13 @@ class Base {
 @Controller("/users")
 class UserController extends Base {
   @Get("/")
-  list(ctx) {
+  list(ctx: Context) {
     return ctx.json([]);
   }
 
   // Override parent's /health route
   @Get("/health")
-  customHealth(ctx) {
+  customHealth(ctx: Context) {
     return ctx.json({ status: "custom" });
   }
 }
@@ -335,7 +340,9 @@ class UserController extends BaseController<User, CreateUser, Partial<User>> {
         Overriding Methods
       </Heading>
       <CodeBlock
-        code={`@Controller("/users")
+        code={`import type { Context } from "@buntok/core";
+
+@Controller("/users")
 class UserController extends BaseController<User, CreateUser> {
   constructor(private service: UserService) {
     super(service);
@@ -343,7 +350,7 @@ class UserController extends BaseController<User, CreateUser> {
 
   // Override the default getAll behavior
   @Get("/")
-  override async list(ctx) {
+  override async list(ctx: Context) {
     const users = await this.service.findAllWithRoles();
     return ctx.success(users);
   }
@@ -368,6 +375,7 @@ class UserController extends BaseController<User, CreateUser> {
       </p>
       <CodeBlock
         code={`import { Injectable, Inject, Controller, Get } from "@buntok/core";
+import type { Context } from "@buntok/core";
 
 @Injectable()
 class UserService {
@@ -383,7 +391,7 @@ class UserController {
   ) {}
 
   @Get("/")
-  async list(ctx) {
+  async list(ctx: Context) {
     const users = await this.userService.findAll();
     return ctx.json(users);
   }

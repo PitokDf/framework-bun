@@ -162,6 +162,7 @@ bun run start`}
       <CodeBlock
         code={`// src/controllers/user.controller.ts
 import { Controller, Get, Post, Put, Delete } from "@buntok/core";
+import type { Context } from "@buntok/core";
 import { UserService } from "../services/user.service";
 
 @Controller("/users")
@@ -169,13 +170,13 @@ export class UserController {
   private service = new UserService();
 
   @Get("/")
-  async findAll(ctx) {
+  async findAll(ctx: Context) {
     const users = await this.service.findAll();
     return ctx.json({ data: users });
   }
 
   @Get("/:id")
-  async findById(ctx) {
+  async findById(ctx: Context) {
     const user = await this.service.findById(ctx.params.id);
     if (!user) {
       return ctx.json({ message: "User not found" }, 404);
@@ -184,21 +185,21 @@ export class UserController {
   }
 
   @Post("/")
-  async create(ctx) {
+  async create(ctx: Context) {
     const body = await ctx.body();
     const user = await this.service.create(body);
     return ctx.json({ data: user }, 201);
   }
 
   @Put("/:id")
-  async update(ctx) {
+  async update(ctx: Context) {
     const body = await ctx.body();
     const user = await this.service.update(ctx.params.id, body);
     return ctx.json({ data: user });
   }
 
   @Delete("/:id")
-  async delete(ctx) {
+  async delete(ctx: Context) {
     await this.service.delete(ctx.params.id);
     return ctx.json({ message: "User deleted" });
   }

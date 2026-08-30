@@ -222,6 +222,7 @@ export function HomeSection() {
                     minWidth: "300px",
                   }}
                 >{`import { Controller, Get, Post, Use, zValidator, ZodCtx, z } from '@buntok/core';
+import type { Context } from '@buntok/core';
 
 const UserSchema = z.object({
   name: z.string().min(2),
@@ -232,8 +233,8 @@ const UserSchema = z.object({
 export class UserController {
 
   @Get('/')
-  async list() {
-    return [{ id: 1, name: 'Alice' }];
+  async list(ctx: Context) {
+    return ctx.success([{ id: 1, name: 'Alice' }]);
   }
 
   @Post('/')
