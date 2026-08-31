@@ -11,6 +11,7 @@ export type {
 	ErrorHandler,
 	ExtractParams,
 	Handler,
+	HandlerReturn,
 	Middleware,
 	NotFoundHandler,
 	RouteContext,
@@ -18,7 +19,7 @@ export type {
 	WSHandler,
 	ZodCtx,
 } from "./app";
-export { App } from "./app";
+export { App, type ApiDocsOptions, type StaticOptions, type WSOptions } from "./app";
 // Auth
 export { JwtService, requireAuth } from "./auth";
 // OAuth
@@ -78,8 +79,6 @@ export {
 	Get,
 	type GuardFn,
 	Head,
-	Inject,
-	Injectable,
 	Options,
 	Patch,
 	Post,
@@ -87,12 +86,26 @@ export {
 	Query,
 	Use,
 	UseGuard,
+	// Nest-style alias (deprecated old kept)
+	UseGuards,
+	// New zero-cost decorators
+	SetMetadata,
+	Public,
+	HttpCode,
+	SetHeader,
+	Header,
+	Redirect,
+	Version,
+	applyDecorators,
+	getMetadata,
 } from "./decorators";
 // Native FFI
 export { getBackend, isNativeAvailable } from "./ffi";
 export type { RetryOptions } from "./helpers/async";
 // Async helpers
 export { delay, retry } from "./helpers/async";
+// Response helpers (Elysia-style flexible return)
+export { toResponse, toResponseMaybeAsync } from "./helpers/response";
 // Error helpers
 export {
 	asyncHandler,
@@ -134,7 +147,17 @@ export {
 	sha512,
 } from "./helpers/crypto";
 // Date helpers
-export { formatDate, timeAgo } from "./helpers/date";
+export {
+	addDays,
+	daysBetween,
+	endOfDay,
+	formatDate,
+	formatDuration,
+	isAfter,
+	isBefore,
+	startOfDay,
+	timeAgo,
+} from "./helpers/date";
 // Timezone helpers
 export {
 	formatGroupLabel,
@@ -261,17 +284,19 @@ export {
 export { Router } from "./router";
 // Scheduler / CronJob
 export {
+	BunCronSchedulerDriver,
 	CronJob,
 	MemorySchedulerDriver,
 	Scheduler,
 	type SchedulerDriver,
 	setDefaultSchedulerDriver,
 } from "./schedule";
-// SSE
-export type { SSEMessage, SSEOptions } from "./sse";
-export { createSSE, SSE, SSEBroadcaster } from "./sse";
+// SSE — industrial, pluggable (mirip StorageDriver)
+export type { SSEBroadcasterOptions, SSEHistoryStore, SSEMessage, SSEOptions, SSEPubSub } from "./sse";
+export { MemorySSEHistory, MemorySSEPubSub, SSE, SSEBroadcaster, createSSE } from "./sse";
 // Upload
 export type {
+	ImageUploadedFile,
 	ParseUploadResult,
 	StorageDriver,
 	UploadedFile,
@@ -285,5 +310,15 @@ export {
 	handleUploads,
 	uploader,
 } from "./upload";
-// WebSocket helpers
-export { Room, validateWSMessage, wsAuth, wsHeartbeat } from "./ws-helpers";
+// WebSocket helpers — industrial, pluggable
+export type { RoomOptions, WSPubSub, WSRateLimitOptions, WSRateLimitStore } from "./ws-helpers";
+export {
+	MemoryWSPubSub,
+	MemoryWSRateLimitStore,
+	Room,
+	validateWSMessage,
+	wsAuth,
+	wsHeartbeat,
+	wsHeartbeatPong,
+	wsRateLimit,
+} from "./ws-helpers";

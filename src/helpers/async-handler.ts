@@ -1,16 +1,18 @@
 import type { Context } from "../context";
+import { toResponse } from "./response";
 
 type RouteHandler<DI = Record<string, unknown>> = (
 	ctx: Context<DI>,
 ) => Promise<Response>;
 
 export function asyncHandler<DI = Record<string, unknown>>(
-	handler: (ctx: Context<DI>) => Promise<Response | undefined>,
+	// biome-ignore lint/suspicious/noExplicitAny: flexible return
+	handler: (ctx: Context<DI>) => Promise<any>,
 ): RouteHandler<DI> {
 	return async (ctx: Context<DI>): Promise<Response> => {
 		try {
 			const result = await handler(ctx);
-			return result ?? new Response(null, { status: 204 });
+			return toResponse(result);
 		} catch (error: unknown) {
 			const message =
 				error instanceof Error ? error.message : "Internal Server Error";

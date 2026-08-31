@@ -41,7 +41,7 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
   const menuOpen = isDocs ? isSidebarOpen : mobileNavOpen;
 
   return (
-    <header className="sticky top-0 z-50 w-full h-14 border-b border-border-primary bg-bg-primary/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full h-16 border-b border-border-primary bg-bg-primary/70 backdrop-blur-md supports-[backdrop-filter]:bg-bg-primary/60 transition-colors duration-200">
       <div className="flex h-full items-center px-4 lg:px-6">
         {/* Mobile hamburger — docs & non-docs share one button */}
         <button
@@ -70,15 +70,15 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden sm:flex items-center gap-1 ml-3 flex-1">
+        <div className="hidden sm:flex items-center gap-1 ml-6 flex-1">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 isActive(item.href)
-                  ? "bg-accent-muted text-accent font-medium"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-secondary"
+                  ? "bg-accent text-white shadow-sm"
+                  : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
               }`}
             >
               {item.label}
@@ -88,7 +88,7 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
 
         {/* Right side */}
         <div className="flex items-center gap-2 ml-auto">
-          {/* Search trigger */}
+          {/* Search trigger - Elysia pill */}
           {pathname.startsWith("/docs") && (
             <button
               onClick={() => {
@@ -96,7 +96,7 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
                   new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
                 );
               }}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border-primary bg-bg-secondary text-text-secondary text-xs hover:border-accent/50 hover:bg-bg-tertiary transition-all"
+              className="hidden sm:flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full border border-border-primary bg-bg-secondary text-text-secondary text-xs hover:border-accent/30 hover:bg-accent-muted transition-all"
             >
               <svg
                 className="w-3.5 h-3.5"

@@ -7,10 +7,7 @@ import { Callout } from "@/components/ui/Callout";
 export default function GettingStartedPage() {
   return (
     <div>
-      <Heading
-        level={1}
-        className="text-4xl font-bold mt-8 mb-4 text-text-primary"
-      >
+      <Heading level={1} className="text-4xl font-bold mb-4 text-text-primary">
         Getting Started
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -89,7 +86,8 @@ bunx buntok init`}
         Generated <code>src/index.ts</code>
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        After running <code>buntok init</code>, your entry point looks like this:
+        After running <code>buntok init</code>, your entry point looks like
+        this:
       </p>
       <CodeBlock
         code={`import { App } from "@buntok/core";
@@ -743,9 +741,8 @@ export class UserController {
       />
 
       <Callout type="info">
-        Use <code>buntok create user --repo</code>,{" "}
-        <code>--service</code>, or <code>--controller</code> for partial
-        generation.
+        Use <code>buntok create user --repo</code>, <code>--service</code>, or{" "}
+        <code>--controller</code> for partial generation.
       </Callout>
 
       {/* ──────────────── PACKAGE SCRIPTS ──────────────── */}
@@ -878,9 +875,7 @@ PORT=3000 bun run dev`}
         <li>
           Ensure Bun is installed and up to date: <code>bun --version</code>
         </li>
-        <li>
-          Check if you have write permissions in the current directory
-        </li>
+        <li>Check if you have write permissions in the current directory</li>
       </ul>
 
       <Heading
@@ -946,8 +941,7 @@ PORT=3000 bun run dev`}
           <a href="/docs/controllers" className="text-accent hover:underline">
             Controllers
           </a>{" "}
-          - Organize routes with controllers and{" "}
-          <code>BaseController</code>
+          - Organize routes with controllers and <code>BaseController</code>
         </li>
         <li>
           <a href="/docs/repository" className="text-accent hover:underline">

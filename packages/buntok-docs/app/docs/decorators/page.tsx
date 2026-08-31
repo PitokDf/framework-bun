@@ -76,10 +76,11 @@ class UserController {
       </div>
 
       <Callout type="warning">
-        <code>@Controller</code> must be the topmost decorator. TypeScript
-        decorators execute bottom-to-top, so <code>@Controller</code> runs last
-        and captures all method routes that were registered by{" "}
-        <code>@Get</code>, <code>@Post</code>, etc.
+        <code>@Controller</code> must be the topmost decorator. Stage 3 (TC39)
+        decorators are evaluated top-to-bottom but applied bottom-to-top, so{" "}
+        <code>@Controller</code> (topmost, evaluated first) is applied last and
+        captures all method routes already registered by <code>@Get</code>,{" "}
+        <code>@Post</code>, etc.
       </Callout>
 
       {/* ──────────────── ROUTE DECORATORS ──────────────── */}
@@ -300,19 +301,107 @@ class UserController {
 }`}
       />
 
+      {/* ──────────────── RESPONSE DECORATORS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Response Decorators
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Zero-cost boot-time metadata — no per-request overhead. Configure status,
+        headers and redirects without touching handler logic.
+      </p>
+      <CodeBlock
+        code={`import { HttpCode, SetHeader, Redirect, Version } from "@buntok/core";
+
+@Controller("/users")
+class UserController {
+  @Post("/")
+  @HttpCode(201)
+  create() { return { id: 1 }; } // 201 instead of 200
+
+  @Get("/")
+  @SetHeader("x-cache", "hit")
+  list() { return []; } // header x-cache: hit
+
+  @Get("/old")
+  @Redirect("/new", 301)
+  old() {} // 301 -> /new, handler ignored; return {url: "/other"} to override
+}`}
+      />
+      <Callout type="info">
+        <code>@Header</code> is deprecated alias to <code>@SetHeader</code>{" "}
+        (same reference). <code>toResponse()</code> handles flexible return
+        status/header/redirect composition.
+      </Callout>
+
+      {/* ──────────────── @SETMETADATA ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        @SetMetadata & @Public
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Attach arbitrary metadata to handlers (read via <code>getMetadata</code>{" "}
+        in guards/interceptors). <code>@Public()</code> is shorthand for{" "}
+        <code>SetMetadata("isPublic", true)</code>.
+      </p>
+      <CodeBlock
+        code={`import { SetMetadata, Public, getMetadata } from "@buntok/core";
+
+@SetMetadata("roles", ["admin"])
+@Get("/admin")
+admin() {}
+
+@Public()
+@Get("/health")
+health() { return { ok: true }; }
+
+// In guard
+const roles = getMetadata(AdminController, "admin", "roles");`}
+      />
+
+      {/* ──────────────── APPLYDECORATORS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        applyDecorators
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Compose multiple decorators (Nest <code>applyDecorators</code> alias) —
+        boot-time helper.
+      </p>
+      <CodeBlock
+        code={`import { applyDecorators, SetMetadata, UseGuard } from "@buntok/core";
+
+const Auth = (...roles: string[]) => applyDecorators(
+  SetMetadata("roles", roles),
+  UseGuard((ctx) => checkRoles(ctx, roles))
+);
+
+@Auth("admin")
+@Get("/secret")
+secret() {}`}
+      />
+
       {/* ──────────────── @USEGUARD ──────────────── */}
       <Heading
         level={2}
         className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
       >
-        @UseGuard
+        @UseGuard / @UseGuards
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         A convenience decorator for boolean authorization checks. A guard is a
         function that returns <code>boolean</code> or{" "}
         <code>Promise&lt;boolean&gt;</code>. If any guard returns{" "}
         <code>false</code>, the request is rejected with{" "}
-        <code>403 Forbidden</code>.
+        <code>403 Forbidden</code>. <code>UseGuards</code> is the recommended
+        plural alias — <code>UseGuard</code> remains deprecated but same
+        reference.
       </p>
       <CodeBlock
         code={`import type { Context } from "@buntok/core";
@@ -384,117 +473,13 @@ class AdminController {
         are fully supported.
       </Callout>
 
-      {/* ──────────────── @INJECTABLE ──────────────── */}
-      <Heading
-        level={2}
-        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
-      >
-        @Injectable
-      </Heading>
-      <p className="my-3 text-text-secondary leading-relaxed">
-        Marks a class as container-managed for dependency injection.
-      </p>
-      <CodeBlock
-        code={`// Singleton (default) - one instance shared across the app
-@Injectable()
-class UserService {
-  async findAll() {
-    return await db.user.findMany();
-  }
-}
-
-// Transient - new instance each time it's injected
-@Injectable({ scope: "transient" })
-class Logger {
-  log(msg) { console.log(msg); }
-}`}
-      />
-
-      <div className="my-4 overflow-x-auto">
-        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
-          <thead className="bg-bg-tertiary border-b border-border-primary">
-            <tr>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">
-                Option
-              </th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">
-                Type
-              </th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">
-                Default
-              </th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">
-                Description
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">scope</td>
-              <td className="px-4 py-2 font-mono">"singleton" | "transient"</td>
-              <td className="px-4 py-2">"singleton"</td>
-              <td className="px-4 py-2">
-                <code>singleton</code>: shared instance, <code>transient</code>:
-                new instance per injection
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* ──────────────── @INJECT ──────────────── */}
-      <Heading
-        level={2}
-        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
-      >
-        @Inject
-      </Heading>
-      <p className="my-3 text-text-secondary leading-relaxed">
-        Declares a dependency to be resolved from the IoC container. Use on
-        class fields.
-      </p>
-      <CodeBlock
-        code={`import type { Context } from "@buntok/core";
-
-@Controller("/users")
-class UserController {
-  @Inject(UserService) private userService: UserService;
-  @Inject(UserRepository) private userRepo: UserRepository;
-
-  @Get("/")
-  async list(ctx: Context) {
-    const users = await this.userService.findAll();
-    return ctx.json(users);
-  }
-}`}
-      />
-
-      <div className="my-4 overflow-x-auto">
-        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
-          <thead className="bg-bg-tertiary border-b border-border-primary">
-            <tr>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">
-                Parameter
-              </th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">
-                Type
-              </th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">
-                Description
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">token</td>
-              <td className="px-4 py-2 font-mono">Token</td>
-              <td className="px-4 py-2">
-                Class constructor or string token to resolve
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {/* ──────────────── @INJECTABLE / @INJECT (REMOVED) ──────────────── */}
+      <Callout type="warning">
+        <code>@Injectable</code> & <code>@Inject</code> sudah dihapus di{" "}
+        <code>v2.1+</code>. Gunakan <code>Container.register</code> dengan{" "}
+        <code>useClass</code>/<code>useFactory</code> + <code>scope</code> untuk
+        DI. Lihat halaman <a href="/docs/ioc" className="text-accent hover:underline">IoC Container</a>.
+      </Callout>
 
       {/* ──────────────── DECORATOR ORDERING ──────────────── */}
       <Heading
@@ -504,24 +489,26 @@ class UserController {
         Decorator Ordering
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        TypeScript decorators execute <strong>bottom-to-top</strong>. The{" "}
-        <code>@Controller</code> decorator must always be on top because it runs
-        last and captures all routes.
+        Stage 3 decorators: factories are evaluated <strong>top-to-bottom</strong>{" "}
+        but applied <strong>bottom-to-top</strong>. <code>@Controller</code> is
+        evaluated first (topmost) but applied last, so it captures all routes.
       </p>
       <CodeBlock
         code={`import type { Context } from "@buntok/core";
 
-@Controller("/users")          // 4. Captures all routes
+@Controller("/users")          // 4. Evaluated 1st, applied 4th → captures all
 class UserController {
-  @Get("/")                   // 3. Registers GET route
-  @Use(auth)                  // 2. Attaches middleware
-  @Use(log)                   // 1. Attaches middleware (runs first)
+  @Get("/")                   // 3. Evaluated 4th, applied 1st → creates entry
+  @Use(auth)                  // 2. Evaluated 2nd, applied 3rd → unshift → runs 1st
+  @Use(log)                   // 1. Evaluated 3rd, applied 2nd → unshift → runs 2nd
   async list(ctx: Context) {
     return ctx.json([]);
   }
 }
 
-// Execution order: log → auth → list`}
+// Evaluate: Controller → auth → log → Get (top-to-bottom)
+// Apply:    Get → log → auth → Controller (bottom-to-top)
+// Execution order: auth → log → list`}
       />
 
       <Callout type="warning">
@@ -539,12 +526,11 @@ class UserController {
       <CodeBlock
         code={`import {
   App, Controller, Get, Post, Use, UseGuard,
-  Injectable, Inject, Container, zValidator, z
+  Container, zValidator, z
 } from "@buntok/core";
 import type { Context, ZodCtx } from "@buntok/core";
 
-// Service
-@Injectable()
+// Service — plain class, no decorator
 class UserService {
   async findAll() {
     return await db.user.findMany();
@@ -570,10 +556,10 @@ const createUserSchema = z.object({
   email: z.string().email(),
 });
 
-// Controller
+// Controller — constructor injection via Container factory
 @Controller("/users")
 class UserController {
-  @Inject(UserService) private service: UserService;
+  constructor(private service: UserService) {}
 
   @Get("/")
   async list(ctx: Context) {
@@ -592,13 +578,16 @@ class UserController {
   }
 }
 
-// Setup
+// Setup — Container factory untuk DI
 const app = new App();
 const container = new Container();
-container.registerClass(UserService);
+container.register(UserService, { useClass: UserService });
+container.register(UserController, {
+  useFactory: (c) => new UserController(c.resolve(UserService)),
+});
 
 app.setContainer(container);
-app.registerController(UserController);
+app.registerController(container.resolve(UserController));
 app.listen(1212);`}
       />
 

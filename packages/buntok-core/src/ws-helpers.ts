@@ -11,37 +11,52 @@ interface WSDataWithHeartbeat<DI> extends WSData<DI> {
 	};
 }
 
+// ── Pluggable PubSub (mirip StorageDriver) ──
+export interface WSPubSub {
+	/** Publish ke channel — memory default, Redis pluggable */
+	publish(channel: string, message: string | object): Promise<void> | void;
+	/** Subscribe — return unsubscribe */
+	subscribe(channel: string, handler: (message: string | object) => void): () => void;
+}
+
+export class MemoryWSPubSub implements WSPubSub {
+	private channels = new Map<string, Set<(m: string | object) => void>>();
+	publish(channel: string, message: string | object): void {
+		const subs = this.channels.get(channel);
+		if (!subs) return;
+		for (const cb of subs) {
+			try { cb(message); } catch {}
+		}
+	}
+	subscribe(channel: string, handler: (m: string | object) => void): () => void {
+		let set = this.channels.get(channel);
+		if (!set) { set = new Set(); this.channels.set(channel, set); }
+		set.add(handler);
+		return () => set!.delete(handler);
+	}
+}
+
+// ── Rate limit store pluggable ──
+export interface WSRateLimitStore {
+	incr(key: string, windowMs: number): Promise<number> | number;
+}
+
+export class MemoryWSRateLimitStore implements WSRateLimitStore {
+	private map = new Map<string, { count: number; resetAt: number }>();
+	incr(key: string, windowMs: number): number {
+		const now = Date.now();
+		const ent = this.map.get(key);
+		if (!ent || now > ent.resetAt) {
+			this.map.set(key, { count: 1, resetAt: now + windowMs });
+			return 1;
+		}
+		ent.count++;
+		return ent.count;
+	}
+}
+
 /**
  * Validate a WebSocket message against a Zod schema.
- *
- * @example
- * ```ts
- * import { z } from "zod";
- * import { validateWSMessage } from "@buntok/core";
- *
- * const messageSchema = z.object({
- *   type: z.enum(["chat", "ping", "join"]),
- *   payload: z.string().optional(),
- * });
- *
- * app.ws("/chat", {
- *   message: (ws, message) => {
- *     const result = validateWSMessage(messageSchema, message);
- *
- *     if (!result.success) {
- *       ws.send(JSON.stringify({ error: "Invalid message", details: result.errors }));
- *       return;
- *     }
- *
- *     // result.data is fully typed
- *     switch (result.data.type) {
- *       case "chat": handleChat(ws, result.data.payload); break;
- *       case "ping": ws.send(JSON.stringify({ type: "pong" })); break;
- *       case "join": handleJoin(ws, result.data.payload); break;
- *     }
- *   },
- * });
- * ```
  */
 export function validateWSMessage<T>(
 	schema: z.ZodSchema<T>,
@@ -73,213 +88,213 @@ export function validateWSMessage<T>(
 }
 
 /**
- * Room class for managing WebSocket connections in named groups.
+ * Room class — in-memory default, pluggable ke Redis via pubSub
+ * Mirip LocalDiskStorage vs MemoryStorage pattern.
  *
- * @example
+ * @example Memory (default)
  * ```ts
- * import { Room } from "@buntok/core";
- *
- * const rooms = new Map<string, Room>();
- *
- * app.ws("/chat", {
- *   open: (ws) => {
- *     const roomName = ws.data.ctx.query.get("room") || "general";
- *     let room = rooms.get(roomName);
- *     if (!room) {
- *       room = new Room(roomName);
- *       rooms.set(roomName, room);
- *     }
- *     room.join(ws);
- *     ws.data.room = room;
- *   },
- *   message: (ws, msg) => {
- *     ws.data.room?.broadcast(msg, ws);
- *   },
- *   close: (ws) => {
- *     ws.data.room?.leave(ws);
- *   },
- * });
+ * const room = new Room("chat");
+ * app.ws("/chat", { open: (ws)=> room.join(ws), message: (ws,msg)=> room.broadcast(msg, ws) })
+ * ```
+ * @example Redis (pluggable)
+ * ```ts
+ * class RedisWSPubSub implements WSPubSub { constructor(private redis: Redis){} publish(ch,msg){ redis.publish(ch, typeof msg==="object"?JSON.stringify(msg):msg as string)} subscribe(ch,cb){ redis.subscribe(ch,(m)=>cb(m)); return ()=>redis.unsubscribe(ch)} }
+ * const room = new Room("chat", { pubSub: new RedisWSPubSub(redis) })
  * ```
  */
+export interface RoomOptions {
+	pubSub?: WSPubSub;
+	channel?: string;
+}
 export class Room<DI = Record<string, unknown>> {
 	public readonly name: string;
 	private members = new Set<ServerWebSocket<WSData<DI>>>();
+	private pubSub?: WSPubSub;
+	private channel: string;
+	private unsubscribe?: () => void;
 
-	constructor(name: string) {
+	constructor(name: string, opts?: RoomOptions | WSPubSub) {
 		this.name = name;
+		if (opts && typeof (opts as WSPubSub).publish === "function") {
+			this.pubSub = opts as WSPubSub;
+			this.channel = `buntok:ws:${name}`;
+		} else {
+			const o = opts as RoomOptions | undefined;
+			this.pubSub = o?.pubSub;
+			this.channel = o?.channel ?? `buntok:ws:${name}`;
+		}
+		if (this.pubSub) {
+			this.unsubscribe = this.pubSub.subscribe(this.channel, (msg) => {
+				const data = typeof msg === "object" ? JSON.stringify(msg) : (msg as string);
+				for (const m of [...this.members]) {
+					if (m.readyState === 1) {
+						try { m.send(data); } catch {}
+					}
+				}
+			});
+		}
 	}
 
-	/**
-	 * Add a WebSocket connection to the room
-	 */
 	join(ws: ServerWebSocket<WSData<DI>>): void {
 		this.members.add(ws);
+		// Also Bun native subscribe untuk fan-out kernel (optional, not required jika pakai pubSub)
+		try { (ws as unknown as { subscribe?: (c:string)=>void }).subscribe?.(this.channel); } catch {}
 	}
 
-	/**
-	 * Remove a WebSocket connection from the room
-	 */
 	leave(ws: ServerWebSocket<WSData<DI>>): void {
 		this.members.delete(ws);
+		try { (ws as unknown as { unsubscribe?: (c:string)=>void }).unsubscribe?.(this.channel); } catch {}
 	}
 
-	/**
-	 * Broadcast a message to all members except the sender
-	 */
 	broadcast(message: string | object, exclude?: ServerWebSocket<WSData<DI>>): void {
+		if (this.pubSub) {
+			// via pubSub (Redis) — akan di-fanout ke semua instance termasuk self via subscribe
+			const r = this.pubSub.publish(this.channel, message);
+			if (r instanceof Promise) r.catch(() => this.localBroadcast(message, exclude));
+			return;
+		}
+		this.localBroadcast(message, exclude);
+	}
+
+	private localBroadcast(message: string | object, exclude?: ServerWebSocket<WSData<DI>>): void {
 		const data = typeof message === "object" ? JSON.stringify(message) : message;
-		for (const member of this.members) {
+		// Backpressure check: jika bufferedAmount tinggi, skip slow client
+		for (const member of [...this.members]) {
 			if (member !== exclude && member.readyState === 1) {
-				member.send(data);
+				try {
+					const buffered = (member as unknown as { getBufferedAmount?: () => number }).getBufferedAmount?.() ?? 0;
+					if (buffered > 1024 * 1024) continue; // drop jika >1MB buffered
+					member.send(data);
+				} catch {}
 			}
 		}
 	}
 
-	/**
-	 * Send a message to all members including the sender
-	 */
 	sendAll(message: string | object): void {
-		const data = typeof message === "object" ? JSON.stringify(message) : message;
-		for (const member of this.members) {
-			if (member.readyState === 1) {
-				member.send(data);
-			}
-		}
+		this.broadcast(message);
 	}
 
-	/**
-	 * Get all members in the room
-	 */
 	getMembers(): ServerWebSocket<WSData<DI>>[] {
 		return Array.from(this.members);
 	}
 
-	/**
-	 * Get the number of members in the room
-	 */
 	get size(): number {
 		return this.members.size;
 	}
 
-	/**
-	 * Check if the room is empty
-	 */
 	get isEmpty(): boolean {
 		return this.members.size === 0;
 	}
 
-	/**
-	 * Check if a WebSocket is in the room
-	 */
 	has(ws: ServerWebSocket<WSData<DI>>): boolean {
 		return this.members.has(ws);
 	}
 
-	/**
-	 * Close all connections in the room
-	 */
 	closeAll(): void {
-		for (const member of this.members) {
-			member.close(1000, "Room closed");
+		if (this.unsubscribe) { try { this.unsubscribe(); } catch {} }
+		for (const member of [...this.members]) {
+			try { member.close(1000, "Room closed"); } catch {}
 		}
 		this.members.clear();
+	}
+
+	/** Filtered broadcast mirip SSEBroadcaster.broadcastWhere */
+	broadcastWhere(predicate: (ws: ServerWebSocket<WSData<DI>>) => boolean, message: string | object): void {
+		const data = typeof message === "object" ? JSON.stringify(message) : message;
+		for (const member of [...this.members]) {
+			if (member.readyState !== 1) continue;
+			if (predicate(member)) {
+				try { member.send(data); } catch {}
+			}
+		}
 	}
 }
 
 /**
- * WebSocket heartbeat middleware.
- * Sends periodic pings to detect stale connections.
- *
- * @example
- * ```ts
- * import { wsHeartbeat } from "@buntok/core";
- *
- * app.ws("/chat", {
- *   ...wsHeartbeat(),
- *   open: (ws) => {
- *     console.log("Client connected");
- *   },
- *   message: (ws, msg) => {
- *     // Handle message
- *   },
- * });
- * ```
+ * WebSocket heartbeat — 30s fixed, Bun-only
+ * Fix: pong event reset alive (bukan message/drain)
  */
 export function wsHeartbeat<DI = Record<string, unknown>>(
 	interval = 30_000,
 ): WSHandler<DI> {
 	return {
-		open: (ws) => {
+		open: (ws: ServerWebSocket<WSData<DI>>) => {
 			const wsData = ws.data as WSDataWithHeartbeat<DI>;
 			wsData.heartbeat = {
 				interval,
 				timer: null as ReturnType<typeof setInterval> | null,
 				alive: true,
 			};
-
-			// Start heartbeat
 			wsData.heartbeat.timer = setInterval(() => {
-				if (!wsData.heartbeat?.alive) {
-					// Connection is stale, close it
-					ws.close(4000, "Heartbeat timeout");
+				const hb = (ws.data as WSDataWithHeartbeat<DI>).heartbeat;
+				if (!hb) return;
+				if (!hb.alive) {
+					try { ws.close(4000, "Heartbeat timeout"); } catch {}
 					return;
 				}
-
-				// Mark as not alive until pong is received
-				wsData.heartbeat.alive = false;
-
-				// Send ping
-				ws.ping();
+				hb.alive = false;
+				try { ws.ping(); } catch {}
 			}, interval);
 		},
-		message: (ws) => {
-			// Reset alive on any message (including pong)
+		// `pong` handler khusus — akan di-wire di app.ts websocket.pong
+		// fallback untuk Bun versi lama: message juga reset (compat)
+		message: (ws: ServerWebSocket<WSData<DI>>) => {
 			const wsData = ws.data as WSDataWithHeartbeat<DI>;
-			if (wsData.heartbeat) {
-				wsData.heartbeat.alive = true;
-			}
+			if (wsData.heartbeat) wsData.heartbeat.alive = true;
 		},
-		close: (ws) => {
+		close: (ws: ServerWebSocket<WSData<DI>>) => {
 			const wsData = ws.data as WSDataWithHeartbeat<DI>;
-			if (wsData.heartbeat?.timer) {
-				clearInterval(wsData.heartbeat.timer);
-			}
+			if (wsData.heartbeat?.timer) clearInterval(wsData.heartbeat.timer);
 		},
-		drain: (ws) => {
-			// Reset alive on drain event
-			const wsData = ws.data as WSDataWithHeartbeat<DI>;
-			if (wsData.heartbeat) {
-				wsData.heartbeat.alive = true;
-			}
-		},
-	};
+		// drain tidak reset alive lagi (fix drain bug)
+	} as unknown as WSHandler<DI>;
+}
+
+/** Internal helper untuk app.ts — reset pong */
+export function wsHeartbeatPong<DI>(ws: ServerWebSocket<WSData<DI>>): void {
+	const wsData = ws.data as unknown as WSDataWithHeartbeat<DI>;
+	if (wsData.heartbeat) wsData.heartbeat.alive = true;
 }
 
 /**
- * WebSocket authentication middleware.
- * Authenticate connections in the open handler and close if unauthorized.
- *
+ * WebSocket rate limiter — in-memory default, pluggable ke Redis
  * @example
- * ```ts
- * import { wsAuth } from "@buntok/core";
- *
- * app.ws("/chat", {
- *   ...wsAuth(async (ws) => {
- *     const token = new URL(ws.data.ctx.request.url).searchParams.get("token");
- *     if (!token) return null;
- *
- *     const user = await verifyToken(token);
- *     return user ? { user } : null;
- *   }),
- *   open: (ws) => {
- *     // ws.data.user is now available (typed as { user: User })
- *     console.log("Authenticated:", ws.data.user);
- *   },
- *   message: (ws, msg) => {
- *     // ws.data.user is available
- *   },
- * });
- * ```
+ * const limiter = wsRateLimit({ windowMs: 1000, max: 10 })
+ * app.ws("/chat", { ...limiter, message: (ws,msg)=>{} })
+ */
+export interface WSRateLimitOptions<DI = Record<string, unknown>> {
+	windowMs?: number;
+	max?: number;
+	store?: WSRateLimitStore;
+	keyGenerator?: (ws: ServerWebSocket<WSData<DI>>) => string;
+	/** Close code saat limit */
+	closeCode?: number;
+}
+export function wsRateLimit<DI = Record<string, unknown>>(opts: WSRateLimitOptions<DI> = {}): WSHandler<DI> {
+	const windowMs = opts.windowMs ?? 1000;
+	const max = opts.max ?? 20;
+	const store = opts.store ?? new MemoryWSRateLimitStore();
+	const keyGen = opts.keyGenerator ?? ((ws: ServerWebSocket<WSData<DI>>) => (ws.data.ctx.ip || "unknown"));
+	const closeCode = opts.closeCode ?? 1013;
+	return {
+		message: (ws: ServerWebSocket<WSData<DI>>) => {
+			const key = keyGen(ws);
+			const count = store.incr(key, windowMs);
+			const c = count instanceof Promise ? 0 : count;
+			// async case handled via promise
+			if (count instanceof Promise) {
+				count.then((n) => { if (n > max) try { ws.close(closeCode, "Rate limited"); } catch {} });
+				return;
+			}
+			if (c > max) {
+				try { ws.close(closeCode, "Rate limited"); } catch {}
+			}
+		},
+	} as WSHandler<DI>;
+}
+
+/**
+ * WebSocket authentication middleware — pluggable
  */
 export function wsAuth<DI extends Record<string, unknown>, TAuth = unknown>(
 	authenticate: (ws: ServerWebSocket<WSData<DI>>) => Promise<TAuth | null>,
@@ -292,11 +307,10 @@ export function wsAuth<DI extends Record<string, unknown>, TAuth = unknown>(
 					ws.close(4001, "Unauthorized");
 					return;
 				}
-				// Store auth data on ws.data (will be merged by the server)
 				(ws.data as unknown as Record<string, unknown>).auth = authData;
 			} catch {
 				ws.close(4001, "Unauthorized");
 			}
 		},
-	};
+	} as WSHandler<DI>;
 }

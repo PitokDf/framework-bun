@@ -95,7 +95,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-14 left-0 z-40 h-[calc(100vh-3.5rem)] w-64 overflow-y-auto border-r border-border-primary bg-bg-primary
+          fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-72 overflow-y-auto border-r border-border-primary bg-bg-primary
           transition-transform duration-200 ease-in-out
           lg:sticky lg:translate-x-0 lg:block
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
@@ -110,7 +110,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               placeholder="Search docs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-border-primary bg-bg-secondary text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent transition-colors"
+              className="w-full pl-9 pr-4 py-2 rounded-full border border-border-primary bg-bg-secondary text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-accent/30 focus:bg-accent-muted transition-colors text-sm"
             />
           </div>
 
@@ -157,11 +157,11 @@ function NavItemComponent({
       <Link
         href={item.href}
         className={`
-          block px-3 py-2 rounded-lg text-sm transition-colors
+          block px-3 py-2 text-sm transition-colors border-l-2 -ml-px
           ${
             isActive
-              ? "bg-accent-muted text-accent font-medium"
-              : "text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
+              ? "border-accent bg-accent-muted text-accent font-medium"
+              : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-tertiary"
           }
         `}
       >
@@ -174,17 +174,17 @@ function NavItemComponent({
     <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium text-text-primary hover:bg-bg-tertiary transition-colors"
+        className="sidebar-section flex items-center justify-between w-full px-3 py-2 text-text-primary hover:bg-bg-tertiary transition-colors rounded-lg"
       >
         {item.title}
         <ChevronRight
-          className={`w-4 h-4 text-text-secondary transition-transform duration-200 ${
+          className={`w-3.5 h-3.5 text-text-secondary transition-transform duration-200 ${
             isOpen ? "rotate-90" : ""
           }`}
         />
       </button>
       {isOpen && hasChildren && (
-        <div className="ml-3 mt-1 space-y-1 border-l border-border-primary pl-3">
+        <div className="ml-3 mt-1 space-y-0.5 border-l border-border-primary pl-3">
           {item.items!.map((child) => (
             <NavItemComponent
               key={child.title}

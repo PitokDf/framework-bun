@@ -147,9 +147,8 @@ scheduler.schedule("*/5 * * * *", async () => {
         class instance, so <code>this</code> works correctly:
       </p>
       <CodeBlock
-        code={`import { Controller, Get, CronJob, Injectable } from "@buntok/core";
+        code={`import { Controller, Get, CronJob } from "@buntok/core";
 
-@Injectable()
 class CacheService {
   deletePattern(pattern: string) { /* ... */ }
 }

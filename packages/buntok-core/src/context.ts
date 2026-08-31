@@ -323,7 +323,7 @@ export class Context<
 	}
 
 	/**
-	 * Start a Server-Sent Events (SSE) stream
+	 * Start a Server-Sent Events (SSE) stream — Bun-only
 	 */
 	public sse(
 		callback: (stream: SSE) => void | Promise<void>,
@@ -331,15 +331,16 @@ export class Context<
 	): Response {
 		const stream = createSSE(this.request, options);
 
-		// Run the callback asynchronously so we can return the response immediately
-		setTimeout(async () => {
+		// queueMicrotask lebih cepat dari setTimeout(0) — tanpa macrotask latency
+		queueMicrotask(async () => {
 			try {
 				await callback(stream);
 			} catch (err) {
 				console.error("[SSE Error]", err);
+				try { stream.sendEvent("error", String((err as Error).message)); } catch {}
 				stream.close();
 			}
-		}, 0);
+		});
 
 		return stream.connect();
 	}

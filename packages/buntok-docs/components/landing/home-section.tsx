@@ -5,7 +5,14 @@ import {
   vscDarkPlus,
   vs,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ArrowRight, Terminal, Zap, Clock, Code2, CheckCircle } from "lucide-react";
+import {
+  ArrowRight,
+  Terminal,
+  Zap,
+  Clock,
+  Code2,
+  CheckCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -20,6 +27,7 @@ const EMPTY_DATA = {
 
 export function HomeSection() {
   const [data, setData] = useState(EMPTY_DATA);
+  const [npmVersion, setNpmVersion] = useState<string | null>(null);
 
   useEffect(() => {
     const base = process.env.NEXT_PUBLIC_BASE_URL || "";
@@ -27,6 +35,17 @@ export function HomeSection() {
       .then((res) => (res.ok ? res.json() : null))
       .then((d) => {
         if (d?.frameworks?.buntok) setData(d);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("https://registry.npmjs.org/@buntok%2Fcore/latest", {
+      cache: "no-store",
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => {
+        if (d?.version) setNpmVersion(d.version);
       })
       .catch(() => {});
   }, []);
@@ -56,7 +75,10 @@ export function HomeSection() {
   return (
     <div className="relative animate-fade-up overflow-x-hidden">
       {/* Background effects — full-bleed beyond max-w-6xl parent */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-full pointer-events-none z-0" style={{ marginLeft: "calc(-50vw + 50%)" }}>
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-full pointer-events-none z-0"
+        style={{ marginLeft: "calc(-50vw + 50%)" }}
+      >
         <div
           className="absolute inset-0 transition-opacity duration-300"
           style={{
@@ -79,17 +101,72 @@ export function HomeSection() {
               </filter>
             </defs>
             <g filter="url(#glow)">
-              <path d="M 384 -64 V 256 H 704 V 800" stroke="#f97316" strokeWidth="2" fill="none" strokeLinecap="round" strokeDasharray="150 3000">
-                <animate attributeName="stroke-dashoffset" from="3000" to="-150" dur="6s" repeatCount="indefinite" />
+              <path
+                d="M 384 -64 V 256 H 704 V 800"
+                stroke="#f97316"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray="150 3000"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="3000"
+                  to="-150"
+                  dur="6s"
+                  repeatCount="indefinite"
+                />
               </path>
-              <path d="M 1984 128 H 1280 V 384 H 896 V 900" stroke="#f97316" strokeWidth="2" fill="none" strokeLinecap="round" strokeDasharray="150 3000">
-                <animate attributeName="stroke-dashoffset" from="3000" to="-150" dur="8s" begin="1s" repeatCount="indefinite" />
+              <path
+                d="M 1984 128 H 1280 V 384 H 896 V 900"
+                stroke="#f97316"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray="150 3000"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="3000"
+                  to="-150"
+                  dur="8s"
+                  begin="1s"
+                  repeatCount="indefinite"
+                />
               </path>
-              <path d="M 192 1000 V 448 H 512 V -64" stroke="#f97316" strokeWidth="2" fill="none" strokeLinecap="round" strokeDasharray="150 3000">
-                <animate attributeName="stroke-dashoffset" from="3000" to="-150" dur="7s" begin="2s" repeatCount="indefinite" />
+              <path
+                d="M 192 1000 V 448 H 512 V -64"
+                stroke="#f97316"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray="150 3000"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="3000"
+                  to="-150"
+                  dur="7s"
+                  begin="2s"
+                  repeatCount="indefinite"
+                />
               </path>
-              <path d="M 1600 -64 V 192 H 1408 V 800" stroke="#f97316" strokeWidth="2" fill="none" strokeLinecap="round" strokeDasharray="150 3000">
-                <animate attributeName="stroke-dashoffset" from="3000" to="-150" dur="5s" begin="0.5s" repeatCount="indefinite" />
+              <path
+                d="M 1600 -64 V 192 H 1408 V 800"
+                stroke="#f97316"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray="150 3000"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="3000"
+                  to="-150"
+                  dur="5s"
+                  begin="0.5s"
+                  repeatCount="indefinite"
+                />
               </path>
             </g>
           </svg>
@@ -98,18 +175,34 @@ export function HomeSection() {
 
       {/* ── Hero ── */}
       <section className="relative z-10 flex flex-col items-center text-center pt-28 pb-16 sm:pb-24 px-4 sm:px-0">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#f97316]/20 bg-[#f97316]/5 backdrop-blur-sm text-xs text-text-secondary mb-8 hover:border-[#f97316]/40 hover:bg-[#f97316]/10 transition-all cursor-default group">
+        {/* Badge - dynamic npm version as text */}
+        <a
+          href="https://www.npmjs.com/package/@buntok/core"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#f97316]/20 bg-[#f97316]/5 backdrop-blur-sm text-xs text-text-secondary mb-8 hover:border-[#f97316]/40 hover:bg-[#f97316]/10 transition-all group"
+        >
           <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse group-hover:scale-125 transition-transform" />
-          <img src="https://img.shields.io/npm/v/@buntok/core" alt="npm version" />
-        </div>
+          <span className="font-mono font-medium tracking-tight">
+            @buntok/core
+          </span>
+          <span className="w-px h-3 bg-[#f97316]/20" />
+          {npmVersion ? (
+            <span className="font-mono text-[#f97316]">v{npmVersion}</span>
+          ) : (
+            <span
+              className="inline-block h-3 w-10 rounded bg-[#f97316]/20 animate-pulse"
+              aria-hidden
+            />
+          )}
+        </a>
 
         {/* Headline */}
         <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.08] mb-6 max-w-4xl relative px-2 sm:px-0">
           Decorator-Powered, Zero-Config <br className="hidden sm:block" />
-          <span className="relative inline-block bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#f97316] bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 cursor-default">
+          <span className="relative inline-block bg-linear-to-r from-[#f97316] via-[#fb923c] to-[#f97316] bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 cursor-default">
             API Framework
-            <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-[#f97316]/40 to-[#f97316]/10 rounded-full blur-sm" />
+            <span className="absolute -bottom-2 left-0 w-full h-1 bg-linear-to-r from-[#f97316]/40 to-[#f97316]/10 rounded-full blur-sm" />
           </span>{" "}
           for Bun
         </h1>
@@ -123,13 +216,13 @@ export function HomeSection() {
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <Link
             href="/docs"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-[#f97316] text-white text-sm font-semibold hover:bg-[#ea580c] hover:shadow-[0_0_24px_rgba(249,115,22,0.3)] transition-all duration-300 active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#f97316] text-white text-sm font-semibold hover:bg-[#ea580c] hover:shadow-[0_0_24px_rgba(249,115,22,0.3)] transition-all duration-300 active:scale-95"
           >
             Get Started <ArrowRight className="w-4 h-4" />
           </Link>
           <button
             onClick={copyCmd}
-            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-lg border border-border-primary bg-bg-secondary hover:bg-bg-tertiary text-sm font-mono text-text-secondary hover:border-[#f97316]/40 transition-all duration-300 active:scale-95 group"
+            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-full border border-border-primary bg-bg-secondary hover:bg-bg-tertiary text-sm font-mono text-text-secondary hover:border-[#f97316]/30 transition-all duration-300 active:scale-95 group"
           >
             <Terminal className="w-3.5 h-3.5 shrink-0 text-[#f97316] group-hover:animate-bounce" />
             bun add @buntok/core
@@ -166,7 +259,7 @@ export function HomeSection() {
 
       {/* ── Code preview ── */}
       <section className="relative z-10 border-t border-border-primary py-16 sm:py-24 px-4 sm:px-0">
-        <div className="grid lg:grid-cols-2 gap-10 sm:gap-16 items-center">
+        <div className="md:max-w-4xl lg:max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 sm:gap-16 items-center">
           <div className="order-2 lg:order-1">
             <p className="text-xs font-semibold uppercase tracking-widest text-[#f97316] mb-3 flex items-center gap-2">
               <span className="w-8 h-px bg-[#f97316]/50" />
@@ -216,9 +309,9 @@ export function HomeSection() {
                   style={mounted && theme === "dark" ? vscDarkPlus : vs}
                   customStyle={{
                     margin: 0,
-                    padding: "1.25rem",
+                    padding: "0.75rem 1rem",
                     fontSize: "0.7rem",
-                    lineHeight: "1.7",
+                    lineHeight: "1.55",
                     minWidth: "300px",
                   }}
                 >{`import { Controller, Get, Post, Use, zValidator, ZodCtx, z } from '@buntok/core';
@@ -233,8 +326,8 @@ const UserSchema = z.object({
 export class UserController {
 
   @Get('/')
-  async list(ctx: Context) {
-    return ctx.success([{ id: 1, name: 'Alice' }]);
+  async list() {
+    return [{ id: 1, name: 'Alice' }];
   }
 
   @Post('/')
@@ -259,12 +352,14 @@ export class UserController {
             <span className="w-8 h-px bg-[#f97316]/50" />
           </p>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-5">
-            Faster than Hono. <br className="sm:hidden" /> Neck-and-neck with Elysia.
+            Faster than Hono. <br className="sm:hidden" /> Neck-and-neck with
+            Elysia.
           </h2>
           <p className="text-text-secondary leading-relaxed mb-10 sm:mb-14 text-base sm:text-lg max-w-2xl mx-auto">
-            Buntok wasn&apos;t just built for developer experience - it was built for
-            raw throughput. By compiling your decorators Ahead-of-Time (AOT),
-            Buntok bypasses the heavy runtime routing overhead found in Express and NestJS.
+            Buntok wasn&apos;t just built for developer experience - it was
+            built for raw throughput. By compiling your decorators Ahead-of-Time
+            (AOT), Buntok bypasses the heavy runtime routing overhead found in
+            Express and NestJS.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
@@ -288,7 +383,9 @@ export class UserController {
             </div>
             <div className="bg-bg-primary rounded-xl p-5 border border-border-primary hover:border-[#3b82f6]/30 transition-all duration-300 shadow-lg shadow-black/5 hover:-translate-y-0.5">
               <Code2 className="w-5 h-5 text-[#3b82f6] mx-auto mb-3" />
-              <h3 className="text-2xl font-black text-text-primary mb-1">Full</h3>
+              <h3 className="text-2xl font-black text-text-primary mb-1">
+                Full
+              </h3>
               <p className="text-xs text-text-secondary">TypeScript</p>
             </div>
           </div>
@@ -296,8 +393,10 @@ export class UserController {
           <div className="mt-10 sm:mt-14 text-xs sm:text-sm text-text-secondary px-2 sm:px-0">
             <p>
               In our independent benchmarks, Buntok consistently outperforms{" "}
-              <strong className="text-text-primary">Hono</strong> and stays highly competitive with{" "}
-              <strong className="text-text-primary">Elysia</strong>, while providing a clean decorator-powered API.
+              <strong className="text-text-primary">Hono</strong> and stays
+              highly competitive with{" "}
+              <strong className="text-text-primary">Elysia</strong>, while
+              providing a clean decorator-powered API.
             </p>
           </div>
         </div>
@@ -311,9 +410,23 @@ export class UserController {
             <span>&copy; {new Date().getFullYear()}</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/docs" className="hover:text-accent transition-colors">Docs</Link>
-            <Link href="/benchmarks" className="hover:text-accent transition-colors">Benchmarks</Link>
-            <a href="https://github.com/PitokDf/framework-bun" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">GitHub</a>
+            <Link href="/docs" className="hover:text-accent transition-colors">
+              Docs
+            </Link>
+            <Link
+              href="/benchmarks"
+              className="hover:text-accent transition-colors"
+            >
+              Benchmarks
+            </Link>
+            <a
+              href="https://github.com/PitokDf/framework-bun"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-accent transition-colors"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </footer>

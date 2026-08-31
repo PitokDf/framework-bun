@@ -95,18 +95,7 @@ export class Container {
 
 		if (isClassProvider(provider)) {
 			scope = provider.scope ?? "singleton";
-			const meta = provider.useClass[Symbol.metadata] as
-				| Record<string, unknown>
-				| undefined;
-			const injections = meta?.__injections as Map<string, Token> | undefined;
-
 			instance = new provider.useClass();
-
-			if (injections) {
-				for (const [prop, depToken] of injections) {
-					(instance as Record<string, unknown>)[prop] = this.resolve(depToken);
-				}
-			}
 		} else if (isValueProvider(provider)) {
 			scope = "singleton";
 			instance = provider.useValue;

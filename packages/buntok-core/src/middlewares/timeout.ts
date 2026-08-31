@@ -17,6 +17,8 @@ import type { Middleware } from "../app";
  */
 export function timeout(ms: number, message = "Request timed out"): Middleware {
 	return async (_ctx, next) => {
+		// Industrial: skip timeout for SSE — SSE adalah long-lived, timeout akan bunuh koneksi 30s heartbeat
+		if (_ctx.request.headers.get("accept")?.includes("text/event-stream")) return next();
 		let timeoutId: ReturnType<typeof setTimeout>;
 
 		const timeoutPromise = new Promise<never>((_, reject) => {

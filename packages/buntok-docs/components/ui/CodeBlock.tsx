@@ -50,28 +50,20 @@ export function CodeBlock({
   const showHeader = filename || showWindowControls;
 
   return (
-    <div className="relative group rounded-lg border border-border-primary overflow-hidden">
-      {/* Header */}
+    <div className="relative group rounded-xl border border-border-primary overflow-hidden bg-bg-tertiary">
+      {/* Header - Elysia style: lang label + copy, no traffic lights */}
       {showHeader && (
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-primary bg-bg-secondary">
-          <div className="flex items-center gap-3">
-            {/* macOS window dots */}
-            {showWindowControls && (
-              <div className="flex gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-[#ff5f56] hover:bg-red-400 transition-colors" />
-                <span className="w-3 h-3 rounded-full bg-[#ffbd2e] hover:bg-yellow-400 transition-colors" />
-                <span className="w-3 h-3 rounded-full bg-[#27c93f] hover:bg-green-400 transition-colors" />
-              </div>
-            )}
-            {filename && (
-              <span className="text-sm text-text-secondary font-mono">
-                {filename}
-              </span>
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-primary bg-bg-secondary">
+          <div className="flex items-center gap-2">
+            {filename ? (
+              <span className="text-xs text-text-secondary font-mono">{filename}</span>
+            ) : (
+              <span className="text-xs text-text-secondary font-mono">{language}</span>
             )}
           </div>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-text-secondary hover:text-accent hover:bg-accent-muted transition-colors"
           >
             {copied ? (
               <>
@@ -97,9 +89,9 @@ export function CodeBlock({
             showLineNumbers={showLineNumbers}
             customStyle={{
               margin: 0,
-              padding: "1.25rem",
-              fontSize: "0.85rem",
-              lineHeight: "1.7",
+              padding: "0.75rem 1rem",
+              fontSize: "0.8125rem",
+              lineHeight: "1.55",
               background: "transparent",
             }}
             codeTagProps={{
@@ -111,23 +103,26 @@ export function CodeBlock({
             {code}
           </SyntaxHighlighter>
         ) : (
-          <pre className="p-5 text-sm leading-relaxed">
+          <pre className="px-4 py-3 text-[0.8125rem] leading-[1.55]">
             <code>{code}</code>
           </pre>
         )}
 
-        {/* Copy button (when no header) */}
+        {/* Copy button (when no header) - keep header for lang, so this rarely shows */}
         {!showHeader && (
-          <button
-            onClick={handleCopy}
-            className="absolute top-3 right-3 p-2 rounded-lg bg-bg-secondary border border-border-primary text-text-secondary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-all"
-          >
-            {copied ? (
-              <Check className="w-4 h-4 text-green-500" />
-            ) : (
-              <Copy className="w-4 h-4" />
-            )}
-          </button>
+          <div className="absolute top-2 right-2 flex items-center gap-1.5">
+            <span className="text-[11px] font-mono text-text-secondary bg-bg-secondary border border-border-primary px-1.5 py-0.5 rounded">{language}</span>
+            <button
+              onClick={handleCopy}
+              className="p-1.5 rounded-md bg-bg-secondary border border-border-primary text-text-secondary hover:text-accent opacity-0 group-hover:opacity-100 transition-all"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-green-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
         )}
       </div>
     </div>

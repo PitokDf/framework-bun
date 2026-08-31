@@ -1,17 +1,15 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { Container } from "../src/container";
-import { Injectable } from "../src/decorators/injectable";
-import { Inject } from "../src/decorators/inject";
 
-@Injectable()
 class Database {
-connected = true;
+	connected = true;
 }
 
-@Injectable()
 class UserService {
-	@Inject("db")
-	declare db: Database;
+	db: Database;
+	constructor(db: Database) {
+		this.db = db;
+	}
 }
 
 describe("Container", () => {

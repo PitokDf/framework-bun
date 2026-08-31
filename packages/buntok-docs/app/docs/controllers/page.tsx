@@ -61,9 +61,10 @@ class UserController {
 
       <Callout type="info">
         <code>@Controller</code> must be the{" "}
-        <strong>outermost (topmost)</strong> decorator on the class. TypeScript
-        decorators execute bottom-to-top, so <code>@Controller</code> runs last
-        and captures all method routes.
+        <strong>outermost (topmost)</strong> decorator on the class. Stage 3
+        decorators are evaluated top-to-bottom but applied bottom-to-top, so{" "}
+        <code>@Controller</code> (evaluated first, applied last) captures all
+        method routes.
       </Callout>
 
       {/* ──────────────── REGISTER CONTROLLERS ──────────────── */}
@@ -370,14 +371,14 @@ class UserController extends BaseController<User, CreateUser> {
         Dependency Injection
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Controllers work with the IoC container. Use <code>@Inject</code> to
-        declare dependencies and <code>@Injectable</code> to register services:
+        Controllers work with the IoC container. Daftarkan service di{" "}
+        <code>Container</code> lalu inject via <code>useFactory</code> (field
+        decorator <code>@Inject</code> sudah dihapus):
       </p>
       <CodeBlock
-        code={`import { Injectable, Inject, Controller, Get } from "@buntok/core";
+        code={`import { Container, Controller, Get } from "@buntok/core";
 import type { Context } from "@buntok/core";
 
-@Injectable()
 class UserService {
   async findAll() {
     return await db.user.findMany();
@@ -386,9 +387,7 @@ class UserService {
 
 @Controller("/users")
 class UserController {
-  constructor(
-    @Inject(UserService) private userService: UserService
-  ) {}
+  constructor(private userService: UserService) {}
 
   @Get("/")
   async list(ctx: Context) {
@@ -397,18 +396,21 @@ class UserController {
   }
 }
 
-// Setup
+// Setup — DI via Container factory
 const container = new Container();
-container.registerClass(UserService);
+container.register(UserService, { useClass: UserService });
+container.register(UserController, {
+  useFactory: (c) => new UserController(c.resolve(UserService)),
+});
 
 app.setContainer(container);
-app.registerController(UserController);`}
+app.registerController(container.resolve(UserController));`}
       />
 
-      <Callout type="warning">
-        Without <code>app.setContainer()</code>, the controller is instantiated
-        with <code>new Controller()</code> and <code>@Inject</code> properties
-        will be <code>undefined</code>.
+      <Callout type="info">
+        Tanpa <code>app.setContainer()</code>, controller di-instantiate dengan{" "}
+        <code>new Controller()</code> biasa. Gunakan <code>Container</code>{" "}
+        + <code>useFactory</code> untuk constructor injection.
       </Callout>
 
       {/* ──────────────── HOW IT WORKS ──────────────── */}

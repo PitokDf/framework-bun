@@ -42,7 +42,9 @@ app.get("/mod", requireAuth(secret), requireRole("admin", "moderator"), modHandl
 
       <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Decorator Usage</Heading>
       <Callout type="warning">
-        <strong>Decorators execute from bottom to top</strong> (because they use unshift internally). So <code>@Use(requireAuth)</code> must be ABOVE <code>@Use(requireRole)</code>.
+        <strong>Stage 3:</strong> evaluated top-to-bottom, applied bottom-to-top
+        (via <code>unshift</code>). So <code>@Use(requireAuth)</code> must be{" "}
+        <strong>ABOVE</strong> <code>@Use(requireRole)</code> to run first.
       </Callout>
       <CodeBlock
         code={`@Get("/admin")

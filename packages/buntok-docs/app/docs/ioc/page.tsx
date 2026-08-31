@@ -30,25 +30,24 @@ export default function IoCPage() {
         Quick Start
       </Heading>
       <CodeBlock
-        code={`import { Injectable, Inject, Container } from "@buntok/core";
+        code={`import { Container } from "@buntok/core";
 
-// 1. Define services
-@Injectable()
+// 1. Define services (plain classes — no decorator needed)
 class UserRepository {
   findAll() { return [{ id: 1, name: "John" }]; }
 }
 
-@Injectable()
 class UserService {
-  @Inject(UserRepository) private repo: UserRepository;
+  constructor(private repo: UserRepository) {}
   getUsers() { return this.repo.findAll(); }
 }
 
 // 2. Register and resolve
 const container = new Container();
-container
-  .register(UserRepository, { useClass: UserRepository })
-  .register(UserService, { useClass: UserService });
+container.register(UserRepository, { useClass: UserRepository });
+container.register(UserService, {
+  useFactory: (c) => new UserService(c.resolve(UserRepository)),
+});
 
 const userService = container.resolve(UserService);
 const users = userService.getUsers();`}
@@ -186,39 +185,13 @@ container.register(UserService, { useClass: UserService, scope: "singleton" });
 container.register(RequestLogger, { useClass: RequestLogger, scope: "transient" });`}
       />
 
-      {/* ──────────────── @INJECTABLE & @INJECT ──────────────── */}
-      <Heading
-        level={2}
-        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
-      >
-        @Injectable & @Inject
-      </Heading>
-      <CodeBlock
-        code={`import { Injectable, Inject } from "@buntok/core";
-
-// @Injectable marks a class for DI
-@Injectable()
-class EmailService {
-  send(to: string, body: string) { /* ... */ }
-}
-
-// @Inject declares dependencies via fields
-@Injectable()
-class UserService {
-  @Inject(EmailService) private email: EmailService;
-}
-
-// Set scope via decorator option (alternative to container.registerClass)
-@Injectable({ scope: "transient" })
-class RequestLogger {
-  log(msg: string) { console.log(msg); }
-}
-
-// When container resolves UserService:
-// 1. Creates UserService instance
-// 2. Resolves EmailService from container
-// 3. Injects EmailService into the field`}
-      />
+      {/* ──────────────── DEPRECATED DECORATORS ──────────────── */}
+      <Callout type="warning">
+        <code>@Injectable</code> & <code>@Inject</code> sudah dihapus. Gunakan{" "}
+        <code>Container.register</code> + <code>useFactory</code> /{" "}
+        <code>useClass</code> untuk DI (contoh di Quick Start). Field decorator{" "}
+        tidak lagi didukung.
+      </Callout>
 
       {/* ──────────────── CONTAINER API ──────────────── */}
       <Heading
@@ -298,9 +271,8 @@ class RequestLogger {
         Full Example: Controller with DI
       </Heading>
       <CodeBlock
-        code={`import { App, Injectable, Inject } from "@buntok/core";
+        code={`import { App, Container } from "@buntok/core";
 
-@Injectable()
 class UserRepository {
   async findAll() {
     return await db.user.findMany();
@@ -310,33 +282,34 @@ class UserRepository {
   }
 }
 
-@Injectable()
 class UserService {
-  @Inject(UserRepository) private repo: UserRepository;
+  constructor(private repo: UserRepository) {}
   getUsers() { return this.repo.findAll(); }
   getUser(id: string) { return this.repo.findById(id); }
 }
 
-// Register in app
+// Register in app — useFactory untuk constructor injection
 const app = new App();
 const container = new Container();
-container.registerClass(UserRepository);
-container.registerClass(UserService);
+container.register(UserRepository, { useClass: UserRepository });
+container.register(UserService, {
+  useFactory: (c) => new UserService(c.resolve(UserRepository)),
+});
 app.setContainer(container);
 
-// Controller uses DI
-@Controller("/users")
+// Controller — inject via factory, bukan field decorator
 class UserController {
-  @Inject(UserService) private userService: UserService;
-
-  @Get("/")
+  constructor(private userService: UserService) {}
   async list(ctx: Context) {
     const users = await this.userService.getUsers();
     return ctx.json(users);
   }
 }
-
-app.registerController(UserController);
+// Daftarkan controller dengan factory agar dapat service
+container.register(UserController, {
+  useFactory: (c) => new UserController(c.resolve(UserService)),
+});
+app.registerController(container.resolve(UserController));
 app.listen(1212);`}
       />
     </div>

@@ -3,33 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
   <title>Scalar API Reference & Interactive Client</title>
+  <script>
+    // Sync theme with buntok-docs (next-themes) — evaluated before paint, tetap orange #f97316
+    (function(){ try{
+      var t = localStorage.getItem('theme') || localStorage.getItem('scalar_theme') || localStorage.getItem('buntok-docs-theme');
+      var m = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var isDark = t ? (t==='dark') : m;
+      // next-themes defaultTheme dark + enableSystem
+      if(t===null && m===false){ isDark = false; }
+      // respect system if no explicit theme
+      if(isDark) document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+    }catch(e){}})();
+  </script>
   <script src="./tailwind.js"></script>
   <link href="./font-googles.css" rel="stylesheet">
   <style>
+    /* Sync tokens with buntok-docs app/globals.css — tetap orange #f97316, no AI slop */
     :root {
       --bg-primary: #ffffff;
-      --bg-secondary: #f8fafc;
-      --bg-tertiary: #f1f5f9;
-      --text-primary: #0f172a;
-      --text-secondary: #64748b;
-      --border-primary: #e2e8f0;
-      --border-hover: #cbd5e1;
+      --bg-secondary: #fafafa;
+      --bg-tertiary: #f4f4f5;
+      --text-primary: #18181b;
+      --text-secondary: #52525b;
+      --border-primary: #e4e4e7;
+      --border-hover: #d4d4d8;
       --accent: #f97316;
-      --accent-muted: rgba(249, 115, 22, 0.12);
+      --accent-muted: rgba(249, 115, 22, 0.1);
       --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
     }
     html.dark {
-      --bg-primary: #09090b;
-      --bg-secondary: #121215;
-      --bg-tertiary: #18181b;
-      --text-primary: #fafafa;
+      --bg-primary: #0f0e11;
+      --bg-secondary: #18161a;
+      --bg-tertiary: #1c1a1e;
+      --text-primary: #fafafb;
       --text-secondary: #a1a1aa;
       --border-primary: #27272a;
       --border-hover: #3f3f46;
       --accent: #f97316;
-      --accent-muted: rgba(249, 115, 22, 0.15);
+      --accent-muted: rgba(249, 115, 22, 0.12);
     }
     body {
       background-color: var(--bg-primary);
@@ -47,6 +62,7 @@
     .badge-delete { background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); }
     .badge-patch { background: rgba(168, 85, 247, 0.12); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.25); }
 
+    * { scrollbar-width: thin; scrollbar-color: var(--border-primary) transparent; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 3px; }
@@ -93,17 +109,172 @@
     .toast {
       padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 500;
       pointer-events: auto; animation: toastIn 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      border: 1px solid transparent;
     }
-    .toast-success { background: #065f46; color: #a7f3d0; border: 1px solid #10b981; }
-    .toast-error { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
-    .toast-info { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
+    /* Light theme (default) - soft, readable on white */
+    .toast-success { background: #ecfdf5; color: #065f46; border-color: #6ee7b7; }
+    .toast-error { background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+    .toast-info { background: #eff6ff; color: #1e40af; border-color: #93c5fd; }
+    /* Dark theme - keep existing deep colors but ensure contrast */
+    html.dark .toast-success { background: #064e3b; color: #a7f3d0; border-color: #10b981; }
+    html.dark .toast-error { background: #7f1d1d; color: #fecaca; border-color: #ef4444; }
+    html.dark .toast-info { background: #1e3a5f; color: #bfdbfe; border-color: #3b82f6; }
+    html.dark .toast { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2); }
     @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     /* Deprecation badge */
     .badge-deprecated {
       background: rgba(234, 179, 8, 0.12); color: #eab308;
       border: 1px solid rgba(234, 179, 8, 0.25); text-decoration: line-through;
+    }
+
+    /* === Resizable Sidebar === */
+    :root { --sidebar-width: 288px; }
+    #sidebar {
+      width: var(--sidebar-width);
+      min-width: 200px;
+      max-width: min(560px, 50vw);
+      transition: width 0.2s ease, transform 0.2s ease, opacity 0.15s ease;
+      flex-shrink: 0;
+    }
+    #sidebar.collapsed {
+      width: 0 !important;
+      min-width: 0 !important;
+      opacity: 0;
+      overflow: hidden;
+      border-width: 0 !important;
+      pointer-events: none;
+    }
+    #sidebar-resizer {
+      width: 4px;
+      flex-shrink: 0;
+      background: transparent;
+      cursor: col-resize;
+      position: relative;
+      z-index: 10;
+      touch-action: none;
+      transition: background 0.15s, width 0.15s;
+      user-select: none;
+    }
+    #sidebar-resizer::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--border-primary);
+      transform: translateX(-50%);
+      transition: background 0.15s, width 0.15s;
+    }
+    #sidebar-resizer:hover,
+    #sidebar-resizer.dragging {
+      background: rgba(249,115,22,0.08);
+    }
+    #sidebar-resizer:hover::after,
+    #sidebar-resizer.dragging::after {
+      background: var(--accent);
+      width: 2px;
+    }
+    #sidebar-resizer.dragging {
+      width: 6px;
+    }
+    body.resizing {
+      cursor: col-resize !important;
+      user-select: none !important;
+    }
+    body.resizing * {
+      user-select: none !important;
+      cursor: col-resize !important;
+    }
+    /* Hover handle dot */
+    #sidebar-resizer .handle-dot {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 32px;
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s, border-color 0.15s;
+      pointer-events: none;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    #sidebar-resizer:hover .handle-dot,
+    #sidebar-resizer.dragging .handle-dot {
+      opacity: 1;
+      border-color: var(--accent);
+    }
+    /* Sidebar collapsed floating expand button */
+    #sidebar-expand-btn {
+      position: fixed;
+      left: 8px;
+      top: 64px;
+      z-index: 25;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #sidebar-expand-btn.visible { display: flex; }
+    #sidebar-expand-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Mobile drawer */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      top: 56px;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      z-index: 20;
+    }
+    #sidebar-overlay.visible { display: block; }
+    @media (max-width: 1024px) {
+      #sidebar {
+        position: fixed;
+        left: 0;
+        top: 56px;
+        bottom: 0;
+        z-index: 30;
+        height: calc(100vh - 56px);
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        transform: translateX(0);
+      }
+      #sidebar.mobile-hidden {
+        transform: translateX(-100%);
+        opacity: 1;
+        width: var(--sidebar-width) !important;
+        min-width: 200px !important;
+        pointer-events: none;
+      }
+      #sidebar-resizer { display: none !important; }
+      #sidebar-expand-btn { display: none !important; }
+    }
+    /* Sidebar header collapse button */
+    #sidebar-collapse-btn {
+      opacity: 0.6;
+      transition: opacity 0.15s, color 0.15s, background 0.15s;
+    }
+    #sidebar:hover #sidebar-collapse-btn,
+    #sidebar-collapse-btn:focus-visible {
+      opacity: 1;
     }
   </style>
 </head>
@@ -124,16 +295,20 @@
     <div class="flex items-center gap-2">
       <button onclick="refreshSwaggerSpec()" class="px-2 py-1 rounded text-[10px] font-bold bg-red-500/20 hover:bg-red-500/30 transition">Retry</button>
       <button onclick="openEditorModal()" class="px-2 py-1 rounded text-[10px] font-bold bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] transition border border-[var(--border-primary)]">Paste JSON</button>
-      <button onclick="document.getElementById('error-banner').classList.add('hidden')" class="px-2 py-1 rounded text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">✕</button>
+      <button onclick="document.getElementById('error-banner').classList.add('hidden')" class="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Dismiss"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
   </div>
 
   <!-- Toast Container -->
   <div id="toast-container"></div>
 
-  <!-- ================= NAVBAR ================= -->
-  <header class="h-14 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] px-4 lg:px-6 flex items-center justify-between z-30 shrink-0">
+  <!-- ================= NAVBAR (glass, h-12, nuance buntok-docs orange) ================= -->
+  <header class="h-12 sticky top-0 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]/85 backdrop-blur-xl px-4 lg:px-6 flex items-center justify-between z-30 shrink-0 supports-[backdrop-filter]:bg-[var(--bg-secondary)]/70">
     <div class="flex items-center gap-3">
+      <!-- Sidebar Toggle — single button for desktop collapse & mobile drawer (was double) -->
+      <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar (⌘B)" aria-label="Toggle sidebar" class="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] border border-transparent hover:border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+      </button>
       <img class="h-7 w-7 rounded " src="/favicon.ico" alt="buntok-icon">
       <div class="flex items-center gap-2">
         <span class="font-bold text-sm tracking-tight text-[var(--text-primary)]" id="header-api-title">Scalar API Reference</span>
@@ -189,12 +364,30 @@
     </div>
   </header>
 
+  <!-- Overlay for mobile drawer -->
+  <div id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+  <!-- Floating expand button when collapsed (desktop) -->
+  <button id="sidebar-expand-btn" onclick="toggleSidebar()" title="Expand sidebar (⌘B)">
+    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+    <span>Sidebar</span>
+    <kbd class="text-[9px] font-mono bg-[var(--bg-tertiary)] px-1 rounded border border-[var(--border-primary)]">⌘B</kbd>
+  </button>
+
   <!-- ================= BODY WORKSPACE ================= -->
-  <div class="flex-1 flex overflow-hidden">
-    <!-- Sidebar -->
-    <aside class="w-72 border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col shrink-0 h-full overflow-hidden">
-      <!-- Search Filter in Sidebar -->
-      <div class="p-3 border-b border-[var(--border-primary)]">
+  <div id="workspace" class="flex-1 flex overflow-hidden relative">
+    <!-- Sidebar (resizable via --sidebar-width) -->
+    <aside id="sidebar" class="border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] flex flex-col h-full overflow-hidden">
+      <!-- Sidebar header with collapse -->
+      <div class="p-3 border-b border-[var(--border-primary)] space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Explorer</span>
+          <div class="flex items-center gap-1">
+            <span class="text-[10px] text-[var(--text-secondary)] hidden lg:inline">Drag ↔ resize</span>
+            <button id="sidebar-collapse-btn" onclick="toggleSidebar()" title="Collapse sidebar (⌘B)" class="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg>
+            </button>
+          </div>
+        </div>
         <div class="relative">
           <input type="text" id="sidebar-search" oninput="handleSidebarSearch(this.value)" placeholder="Filter endpoints..." class="w-full text-xs pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
           <svg class="w-3.5 h-3.5 absolute left-2.5 top-2 text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -205,10 +398,24 @@
       <div class="flex-1 overflow-y-auto p-3 space-y-4 text-xs" id="sidebar-content">
         <!-- Injected via JS -->
       </div>
+      <div class="px-3 py-2 border-t border-[var(--border-primary)] flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
+        <span class="hidden lg:inline">Double-click handle to reset</span>
+        <span class="lg:hidden">Swipe or tap outside to close</span>
+        <kbd class="font-mono bg-[var(--bg-tertiary)] px-1 rounded border border-[var(--border-primary)] hidden lg:inline">⌘B</kbd>
+      </div>
     </aside>
 
+    <!-- Resizer handle (desktop only) -->
+    <div id="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" title="Drag to resize — double-click to reset">
+      <div class="handle-dot">
+        <svg width="8" height="12" viewBox="0 0 8 12" fill="none"><circle cx="2" cy="2" r="1" fill="currentColor" opacity="0.5"/><circle cx="6" cy="2" r="1" fill="currentColor" opacity="0.5"/><circle cx="2" cy="6" r="1" fill="currentColor" opacity="0.5"/><circle cx="6" cy="6" r="1" fill="currentColor" opacity="0.5"/><circle cx="2" cy="10" r="1" fill="currentColor" opacity="0.5"/><circle cx="6" cy="10" r="1" fill="currentColor" opacity="0.5"/></svg>
+      </div>
+    </div>
+
     <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto p-4 lg:p-8 h-full">
+    <main class="flex-1 overflow-y-auto p-4 lg:p-8 h-full min-w-0">
+      <!-- Breadcrumbs (nuance buntok-docs, orange accent) -->
+      <nav id="breadcrumb" class="hidden max-w-7xl mx-auto mb-4 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]" aria-label="Breadcrumb"></nav>
       
       <!-- OVERVIEW VIEW -->
       <div id="view-overview" class="max-w-4xl mx-auto space-y-8">
@@ -346,7 +553,7 @@
                 <table class="w-full text-left text-xs">
                   <thead class="bg-[var(--bg-primary)] text-[10px] text-[var(--text-secondary)] border-b border-[var(--border-primary)]">
                     <tr>
-                      <th class="p-1.5 w-6 text-center">✓</th>
+                      <th class="p-1.5 w-6 text-center" aria-label="Enabled"><svg class="w-3 h-3 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg></th>
                       <th class="p-1.5 w-1/3">Key</th>
                       <th class="p-1.5 w-24">Type</th>
                       <th class="p-1.5">Value / File</th>
@@ -369,7 +576,7 @@
                 <table class="w-full text-left text-xs">
                   <thead class="bg-[var(--bg-primary)] text-[10px] text-[var(--text-secondary)] border-b border-[var(--border-primary)]">
                     <tr>
-                      <th class="p-1.5 w-6 text-center">✓</th>
+                      <th class="p-1.5 w-6 text-center" aria-label="Enabled"><svg class="w-3 h-3 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg></th>
                       <th class="p-1.5 w-2/5">Key</th>
                       <th class="p-1.5">Value</th>
                       <th class="p-1.5 w-8"></th>
@@ -408,9 +615,9 @@
           </div>
         </div>
 
-        <!-- Postman-style Interactive Client Console -->
-        <div class="xl:col-span-5 space-y-4 xl:sticky xl:top-0">
-          <div class="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 space-y-4 shadow-sm">
+        <!-- Postman-style Interactive Client Console — sticky dengan max-h agar Send tidak hilang -->
+        <div class="xl:col-span-5 space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+          <div class="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 space-y-4 shadow-md">
             
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -420,21 +627,45 @@
               <span class="text-[10px] font-mono text-[var(--text-secondary)]" id="console-mode">Direct / Live</span>
             </div>
 
+            <!-- Postman-like Request Type Switch (HTTP | WebSocket | SSE) -->
+            <div class="flex p-0.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-primary)] w-fit">
+              <button id="console-mode-http" onclick="switchConsoleMode('http')" class="px-3.5 py-1 rounded-full text-xs font-medium bg-[#f97316] text-black flex items-center gap-1.5">
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/><path d="M4 8h16"/><path d="M4 16h12"/></svg>
+                HTTP
+              </button>
+              <button id="console-mode-ws" onclick="switchConsoleMode('ws')" class="px-3.5 py-1 rounded-full text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" id="console-mode-ws-dot"></span>
+                WebSocket
+              </button>
+              <button id="console-mode-sse" onclick="switchConsoleMode('sse')" class="px-3.5 py-1 rounded-full text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1.5">
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4"/><path d="M12 16v4"/><path d="M4 12h4"/><path d="M16 12h4"/></svg>
+                SSE
+              </button>
+            </div>
+
+            <!-- HTTP Panel (default) -->
+            <div id="console-http-panel" class="space-y-4">
+            <!-- Server Selector (moved from header for glass header) -->
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] shrink-0">Server</span>
+              <select id="server-select-console" onchange="handleServerChange(this.value)" class="flex-1 text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-md px-2 py-1 text-[var(--text-secondary)] focus:outline-none focus:border-[#f97316]"></select>
+            </div>
+
             <!-- URL Bar -->
             <div class="flex gap-2">
               <span id="client-method-badge" class="px-2.5 py-1.5 rounded text-xs font-mono font-bold uppercase badge-get flex items-center">GET</span>
               <input type="text" id="client-url-input" class="flex-1 text-xs font-mono p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
-              <button onclick="executeLiveRequest()" id="btn-send-request" class="bg-[#f97316] hover:bg-orange-600 text-black px-4 py-2 rounded text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+              <button onclick="executeLiveRequest()" id="btn-send-request" class="bg-[#f97316] hover:bg-orange-600 text-black px-4 py-2 rounded text-xs font-bold transition flex items-center gap-1.5 shadow-md">
                 <span>Send</span>
               </button>
             </div>
 
-            <!-- Client Tabs -->
-            <div class="border-b border-[var(--border-primary)] flex gap-4 text-xs font-medium">
-              <button onclick="setClientTab('headers')" id="tab-btn-headers" class="pb-2 border-b-2 border-[var(--text-secondary)] hover:text-[var(--text-primary)]">Headers</button>
-              <button onclick="setClientTab('cookies')" id="tab-btn-cookies" class="pb-2 border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Cookies</button>
-              <button onclick="setClientTab('snippets')" id="tab-btn-snippets" class="pb-2 border-b-2 border-[var(--text-secondary)] hover:text-[var(--text-primary)]">Code Snippets</button>
-              <button onclick="setClientTab('res-headers')" id="tab-btn-res-headers" class="pb-2 border-b-2 border-[#f97316] text-[#f97316]">Res Headers</button>
+            <!-- Client Tabs — HTTP only -->
+            <div class="border-b border-[var(--border-primary)] flex gap-4 text-xs font-medium overflow-x-auto">
+              <button onclick="setClientTab('headers')" id="tab-btn-headers" class="pb-2 border-b-2 border-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap">Headers</button>
+              <button onclick="setClientTab('cookies')" id="tab-btn-cookies" class="pb-2 border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap">Cookies</button>
+              <button onclick="setClientTab('snippets')" id="tab-btn-snippets" class="pb-2 border-b-2 border-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap">Code Snippets</button>
+              <button onclick="setClientTab('res-headers')" id="tab-btn-res-headers" class="pb-2 border-b-2 border-[#f97316] text-[#f97316] whitespace-nowrap">Res Headers</button>
             </div>
 
             <!-- Tab: Headers -->
@@ -459,7 +690,7 @@
                 <table class="w-full text-left text-xs">
                   <thead class="bg-[var(--bg-primary)] text-[10px] text-[var(--text-secondary)] border-b border-[var(--border-primary)]">
                     <tr>
-                      <th class="p-1.5 w-6 text-center">✓</th>
+                      <th class="p-1.5 w-6 text-center" aria-label="Enabled"><svg class="w-3 h-3 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg></th>
                       <th class="p-1.5 w-2/5">Name</th>
                       <th class="p-1.5">Value</th>
                       <th class="p-1.5 w-6"></th>
@@ -490,7 +721,7 @@
               </div>
             </div>
 
-            <!-- Response Panel -->
+            <!-- Response Panel (HTTP only) -->
             <div class="pt-3 border-t border-[var(--border-primary)] space-y-2">
               <div class="flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
                 <span class="font-bold uppercase">Response</span>
@@ -504,8 +735,59 @@
                 <button onclick="copyResponseData()" class="text-[10px] text-[#f97316] hover:underline">Copy Response</button>
               </div>
             </div>
+            </div><!-- /#console-http-panel -->
 
-          </div>
+            <!-- WebSocket Standalone Panel (Postman-like, outside HTTP tabs) -->
+            <div id="console-ws-panel" class="hidden space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">WebSocket</span>
+                <span id="ws-status" class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">DISCONNECTED</span>
+              </div>
+              <div class="flex gap-1.5">
+                <input id="ws-url" type="text" placeholder="ws://localhost:3000/chat" class="flex-1 text-xs font-mono p-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]" />
+                <button id="ws-connect-btn" onclick="toggleWS()" class="px-3 py-1.5 rounded-md bg-[#f97316] text-black text-xs font-bold hover:bg-orange-600 transition shrink-0">Connect</button>
+              </div>
+              <div class="flex gap-2 items-center">
+                <input id="ws-token" type="text" placeholder="token query ?token= (optional)" class="flex-1 text-[11px] font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)] focus:outline-none focus:border-[#f97316]" />
+                <button onclick="clearWSLog()" class="text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Clear</button>
+              </div>
+              <div id="ws-log" class="h-48 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] p-2 font-mono text-[11px] overflow-y-auto space-y-0.5">
+                <span class="text-zinc-500">No messages yet. Connect to start.</span>
+              </div>
+              <div class="flex gap-1.5">
+                <select id="ws-msg-type" class="text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded px-2 py-1.5 text-[var(--text-secondary)]">
+                  <option value="text">Text</option>
+                  <option value="json">JSON</option>
+                </select>
+                <input id="ws-input" type="text" placeholder='{"event":"ping"}' class="flex-1 text-xs font-mono p-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]" onkeydown="if(event.key==='Enter') sendWS()" />
+                <button onclick="sendWS()" class="px-3 py-1.5 rounded bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-xs hover:border-[#f97316] text-[var(--text-primary)]">Send</button>
+              </div>
+              <label class="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+                <input type="checkbox" id="ws-heartbeat" class="accent-[#f97316]" /> Heartbeat 30s ping
+              </label>
+            </div>
+
+            <!-- SSE Standalone Panel (Postman-like) -->
+            <div id="console-sse-panel" class="hidden space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Server-Sent Events</span>
+                <span id="sse-status" class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">DISCONNECTED</span>
+              </div>
+              <div class="flex gap-1.5">
+                <input id="sse-url" type="text" placeholder="http://localhost:3000/events" class="flex-1 text-xs font-mono p-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]" />
+                <button id="sse-connect-btn" onclick="toggleSSE()" class="px-3 py-1.5 rounded-md bg-[#f97316] text-black text-xs font-bold hover:bg-orange-600 transition shrink-0">Connect</button>
+              </div>
+              <div class="flex gap-1.5">
+                <input id="sse-last-id" type="text" placeholder="Last-Event-ID (optional)" class="flex-1 text-[11px] font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)]" />
+                <button onclick="clearSSELog()" class="text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">Clear</button>
+              </div>
+              <div id="sse-log" class="h-48 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] p-2 font-mono text-[11px] overflow-y-auto space-y-0.5">
+                <span class="text-zinc-500">No events yet. Connect to start.</span>
+              </div>
+              <p class="text-[10px] text-[var(--text-secondary)]">SSE via <code>fetch</code> stream (supports Authorization). Query <code>?lastEventId=</code> auto if needed.</p>
+            </div>
         </div>
 
       </div>
@@ -515,10 +797,10 @@
 
   <!-- ================= AUTH MODAL ================= -->
   <div id="modal-auth" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-    <div class="w-full max-w-md rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-5 shadow-2xl">
+    <div class="w-full max-w-md rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-5 shadow-md">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-bold text-[var(--text-primary)]">Authentication Configuration</h3>
-        <button onclick="closeAuthModal()" class="text-zinc-500 hover:text-[var(--text-primary)]">✕</button>
+        <button onclick="closeAuthModal()" class="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] text-zinc-500 hover:text-[var(--text-primary)] transition" aria-label="Close"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
 
       <!-- HP5: Security warning -->
@@ -563,13 +845,13 @@
 
   <!-- ================= ENVIRONMENT VARIABLES MODAL ================= -->
   <div id="modal-env" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-    <div class="w-full max-w-lg rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-4 shadow-2xl">
+    <div class="w-full max-w-lg rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-4 shadow-md">
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-sm font-bold text-[var(--text-primary)]">Environment Variables</h3>
           <p class="text-xs text-[var(--text-secondary)]">Define <code>{{variable}}</code> placeholders for URLs, headers, and body.</p>
         </div>
-        <button onclick="closeEnvModal()" class="text-zinc-500 hover:text-[var(--text-primary)]">✕</button>
+        <button onclick="closeEnvModal()" class="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] text-zinc-500 hover:text-[var(--text-primary)] transition" aria-label="Close"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <textarea id="env-editor" rows="10" class="w-full p-3 font-mono text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316] resize-none" placeholder='{ "baseUrl": "http://localhost:3000", "token": "my-jwt-token" }'></textarea>
       <div class="flex justify-end gap-2">
@@ -581,13 +863,13 @@
 
   <!-- ================= SWAGGER JSON EDITOR MODAL ================= -->
   <div id="modal-editor" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-    <div class="w-full max-w-3xl rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-4 shadow-2xl flex flex-col h-[85vh]">
+    <div class="w-full max-w-3xl rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-6 space-y-4 shadow-md flex flex-col h-[85vh]">
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-sm font-bold text-[var(--text-primary)]">Swagger / OpenAPI JSON Specification</h3>
           <p class="text-xs text-[var(--text-secondary)]">View, modify, or load custom OpenAPI 3.0 / Swagger 2.0 specs.</p>
         </div>
-        <button onclick="closeEditorModal()" class="text-zinc-500 hover:text-[var(--text-primary)]">✕</button>
+        <button onclick="closeEditorModal()" class="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] text-zinc-500 hover:text-[var(--text-primary)] transition" aria-label="Close"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
 
       <div class="flex items-center gap-2">
@@ -613,8 +895,8 @@
   </div>
 
   <!-- ================= SEARCH MODAL ================= -->
-  <div id="modal-search" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-xs p-4">
-    <div class="w-full max-w-xl rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 space-y-3 shadow-2xl">
+  <div id="modal-search" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-sm p-4" onclick="if(event.target===this) closeSearchModal()">
+    <div class="w-full max-w-xl rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 space-y-3 shadow-md">
       <div class="relative">
         <input type="text" id="search-dialog-input" oninput="handleSearchDialogInput(this.value)" placeholder="Search operations, paths, summaries, tags..." class="w-full text-sm pl-9 pr-4 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
         <svg class="w-4 h-4 absolute left-3 top-2.5 text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -739,16 +1021,6 @@
       return schema;
     }
 
-    // MP12: Request History
-    function saveRequestToHistory(method, url, status, duration) {
-      try {
-        const history = JSON.parse(localStorage.getItem('scalar_request_history') || '[]');
-        history.unshift({ method, url, status, duration, timestamp: Date.now() });
-        if (history.length > 50) history.length = 50;
-        localStorage.setItem('scalar_request_history', JSON.stringify(history));
-      } catch (e) { /* ignore */ }
-    }
-
     // MP13: Environment Variables
     let envVars = {};
     try { envVars = JSON.parse(localStorage.getItem('scalar_env_vars') || '{}'); } catch (e) { envVars = {}; }
@@ -806,10 +1078,210 @@
       }
     }
 
+    // === Resizable Sidebar State ===
+    const SIDEBAR_WIDTH_KEY = 'scalar_sidebar_width';
+    const SIDEBAR_COLLAPSED_KEY = 'scalar_sidebar_collapsed';
+    const SIDEBAR_DEFAULT = 288;
+    const SIDEBAR_MIN = 200;
+    const SIDEBAR_MAX = 560;
+
+    function clampSidebarWidth(w) {
+      const maxVw = Math.floor(window.innerWidth * 0.5);
+      const max = Math.min(SIDEBAR_MAX, maxVw || SIDEBAR_MAX);
+      return Math.max(SIDEBAR_MIN, Math.min(max, Math.round(w)));
+    }
+    function applySidebarWidth(w, persist = true) {
+      const cw = clampSidebarWidth(w);
+      document.documentElement.style.setProperty('--sidebar-width', cw + 'px');
+      const resizer = document.getElementById('sidebar-resizer');
+      if (resizer) resizer.setAttribute('aria-valuenow', String(cw));
+      if (persist) try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(cw)); } catch {}
+      return cw;
+    }
+    function setSidebarCollapsed(collapsed, persist = true) {
+      const sidebar = document.getElementById('sidebar');
+      const resizer = document.getElementById('sidebar-resizer');
+      const expandBtn = document.getElementById('sidebar-expand-btn');
+      const overlay = document.getElementById('sidebar-overlay');
+      // desktop collapsed vs mobile drawer distinction
+      const isMobile = window.innerWidth <= 1024;
+      if (isMobile) {
+        // mobile: toggle drawer
+        if (collapsed) {
+          sidebar?.classList.add('mobile-hidden');
+          overlay?.classList.remove('visible');
+        } else {
+          sidebar?.classList.remove('mobile-hidden');
+          overlay?.classList.add('visible');
+        }
+        return;
+      }
+      if (collapsed) {
+        sidebar?.classList.add('collapsed');
+        resizer?.classList.add('hidden');
+        expandBtn?.classList.add('visible');
+      } else {
+        sidebar?.classList.remove('collapsed');
+        resizer?.classList.remove('hidden');
+        expandBtn?.classList.remove('visible');
+        // close mobile overlay if any
+        overlay?.classList.remove('visible');
+      }
+      if (persist) try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch {}
+    }
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+      const isMobile = window.innerWidth <= 1024;
+      if (isMobile) {
+        const hidden = sidebar.classList.contains('mobile-hidden');
+        setSidebarCollapsed(!hidden);
+      } else {
+        const collapsed = sidebar.classList.contains('collapsed');
+        setSidebarCollapsed(!collapsed);
+        if (collapsed) showToast('Sidebar expanded', 'info');
+        else showToast('Sidebar collapsed — press ⌘B to restore', 'info');
+      }
+    }
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+      const hidden = sidebar.classList.contains('mobile-hidden');
+      if (hidden) {
+        sidebar.classList.remove('mobile-hidden');
+        document.getElementById('sidebar-overlay')?.classList.add('visible');
+      } else {
+        sidebar.classList.add('mobile-hidden');
+        document.getElementById('sidebar-overlay')?.classList.remove('visible');
+      }
+    }
+    function closeMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      if (window.innerWidth <= 1024) {
+        sidebar?.classList.add('mobile-hidden');
+        document.getElementById('sidebar-overlay')?.classList.remove('visible');
+      }
+    }
+    function initResizableSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const resizer = document.getElementById('sidebar-resizer');
+      const workspace = document.getElementById('workspace');
+      if (!sidebar || !resizer || !workspace) return;
+
+      // restore width
+      try {
+        const savedW = parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY) || '', 10);
+        if (!isNaN(savedW)) applySidebarWidth(savedW, false);
+        else applySidebarWidth(SIDEBAR_DEFAULT, false);
+      } catch { applySidebarWidth(SIDEBAR_DEFAULT, false); }
+
+      // restore collapsed / mobile drawer state
+      try {
+        const collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+        if (collapsed && window.innerWidth > 1024) setSidebarCollapsed(true, false);
+        if (window.innerWidth <= 1024) {
+          // mobile starts hidden
+          sidebar.classList.add('mobile-hidden');
+        }
+      } catch {}
+
+      // responsive: on resize, clamp width and handle mobile switch
+      let resizeTimer = null;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          const cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || SIDEBAR_DEFAULT;
+          applySidebarWidth(cur, true);
+          // if moving from mobile to desktop, ensure correct collapsed state
+          if (window.innerWidth > 1024) {
+            document.getElementById('sidebar-overlay')?.classList.remove('visible');
+            sidebar.classList.remove('mobile-hidden');
+            try {
+              const c = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+              setSidebarCollapsed(c, false);
+            } catch {}
+          } else {
+            // entering mobile: hide resizer collapsed state
+            sidebar.classList.remove('collapsed');
+            document.getElementById('sidebar-expand-btn')?.classList.remove('visible');
+            document.getElementById('sidebar-resizer')?.classList.remove('hidden');
+          }
+        }, 80);
+      });
+
+      // drag via Pointer Events
+      let isResizing = false;
+      let startX = 0;
+      let startWidth = 0;
+
+      const onPointerMove = (e) => {
+        if (!isResizing) return;
+        const delta = e.clientX - startX;
+        const next = clampSidebarWidth(startWidth + delta);
+        document.documentElement.style.setProperty('--sidebar-width', next + 'px');
+        resizer.setAttribute('aria-valuenow', String(next));
+        resizer.setAttribute('aria-valuetext', next + 'px');
+      };
+      const onPointerUp = (e) => {
+        if (!isResizing) return;
+        isResizing = false;
+        resizer.classList.remove('dragging');
+        document.body.classList.remove('resizing');
+        try { resizer.releasePointerCapture(e.pointerId); } catch {}
+        const finalW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || SIDEBAR_DEFAULT;
+        applySidebarWidth(finalW, true);
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+      };
+
+      resizer.addEventListener('pointerdown', (e) => {
+        if (window.innerWidth <= 1024) return;
+        e.preventDefault();
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || sidebar.getBoundingClientRect().width || SIDEBAR_DEFAULT;
+        resizer.classList.add('dragging');
+        document.body.classList.add('resizing');
+        resizer.setPointerCapture(e.pointerId);
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+      });
+
+      // double-click to reset
+      resizer.addEventListener('dblclick', () => {
+        applySidebarWidth(SIDEBAR_DEFAULT, true);
+        if (sidebar.classList.contains('collapsed')) setSidebarCollapsed(false, true);
+        showToast('Sidebar width reset', 'info');
+      });
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       showLoading();
       await loadSwaggerSpec();
       initApp();
+      initResizableSidebar();
+      // restore realtime prefs (standalone, no spec detection)
+      try {
+        const wsSaved = localStorage.getItem('scalar_ws_url');
+        const wsTokenSaved = localStorage.getItem('scalar_ws_token');
+        const sseSaved = localStorage.getItem('scalar_sse_url');
+        const sseLastId = localStorage.getItem('scalar_sse_last_id');
+        const mode = localStorage.getItem('scalar_console_mode') || localStorage.getItem('scalar_realtime_active') || 'http';
+        const wsLastMsg = localStorage.getItem('scalar_ws_last_msg');
+        if (wsSaved && document.getElementById('ws-url')) document.getElementById('ws-url').value = wsSaved;
+        if (wsTokenSaved && document.getElementById('ws-token')) document.getElementById('ws-token').value = wsTokenSaved;
+        if (sseSaved && document.getElementById('sse-url')) document.getElementById('sse-url').value = sseSaved;
+        if (sseLastId && document.getElementById('sse-last-id')) document.getElementById('sse-last-id').value = sseLastId;
+        if (wsLastMsg && document.getElementById('ws-input')) document.getElementById('ws-input').value = wsLastMsg;
+        // default http (Postman-like), ws/sse only if previously selected
+        if (mode === 'ws') switchConsoleMode('ws');
+        else if (mode === 'sse') switchConsoleMode('sse');
+        else switchConsoleMode('http');
+      } catch { try { switchConsoleMode('http'); } catch {} }
+      // cleanup realtime on unload
+      window.addEventListener('beforeunload', () => {
+        try { if (_ws) _ws.close(); if (_sseController) _sseController.abort(); } catch {}
+      });
       hideLoading();
       setupShortcuts();
     });
@@ -837,8 +1309,8 @@
       if (schema.default !== undefined) return schema.default;
       if (schema.enum && schema.enum.length > 0) return schema.enum[0];
 
-      // Handle nullable — alternate between value and null
-      if (schema.nullable && Math.random() > 0.5) return null;
+      // Handle nullable — deterministik: return null only jika type explicitly nullable dan tidak ada value (jangan random)
+      if (schema.nullable && schema.type === 'null') return null;
 
       // Handle $ref if present in components
       if (schema.$ref && specData.components?.schemas) {
@@ -854,8 +1326,8 @@
         const obj = {};
         if (schema.properties) {
           Object.entries(schema.properties).forEach(([key, prop]) => {
-            // Handle nullable per-property
-            if (prop.nullable && Math.random() > 0.7) { obj[key] = null; return; }
+            // nullable per-property — deterministik: tetap isi value, tidak random null
+            if (prop.nullable && prop.type === 'null') { obj[key] = null; return; }
 
             if (prop.example !== undefined) {
               obj[key] = prop.example;
@@ -932,23 +1404,30 @@
       document.getElementById('header-api-version').innerText = 'v' + (specData.info?.version || '1.0.0');
       
       const serverSelect = document.getElementById('server-select');
-      serverSelect.innerHTML = '';
+      const serverSelectConsole = document.getElementById('server-select-console');
+      [serverSelect, serverSelectConsole].forEach(sel => { if (sel) sel.innerHTML = ''; });
       const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
       const servers = specData.servers || [{ url: currentOrigin, description: 'Default Server' }];
       
       servers.forEach((srv) => {
-        const opt = document.createElement('option');
-        opt.value = srv.url;
-        opt.innerText = srv.description ? `${srv.description} (${srv.url})` : srv.url;
-        serverSelect.appendChild(opt);
+        [serverSelect, serverSelectConsole].forEach(sel => {
+          if (!sel) return;
+          const opt = document.createElement('option');
+          opt.value = srv.url;
+          opt.innerText = srv.description ? `${srv.description} (${srv.url})` : srv.url;
+          sel.appendChild(opt);
+        });
       });
       selectedServer = servers[0]?.url || currentOrigin;
+      // sync console selector value
+      if (serverSelectConsole) serverSelectConsole.value = selectedServer;
+      if (serverSelect) serverSelect.value = selectedServer;
 
       updateAuthIndicator();
       renderSidebar();
 
-      // Restore endpoint from URL hash if present
-      const hash = window.location.hash.slice(1);
+      // Restore endpoint from URL hash if present — hash is encodeURIComponent(id)
+      const hash = decodeURIComponent(window.location.hash.slice(1));
       if (hash) {
         const endpoints = getAllEndpoints();
         const ep = endpoints.find(e => e.id === hash);
@@ -964,8 +1443,23 @@
       const isDark = document.documentElement.classList.toggle('dark');
       document.getElementById('theme-sun').classList.toggle('hidden', isDark);
       document.getElementById('theme-moon').classList.toggle('hidden', !isDark);
-      localStorage.setItem('scalar_theme', isDark ? 'dark' : 'light');
+      // sync with buntok-docs next-themes (theme) + scalar_theme
+      try{
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        localStorage.setItem('scalar_theme', isDark ? 'dark' : 'light');
+        localStorage.setItem('buntok-docs-theme', isDark ? 'dark' : 'light');
+      }catch(e){}
     }
+    // init icon sync on load (after theme script in <head>)
+    (function(){
+      try{
+        var isDark = document.documentElement.classList.contains('dark');
+        var sun = document.getElementById('theme-sun');
+        var moon = document.getElementById('theme-moon');
+        if(sun) sun.classList.toggle('hidden', isDark);
+        if(moon) moon.classList.toggle('hidden', !isDark);
+      }catch(e){}
+    })();
 
     async function refreshSwaggerSpec() {
       const btn = document.getElementById('btn-refresh');
@@ -1054,7 +1548,7 @@
         const tagHeader = document.createElement('div');
         tagHeader.className = 'text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)] px-2 py-1 flex items-center justify-between';
         const tagDesc = specData.tags?.find(t => t.name === tag);
-        tagHeader.innerHTML = `<span>${escapeHtml(tag)}</span><span class="text-[9px] bg-[var(--bg-primary)] px-1.5 py-0.5 rounded border border-[var(--border-primary)]">${tagEndpoints.length}</span>`;
+        tagHeader.innerHTML = `<span class="tag-header-label">${escapeHtml(tag)}</span><span class="tag-count text-[9px] bg-[var(--bg-primary)] px-1.5 py-0.5 rounded border border-[var(--border-primary)]">${tagEndpoints.length}</span>`;
         if (tagDesc?.description) {
           tagHeader.title = tagDesc.description;
         }
@@ -1067,8 +1561,8 @@
           btn.className = `w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition text-xs ${isSelected ? 'bg-[var(--accent-muted)] text-[var(--accent)] font-semibold' : 'hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]'}`;
           btn.innerHTML = `
             <span class="w-10 text-[9px] font-mono font-bold uppercase text-center py-0.5 rounded badge-${ep.method.toLowerCase()}">${ep.method}</span>
-            <span class="truncate flex-1 ${isDeprecated ? 'line-through opacity-60' : ''}">${escapeHtml(ep.summary)}</span>
-            ${isDeprecated ? '<span class="text-[8px] px-1 py-0.5 rounded badge-deprecated font-bold">DEPRECATED</span>' : ''}
+            <span class="endpoint-label truncate flex-1 ${isDeprecated ? 'line-through opacity-60' : ''}">${escapeHtml(ep.summary)}</span>
+            ${isDeprecated ? '<span class="text-[8px] px-1 py-0.5 rounded badge-deprecated font-bold collapse-hide">DEPRECATED</span>' : ''}
           `;
           btn.onclick = () => selectEndpoint(ep);
           section.appendChild(btn);
@@ -1116,17 +1610,22 @@
           </div>
         `;
       } else {
+        const maxCount = Math.max(...tags.map(t => endpoints.filter(e => e.tags.includes(t)).length), 1);
         tags.forEach(tagName => {
           const count = endpoints.filter(e => e.tags.includes(tagName)).length;
           const tagDef = specData.tags?.find(t => t.name === tagName);
+          const pct = Math.max(12, Math.round((count / maxCount) * 100));
           const card = document.createElement('div');
-          card.className = 'p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] hover:border-[#f97316] transition cursor-pointer';
+          card.className = 'p-3.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-primary)] hover:border-[#f97316] transition cursor-pointer group';
           card.innerHTML = `
             <div class="flex justify-between items-center mb-1">
               <h4 class="font-bold text-xs text-[var(--text-primary)]">${escapeHtml(tagName)}</h4>
               <span class="text-[10px] font-mono text-[var(--accent)] bg-[var(--accent-muted)] px-1.5 py-0.5 rounded">${count} endpoints</span>
             </div>
             <p class="text-xs text-[var(--text-secondary)] line-clamp-2">${escapeHtml(tagDef?.description || 'Endpoints for ' + tagName.toLowerCase() + ' operations.')}</p>
+            <div class="mt-2 h-1 rounded-full bg-[var(--bg-tertiary)] overflow-hidden">
+              <div class="h-full bg-[var(--accent)] rounded-full transition-all group-hover:opacity-80" style="width:${pct}%"></div>
+            </div>
           `;
           card.onclick = () => {
             const first = endpoints.find(e => e.tags.includes(tagName));
@@ -1142,6 +1641,7 @@
       document.getElementById('view-overview').classList.remove('hidden');
       document.getElementById('view-endpoint').classList.add('hidden');
       window.location.hash = '';
+      updateBreadcrumb(null, null);
       renderSidebar();
     }
 
@@ -1150,9 +1650,12 @@
       document.getElementById('view-overview').classList.add('hidden');
       document.getElementById('view-endpoint').classList.remove('hidden');
       renderSidebar();
+      // close mobile drawer after selection
+      if (window.innerWidth <= 1024) closeMobileSidebar();
 
-      // Update URL hash for persistence across refresh
-      window.location.hash = ep.id;
+      // Update URL hash for persistence across refresh — encode to handle "/" ":" etc.
+      window.location.hash = encodeURIComponent(ep.id);
+      updateBreadcrumb(ep.tags[0] || 'API', ep.path);
 
       document.getElementById('doc-badge').className = `px-2 py-0.5 rounded text-xs font-bold font-mono uppercase badge-${ep.method.toLowerCase()}`;
       document.getElementById('doc-badge').innerText = ep.method;
@@ -1468,7 +1971,7 @@
               <input type="text" value="${row.value}" oninput="updateFormDataValue(${idx}, this.value)" placeholder="Field value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]">
             `}
           </td>
-          <td class="p-1.5 text-center"><button onclick="deleteFormDataRow(${idx})" class="text-zinc-500 hover:text-red-500">✕</button></td>
+          <td class="p-1.5 text-center"><button onclick="deleteFormDataRow(${idx})" class="p-1 rounded hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition" aria-label="Delete"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -1521,7 +2024,7 @@
           <td class="p-1.5 text-center"><input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="toggleUrlEncodedRow(${idx}, this.checked)" class="accent-[#f97316]"></td>
           <td class="p-1.5"><input type="text" value="${row.key}" oninput="updateUrlEncodedKey(${idx}, this.value)" placeholder="Parameter" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
           <td class="p-1.5"><input type="text" value="${row.value}" oninput="updateUrlEncodedValue(${idx}, this.value)" placeholder="Value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
-          <td class="p-1.5 text-center"><button onclick="deleteUrlEncodedRow(${idx})" class="text-zinc-500 hover:text-red-500">✕</button></td>
+          <td class="p-1.5 text-center"><button onclick="deleteUrlEncodedRow(${idx})" class="p-1 rounded hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition" aria-label="Delete"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -1561,7 +2064,7 @@
           <td class="p-1.5 text-center"><input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="toggleCookieRow(${idx}, this.checked)" class="accent-[#f97316]"></td>
           <td class="p-1.5"><input type="text" value="${escapeHtml(row.key)}" oninput="updateCookieKey(${idx}, this.value)" placeholder="Name" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
           <td class="p-1.5"><input type="text" value="${escapeHtml(row.value)}" oninput="updateCookieValue(${idx}, this.value)" placeholder="Value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
-          <td class="p-1.5 text-center"><button onclick="deleteCookieRow(${idx})" class="text-zinc-500 hover:text-red-500">✕</button></td>
+          <td class="p-1.5 text-center"><button onclick="deleteCookieRow(${idx})" class="p-1 rounded hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition" aria-label="Delete"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -1734,9 +2237,10 @@
         const headers = {};
         if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
         if (apiKey) headers['X-API-KEY'] = apiKey;
-        // MP10: Basic Auth
+        // MP10: Basic Auth — unicode-safe
         if (basicAuthUser) {
-          const encoded = btoa(`${basicAuthUser}:${basicAuthPass}`);
+          const raw = `${basicAuthUser}:${basicAuthPass}`;
+          const encoded = btoa(unescape(encodeURIComponent(raw)));
           headers['Authorization'] = `Basic ${encoded}`;
         }
 
@@ -1747,7 +2251,8 @@
           }
         });
 
-        // Cookie header from cookie rows
+        // Cookie header from cookie rows — persist dulu
+        saveCookiesToStorage();
         const enabledCookies = cookieRows.filter(r => r.enabled && r.key);
         if (enabledCookies.length > 0) {
           headers['Cookie'] = enabledCookies.map(r => `${r.key}=${r.value}`).join('; ');
@@ -1829,9 +2334,6 @@
           bodyHtml,
           responseHeaders
         );
-
-        // Store in request history (MP12)
-        saveRequestToHistory(method, url, response.status, duration);
       } catch (err) {
         // HP3: Show actual error instead of fake "200 OK"
         const duration = Math.round(performance.now() - startTime);
@@ -1896,17 +2398,283 @@
 
     function setClientTab(tab) {
       ['headers', 'cookies', 'snippets', 'res-headers'].forEach(t => {
-        document.getElementById(`client-tab-${t}`).classList.toggle('hidden', t !== tab);
+        const pane = document.getElementById(`client-tab-${t}`);
+        if(pane) pane.classList.toggle('hidden', t !== tab);
         const btn = document.getElementById(`tab-btn-${t}`);
+        if(!btn) return;
         if (t === tab) {
-          btn.className = 'pb-2 border-b-2 border-[#f97316] text-[#f97316]';
+          btn.className = 'pb-2 border-b-2 border-[#f97316] text-[#f97316] whitespace-nowrap';
         } else {
-          btn.className = 'pb-2 border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]';
+          btn.className = 'pb-2 border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap';
         }
       });
       if (tab === 'headers') {
         document.getElementById('client-header-auth').innerText = bearerToken ? `Bearer ${bearerToken.substring(0, 12)}...` : 'None';
         document.getElementById('client-header-apikey').innerText = apiKey ? `${apiKey.substring(0, 10)}...` : 'None';
+      }
+      if (tab === 'realtime') {
+        // init realtime URLs from current server if empty
+        const wsInput = document.getElementById('ws-url');
+        const sseInput = document.getElementById('sse-url');
+        try {
+          const httpOrigin = selectedServer || window.location.origin;
+          const wsOrigin = httpOrigin.replace(/^http/, 'ws');
+          if (wsInput && !wsInput.value) wsInput.value = wsOrigin + '/ws/chat';
+          if (sseInput && !sseInput.value) sseInput.value = httpOrigin + '/events';
+          localStorage.setItem('scalar_realtime_last_tab', document.getElementById('realtime-ws-panel')?.classList.contains('hidden') ? 'sse' : 'ws');
+        } catch {}
+      }
+    }
+    // Realtime — WS/SSE standalone tester (no spec detection)
+    let _ws = null;
+    let _wsHeartbeatTimer = null;
+    let _sseController = null;
+    let _sseReader = null;
+    // Postman-like top mode: HTTP | WebSocket | SSE — outside inner tabs
+    function switchConsoleMode(mode) {
+      const httpPanel = document.getElementById('console-http-panel');
+      const wsPanel = document.getElementById('console-ws-panel');
+      const ssePanel = document.getElementById('console-sse-panel');
+      const btnHttp = document.getElementById('console-mode-http');
+      const btnWs = document.getElementById('console-mode-ws');
+      const btnSse = document.getElementById('console-mode-sse');
+      const activeClass = 'px-3.5 py-1 rounded-full text-xs font-medium bg-[#f97316] text-black flex items-center gap-1.5';
+      const idleClass = 'px-3.5 py-1 rounded-full text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1.5';
+      if (httpPanel) httpPanel.classList.toggle('hidden', mode !== 'http');
+      if (wsPanel) wsPanel.classList.toggle('hidden', mode !== 'ws');
+      if (ssePanel) ssePanel.classList.toggle('hidden', mode !== 'sse');
+      if (btnHttp) btnHttp.className = mode === 'http' ? activeClass : idleClass;
+      if (btnWs) btnWs.className = mode === 'ws' ? activeClass : idleClass;
+      if (btnSse) btnSse.className = mode === 'sse' ? activeClass : idleClass;
+      // auto-fill URLs if empty
+      try {
+        const httpOrigin = selectedServer || window.location.origin;
+        const wsOrigin = httpOrigin.replace(/^http/, 'ws');
+        const wsInput = document.getElementById('ws-url');
+        const sseInput = document.getElementById('sse-url');
+        if (wsInput && !wsInput.value) wsInput.value = wsOrigin + '/ws/chat';
+        if (sseInput && !sseInput.value) sseInput.value = httpOrigin + '/events';
+        localStorage.setItem('scalar_console_mode', mode);
+      } catch {}
+    }
+    // legacy alias for old inner tab
+    function switchRealtime(which) { switchConsoleMode(which === 'sse' ? 'sse' : 'ws'); }
+    function appendWSLog(html) {
+      const log = document.getElementById('ws-log');
+      if (!log) return;
+      if (log.innerHTML.includes('No messages yet')) log.innerHTML = '';
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      // limit 200 entries
+      while (log.children.length > 200) log.removeChild(log.firstChild);
+    }
+    function setWSStatus(text, ok) {
+      const el = document.getElementById('ws-status');
+      const dot = document.getElementById('console-mode-ws-dot');
+      const btn = document.getElementById('ws-connect-btn');
+      if (el) {
+        el.textContent = text;
+        el.className = ok ? 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400' : (text === 'CONNECTING' ? 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400' : 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400');
+      }
+      if (dot) dot.className = ok ? 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-emerald-500 opacity-60';
+      if (btn) {
+        btn.textContent = ok || text === 'CONNECTING' ? 'Disconnect' : 'Connect';
+        btn.className = ok ? 'px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-300 text-xs font-bold hover:bg-zinc-700 transition shrink-0' : 'px-3 py-1.5 rounded-md bg-[#f97316] text-black text-xs font-bold hover:bg-orange-600 transition shrink-0';
+      }
+    }
+    function clearWSLog() {
+      const log = document.getElementById('ws-log');
+      if (log) log.innerHTML = '<span class="text-zinc-500">No messages yet. Connect to start.</span>';
+    }
+    function buildWsUrl(raw) {
+      let url = raw.trim();
+      const token = document.getElementById('ws-token')?.value.trim();
+      if (token) {
+        const sep = url.includes('?') ? '&' : '?';
+        url += sep + 'token=' + encodeURIComponent(token);
+      }
+      return url;
+    }
+    function toggleWS() {
+      if (_ws && _ws.readyState === WebSocket.OPEN) {
+        try { _ws.close(1000, 'client close'); } catch {}
+        return;
+      }
+      if (_ws && _ws.readyState === WebSocket.CONNECTING) {
+        try { _ws.close(); } catch {}
+        return;
+      }
+      const raw = document.getElementById('ws-url')?.value.trim();
+      if (!raw) { showToast('WebSocket URL required', 'error'); return; }
+      let url;
+      try { url = buildWsUrl(raw); new URL(url.replace(/^ws/,'http')); } catch { showToast('Invalid WebSocket URL', 'error'); return; }
+      try {
+        _ws = new WebSocket(url);
+      } catch (e) { showToast('Failed to create WebSocket: ' + e.message, 'error'); return; }
+      setWSStatus('CONNECTING', false);
+      appendWSLog(`<span class="text-[var(--text-secondary)]">[${new Date().toLocaleTimeString()}] → Connecting to ${escapeHtml(url)}...</span>`);
+      _ws.onopen = () => {
+        setWSStatus('OPEN', true);
+        appendWSLog(`<span class="text-emerald-500">[${new Date().toLocaleTimeString()}] ✓ Connected</span>`);
+        showToast('WebSocket connected', 'success');
+        const hb = document.getElementById('ws-heartbeat');
+        if (hb?.checked) {
+          _wsHeartbeatTimer = setInterval(() => {
+            if (_ws && _ws.readyState === WebSocket.OPEN) {
+              try { _ws.send(JSON.stringify({ type: 'ping', ts: Date.now() })); appendWSLog(`<span class="text-[var(--text-secondary)]">[${new Date().toLocaleTimeString()}] → ping</span>`); } catch {}
+            }
+          }, 30000);
+        }
+        try { localStorage.setItem('scalar_ws_url', raw); if (document.getElementById('ws-token')?.value) localStorage.setItem('scalar_ws_token', document.getElementById('ws-token').value); } catch {}
+      };
+      _ws.onmessage = (ev) => {
+        let data = ev.data;
+        let pretty = escapeHtml(data);
+        try { const j = JSON.parse(data); pretty = syntaxHighlightJson(j); } catch {}
+        appendWSLog(`<div class="flex gap-1.5"><span class="text-emerald-500 shrink-0">←</span><span class="text-[var(--text-secondary)] shrink-0">[${new Date().toLocaleTimeString()}]</span><span class="break-all">${pretty}</span></div>`);
+      };
+      _ws.onclose = (ev) => {
+        setWSStatus('DISCONNECTED', false);
+        appendWSLog(`<span class="text-zinc-500">[${new Date().toLocaleTimeString()}] ✕ Closed code=${ev.code} reason=${escapeHtml(ev.reason || '-')}${ev.wasClean?' clean':''}</span>`);
+        if (_wsHeartbeatTimer) { clearInterval(_wsHeartbeatTimer); _wsHeartbeatTimer = null; }
+        _ws = null;
+      };
+      _ws.onerror = () => {
+        appendWSLog(`<span class="text-red-400">[${new Date().toLocaleTimeString()}] ⚠ WebSocket error</span>`);
+        showToast('WebSocket error — check URL/CORS', 'error');
+      };
+    }
+    function sendWS() {
+      if (!_ws || _ws.readyState !== WebSocket.OPEN) { showToast('WebSocket not connected', 'error'); return; }
+      const type = document.getElementById('ws-msg-type')?.value || 'text';
+      let val = document.getElementById('ws-input')?.value || '';
+      if (!val) { showToast('Message empty', 'error'); return; }
+      if (type === 'json') {
+        try { const obj = JSON.parse(val); val = JSON.stringify(obj); } catch (e) { showToast('Invalid JSON: ' + e.message, 'error'); return; }
+      }
+      try {
+        _ws.send(val);
+        appendWSLog(`<div class="flex gap-1.5"><span class="text-[var(--accent)] shrink-0">→</span><span class="text-[var(--text-secondary)] shrink-0">[${new Date().toLocaleTimeString()}]</span><span class="break-all">${escapeHtml(val)}</span></div>`);
+        try { localStorage.setItem('scalar_ws_last_msg', val); } catch {}
+      } catch (e) { showToast('Send failed: ' + e.message, 'error'); }
+    }
+    // SSE tester via fetch stream (supports Authorization headers)
+    function appendSSELog(html) {
+      const log = document.getElementById('sse-log');
+      if (!log) return;
+      if (log.innerHTML.includes('No events yet')) log.innerHTML = '';
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      while (log.children.length > 300) log.removeChild(log.firstChild);
+    }
+    function setSSEStatus(text, ok) {
+      const el = document.getElementById('sse-status');
+      const btn = document.getElementById('sse-connect-btn');
+      if (el) {
+        el.textContent = text;
+        el.className = ok ? 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400' : (text === 'CONNECTING' ? 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400' : 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400');
+      }
+      if (btn) {
+        btn.textContent = ok || text === 'CONNECTING' ? 'Disconnect' : 'Connect';
+        btn.className = ok ? 'px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-300 text-xs font-bold hover:bg-zinc-700 transition shrink-0' : 'px-3 py-1.5 rounded-md bg-[#f97316] text-black text-xs font-bold hover:bg-orange-600 transition shrink-0';
+      }
+    }
+    function clearSSELog() {
+      const log = document.getElementById('sse-log');
+      if (log) log.innerHTML = '<span class="text-zinc-500">No events yet. Connect to start.</span>';
+    }
+    async function toggleSSE() {
+      if (_sseController) {
+        try { _sseController.abort(); } catch {}
+        _sseController = null;
+        _sseReader = null;
+        setSSEStatus('DISCONNECTED', false);
+        appendSSELog(`<span class="text-zinc-500">[${new Date().toLocaleTimeString()}] ✕ Disconnected (client abort)</span>`);
+        return;
+      }
+      const raw = document.getElementById('sse-url')?.value.trim();
+      if (!raw) { showToast('SSE URL required', 'error'); return; }
+      let url = raw.trim();
+      const lastId = document.getElementById('sse-last-id')?.value.trim();
+      // append lastEventId as query fallback (buntok sse.ts supports ?lastEventId)
+      if (lastId) {
+        const sep = url.includes('?') ? '&' : '?';
+        url += sep + 'lastEventId=' + encodeURIComponent(lastId);
+      }
+      try { new URL(url); } catch { showToast('Invalid SSE URL', 'error'); return; }
+      _sseController = new AbortController();
+      setSSEStatus('CONNECTING', false);
+      appendSSELog(`<span class="text-[var(--text-secondary)]">[${new Date().toLocaleTimeString()}] → Connecting to ${escapeHtml(url)}...</span>`);
+      try { localStorage.setItem('scalar_sse_url', raw); if (lastId) localStorage.setItem('scalar_sse_last_id', lastId); } catch {}
+      const headers = { 'Accept': 'text/event-stream' };
+      if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
+      if (apiKey) headers['X-API-KEY'] = apiKey;
+      if (lastId) headers['Last-Event-ID'] = lastId;
+      try {
+        const res = await fetch(url, { headers, signal: _sseController.signal });
+        if (!res.ok) {
+          appendSSELog(`<span class="text-red-400">[${new Date().toLocaleTimeString()}] ✗ HTTP ${res.status} ${escapeHtml(res.statusText)}</span>`);
+          showToast('SSE failed: ' + res.status, 'error');
+          setSSEStatus('DISCONNECTED', false);
+          _sseController = null;
+          return;
+        }
+        const ctype = res.headers.get('content-type') || '';
+        if (!ctype.includes('text/event-stream')) {
+          appendSSELog(`<span class="text-amber-400">[${new Date().toLocaleTimeString()}] ⚠ Content-Type not event-stream: ${escapeHtml(ctype)} — still reading</span>`);
+        }
+        setSSEStatus('OPEN', true);
+        appendSSELog(`<span class="text-emerald-500">[${new Date().toLocaleTimeString()}] ✓ Connected — streaming</span>`);
+        const reader = res.body.getReader();
+        _sseReader = reader;
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let boundary;
+          while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+            const rawEvent = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            if (!rawEvent.trim()) continue;
+            if (rawEvent.startsWith(':')) {
+              // comment/heartbeat
+              appendSSELog(`<span class="text-zinc-500">[${new Date().toLocaleTimeString()}] : ${escapeHtml(rawEvent.slice(1).trim())}</span>`);
+              continue;
+            }
+            // parse event
+            let event = 'message', dataLines = [], id = '';
+            rawEvent.split('\n').forEach(line => {
+              if (line.startsWith('event:')) event = line.slice(6).trim();
+              else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
+              else if (line.startsWith('id:')) id = line.slice(3).trim();
+              else if (line.startsWith('retry:')) {}
+            });
+            const data = dataLines.join('\n');
+            let prettyData = escapeHtml(data);
+            try { const j = JSON.parse(data); prettyData = syntaxHighlightJson(j); } catch {}
+            const idHtml = id ? ` <span class="text-[var(--text-secondary)]">id=${escapeHtml(id)}</span>` : '';
+            appendSSELog(`<div class="border-l-2 border-[var(--accent)]/40 pl-2"><div class="flex gap-1.5 text-[10px]"><span class="text-[var(--accent)] font-bold">${escapeHtml(event)}</span>${idHtml}<span class="text-[var(--text-secondary)]">[${new Date().toLocaleTimeString()}]</span></div><div class="break-all">${prettyData}</div></div>`);
+          }
+        }
+        appendSSELog(`<span class="text-zinc-500">[${new Date().toLocaleTimeString()}] — Stream ended</span>`);
+        setSSEStatus('DISCONNECTED', false);
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          appendSSELog(`<span class="text-zinc-500">[${new Date().toLocaleTimeString()}] ✕ Aborted</span>`);
+        } else {
+          appendSSELog(`<span class="text-red-400">[${new Date().toLocaleTimeString()}] ✗ ${escapeHtml(e.message)}</span>`);
+          showToast('SSE error: ' + e.message, 'error');
+        }
+        setSSEStatus('DISCONNECTED', false);
+      } finally {
+        _sseController = null;
+        _sseReader = null;
       }
     }
 
@@ -1966,14 +2734,24 @@
         let contentTypeLine = '"Content-Type": "application/json",\n    ';
         if (isMutation) {
           if (activeBodyType === 'json') {
-            const body = document.getElementById('doc-body-input')?.value || '{}';
-            bodySection = `body: JSON.stringify(${body.replace(/\n/g, '')}),\n  `;
+            const raw = document.getElementById('doc-body-input')?.value?.trim() || '{}';
+            let bodyLiteral = raw;
+            try { bodyLiteral = JSON.stringify(JSON.parse(raw)); } catch { bodyLiteral = JSON.stringify(raw); }
+            bodySection = `body: JSON.stringify(${bodyLiteral}),\n  `;
           } else if (activeBodyType === 'form-data') {
             contentTypeLine = '';
             bodySection = `body: formData,\n  `;
           } else if (activeBodyType === 'x-www-form-urlencoded') {
             contentTypeLine = '"Content-Type": "application/x-www-form-urlencoded",\n    ';
-            bodySection = `body: new URLSearchParams({${urlEncodedRows.filter(r => r.enabled).map(r => `"${r.key}": "${r.value}"`).join(', ')}}),\n  `;
+            bodySection = `body: new URLSearchParams({${urlEncodedRows.filter(r => r.enabled).map(r => `"${r.key}": "${r.value.replace(/"/g,'\\"')}"`).join(', ')}}),\n  `;
+          } else if (activeBodyType === 'raw') {
+            const esc = rawBodyText.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+            contentTypeLine = '"Content-Type": "text/plain",\n    ';
+            bodySection = `body: '${esc}',\n  `;
+          } else if (activeBodyType === 'xml') {
+            const esc = xmlBodyText.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+            contentTypeLine = '"Content-Type": "application/xml",\n    ';
+            bodySection = `body: '${esc}',\n  `;
           }
         }
         code = `const response = await fetch("${url}", {\n  method: "${method}",\n  headers: {\n    ${contentTypeLine}${bearerToken ? `"Authorization": "Bearer ${bearerToken}",\n    ` : ''}${apiKey ? `"X-API-KEY": "${apiKey}",\n    ` : ''}},\n  ${bodySection}});\nconst data = await response.json();\nconsole.log(data);`;
@@ -1986,7 +2764,23 @@
         }
         code = `import requests\n\nurl = "${url}"\nheaders = {\n${bearerToken ? `    "Authorization": "Bearer ${bearerToken}",\n` : ''}${apiKey ? `    "X-API-KEY": "${apiKey}",\n` : ''}}\n\nresponse = requests.${method.toLowerCase()}(url, headers=headers${pyBody})\nprint(response.json())`;
       } else if (lang === 'go') {
-        code = `package main\n\nimport (\n\t"fmt"\n\t"net/http"\n\t"io"\n)\n\nfunc main() {\n\treq, _ := http.NewRequest("${method}", "${url}", nil)\n${bearerToken ? `\treq.Header.Add("Authorization", "Bearer ${bearerToken}")\n` : ''}\tres, _ := http.DefaultClient.Do(req)\n\tbody, _ := io.ReadAll(res.Body)\n\tfmt.Println(string(body))\n}`;
+        let goBody = 'nil';
+        let goImports = '\t"fmt"\n\t"net/http"\n\t"io"';
+        if (isMutation && activeBodyType === 'json') {
+          const raw = document.getElementById('doc-body-input')?.value?.trim() || '{}';
+          const esc = raw.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+          goBody = `strings.NewReader("${esc}")`;
+          goImports = '\t"fmt"\n\t"net/http"\n\t"io"\n\t"strings"';
+        } else if (isMutation && activeBodyType === 'raw') {
+          const esc = rawBodyText.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+          goBody = `strings.NewReader("${esc}")`;
+          goImports = '\t"fmt"\n\t"net/http"\n\t"io"\n\t"strings"';
+        } else if (isMutation && activeBodyType === 'xml') {
+          const esc = xmlBodyText.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+          goBody = `strings.NewReader("${esc}")`;
+          goImports = '\t"fmt"\n\t"net/http"\n\t"io"\n\t"strings"';
+        }
+        code = `package main\n\nimport (\n${goImports}\n)\n\nfunc main() {\n\treq, _ := http.NewRequest("${method}", "${url}", ${goBody})\n${bearerToken ? `\treq.Header.Add("Authorization", "Bearer ${bearerToken}")\n` : ''}\tres, _ := http.DefaultClient.Do(req)\n\tbody, _ := io.ReadAll(res.Body)\n\tfmt.Println(string(body))\n}`;
       } else if (lang === 'php') {
         code = `<?php\n$curl = curl_init();\ncurl_setopt_array($curl, array(\n  CURLOPT_URL => '${url}',\n  CURLOPT_RETURNTRANSFER => true,\n  CURLOPT_CUSTOMREQUEST => '${method}',\n  CURLOPT_HTTPHEADER => array(\n    'Content-Type: application/json'\n  ),\n));\n$response = curl_exec($curl);\ncurl_close($curl);\necho $response;`;
       }
@@ -2087,8 +2881,9 @@
     function handleSearchDialogInput(q) {
       const container = document.getElementById('search-dialog-results');
       container.innerHTML = '';
+      const lq = q.toLowerCase();
       const endpoints = getAllEndpoints().filter(e => 
-        !q || e.summary.toLowerCase().includes(q.toLowerCase()) || e.path.toLowerCase().includes(q.toLowerCase()) || e.tags.some(t => t.toLowerCase().includes(q.toLowerCase()))
+        !q || e.summary.toLowerCase().includes(lq) || e.path.toLowerCase().includes(lq) || e.tags.some(t => t.toLowerCase().includes(lq)) || (e.operationId && e.operationId.toLowerCase().includes(lq))
       );
 
       if (endpoints.length === 0) {
@@ -2118,6 +2913,17 @@
 
     function setupShortcuts() {
       window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+          // ⌘B / Ctrl+B toggle sidebar (same as docs)
+          e.preventDefault();
+          toggleSidebar();
+          return;
+        }
+        if (e.key === '[' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          toggleSidebar();
+          return;
+        }
         if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
           e.preventDefault();
           const modal = document.getElementById('modal-search');
@@ -2129,6 +2935,7 @@
           closeEditorModal();
           closeSearchModal();
           closeEnvModal();
+          closeMobileSidebar();
         }
         // MP20: Keyboard navigation in search
         const searchModal = document.getElementById('modal-search');
@@ -2156,7 +2963,27 @@
     }
     function handleServerChange(val) {
       selectedServer = val;
+      // sync both selectors (header + console)
+      const a = document.getElementById('server-select');
+      const b = document.getElementById('server-select-console');
+      if (a && a.value !== val) a.value = val;
+      if (b && b.value !== val) b.value = val;
       updateClientUrl();
+    }
+    function updateBreadcrumb(tag, path) {
+      const el = document.getElementById('breadcrumb');
+      if (!el) return;
+      if (!tag && !path) {
+        el.classList.add('hidden');
+        el.innerHTML = '';
+        return;
+      }
+      el.classList.remove('hidden');
+      const home = '<button onclick="showOverview()" class="hover:text-[var(--accent)] transition flex items-center gap-1"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Overview</button>';
+      const sep = '<span class="text-[var(--border-primary)]">/</span>';
+      const tagPart = tag ? `<span class="px-1.5 py-0.5 rounded bg-[var(--accent-muted)] text-[var(--accent)] font-medium text-[10px]">${escapeHtml(tag)}</span>` : '';
+      const pathPart = path ? `<span class="font-mono text-[var(--text-primary)]">${escapeHtml(path)}</span>` : '';
+      el.innerHTML = [home, tag?sep:'', tagPart, path?sep:'', pathPart].filter(Boolean).join(' ');
     }
     function copyToClipboard(text, msg) {
       navigator.clipboard.writeText(text);

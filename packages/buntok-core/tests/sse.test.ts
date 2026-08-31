@@ -20,8 +20,8 @@ describe("SSE", () => {
 		const response = sse.connect();
 
 		expect(response.status).toBe(200);
-		expect(response.headers.get("Content-Type")).toBe("text/event-stream");
-		expect(response.headers.get("Cache-Control")).toBe("no-cache");
+		expect(response.headers.get("Content-Type")).toBe("text/event-stream; charset=utf-8");
+		expect(response.headers.get("Cache-Control")).toBe("no-cache, no-transform");
 		expect(response.headers.get("Connection")).toBe("keep-alive");
 		expect(response.headers.get("X-Accel-Buffering")).toBe("no");
 	});

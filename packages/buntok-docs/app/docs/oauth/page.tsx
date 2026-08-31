@@ -11,17 +11,17 @@ export const metadata: Metadata = {
 
 export default function OAuthPage() {
   return (
-    <div className="max-w-3xl">
+    <div>
       <Heading level={1}>OAuth Social Login</Heading>
       <p className="text-text-secondary mb-4">
-        Buntok provides built-in OAuth 2.0 support for social login with
-        Google, GitHub, and Apple. It handles PKCE, state management, and
-        cookie cleanup automatically.
+        Buntok provides builttau -in OAuth 2.0 support for social login with
+        Google, GitHub, and Apple. It handles PKCE, state management, and cookie
+        cleanup automatically.
       </p>
 
       <Callout type="info">
-        All providers use the Authorization Code Flow with PKCE (RFC 7636) -
-        the recommended flow for 2026+.
+        All providers use the Authorization Code Flow with PKCE (RFC 7636) - the
+        recommended flow for 2026+.
       </Callout>
 
       <Heading level={2} className="mt-8 mb-3">
@@ -113,10 +113,18 @@ app.get("/auth/google/callback", async (ctx) => {
         <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
           <thead className="bg-bg-tertiary border-b border-border-primary">
             <tr>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Provider</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Type</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">PKCE</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">User ID</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Provider
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Type
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                PKCE
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                User ID
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -124,19 +132,25 @@ app.get("/auth/google/callback", async (ctx) => {
               <td className="px-4 py-2">Google</td>
               <td className="px-4 py-2">OIDC</td>
               <td className="px-4 py-2">✅</td>
-              <td className="px-4 py-2"><code>sub</code></td>
+              <td className="px-4 py-2">
+                <code>sub</code>
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">GitHub</td>
               <td className="px-4 py-2">OAuth2</td>
               <td className="px-4 py-2">❌</td>
-              <td className="px-4 py-2"><code>id</code></td>
+              <td className="px-4 py-2">
+                <code>id</code>
+              </td>
             </tr>
             <tr>
               <td className="px-4 py-2">Apple</td>
               <td className="px-4 py-2">OIDC</td>
               <td className="px-4 py-2">✅</td>
-              <td className="px-4 py-2"><code>sub</code></td>
+              <td className="px-4 py-2">
+                <code>sub</code>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -146,9 +160,20 @@ app.get("/auth/google/callback", async (ctx) => {
         Google Setup
       </Heading>
       <ol className="my-3 ml-6 list-decimal text-text-secondary space-y-2">
-        <li>Go to <a href="https://console.cloud.google.com/apis/credentials" className="text-accent hover:underline">Google Cloud Console</a></li>
+        <li>
+          Go to{" "}
+          <a
+            href="https://console.cloud.google.com/apis/credentials"
+            className="text-accent hover:underline"
+          >
+            Google Cloud Console
+          </a>
+        </li>
         <li>Create OAuth 2.0 Client ID (Web application type)</li>
-        <li>Add authorized redirect URI: <code>http://localhost:1212/auth/google/callback</code></li>
+        <li>
+          Add authorized redirect URI:{" "}
+          <code>http://localhost:1212/auth/google/callback</code>
+        </li>
         <li>Copy Client ID and Client Secret</li>
       </ol>
 
@@ -162,9 +187,20 @@ GOOGLE_CLIENT_SECRET=your_client_secret`}
         GitHub Setup
       </Heading>
       <ol className="my-3 ml-6 list-decimal text-text-secondary space-y-2">
-        <li>Go to <a href="https://github.com/settings/developers" className="text-accent hover:underline">GitHub Developer Settings</a></li>
+        <li>
+          Go to{" "}
+          <a
+            href="https://github.com/settings/developers"
+            className="text-accent hover:underline"
+          >
+            GitHub Developer Settings
+          </a>
+        </li>
         <li>Create new OAuth App</li>
-        <li>Set Authorization callback URL: <code>http://localhost:1212/auth/github/callback</code></li>
+        <li>
+          Set Authorization callback URL:{" "}
+          <code>http://localhost:1212/auth/github/callback</code>
+        </li>
         <li>Copy Client ID and Client Secret</li>
       </ol>
 
@@ -184,12 +220,23 @@ GITHUB_CLIENT_SECRET=your_client_secret`}
         Apple Setup
       </Heading>
       <ol className="my-3 ml-6 list-decimal text-text-secondary space-y-2">
-        <li>Go to <a href="https://developer.apple.com/account/resources/identifiers/list" className="text-accent hover:underline">Apple Developer Console</a></li>
+        <li>
+          Go to{" "}
+          <a
+            href="https://developer.apple.com/account/resources/identifiers/list"
+            className="text-accent hover:underline"
+          >
+            Apple Developer Console
+          </a>
+        </li>
         <li>Create an App ID with Sign in with Apple enabled</li>
         <li>Create a Services ID and configure Sign in with Apple</li>
         <li>Create a key with Sign in with Apple enabled</li>
         <li>Download the private key (.p8 file)</li>
-        <li>Set authorized redirect URI: <code>http://localhost:1212/auth/apple/callback</code></li>
+        <li>
+          Set authorized redirect URI:{" "}
+          <code>http://localhost:1212/auth/apple/callback</code>
+        </li>
       </ol>
 
       <CodeBlock
@@ -202,8 +249,8 @@ APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----`
 
       <Callout type="warning">
         Apple only sends the user&apos;s name on the <strong>first</strong>
-        authentication. Store it if you receive it - you won&apos;t get it
-        again unless the user revokes and re-authorizes.
+        authentication. Store it if you receive it - you won&apos;t get it again
+        unless the user revokes and re-authorizes.
       </Callout>
 
       <Heading level={2} className="mt-8 mb-3">
@@ -217,22 +264,38 @@ APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----`
         <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
           <thead className="bg-bg-tertiary border-b border-border-primary">
             <tr>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Error</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Cause</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Error
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Cause
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2"><code>OAuthStateError</code></td>
-              <td className="px-4 py-2">State mismatch - possible CSRF attack</td>
+              <td className="px-4 py-2">
+                <code>OAuthStateError</code>
+              </td>
+              <td className="px-4 py-2">
+                State mismatch - possible CSRF attack
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2"><code>OAuthTokenError</code></td>
-              <td className="px-4 py-2">Token exchange failed (code expired, invalid, etc.)</td>
+              <td className="px-4 py-2">
+                <code>OAuthTokenError</code>
+              </td>
+              <td className="px-4 py-2">
+                Token exchange failed (code expired, invalid, etc.)
+              </td>
             </tr>
             <tr>
-              <td className="px-4 py-2"><code>OAuthProviderError</code></td>
-              <td className="px-4 py-2">Provider returned an error (invalid_client, access_denied, etc.)</td>
+              <td className="px-4 py-2">
+                <code>OAuthProviderError</code>
+              </td>
+              <td className="px-4 py-2">
+                Provider returned an error (invalid_client, access_denied, etc.)
+              </td>
             </tr>
           </tbody>
         </table>
@@ -392,7 +455,9 @@ class SpotifyProvider extends BaseOAuthProvider {
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
         <li>Always use PKCE (S256 method)</li>
         <li>Validate state parameter to prevent CSRF</li>
-        <li>Use <code>sub</code> claim as user ID (not email)</li>
+        <li>
+          Use <code>sub</code> claim as user ID (not email)
+        </li>
         <li>Store tokens encrypted if needed for API access</li>
         <li>Use exact redirect URI matching</li>
         <li>Never expose tokens in URLs</li>

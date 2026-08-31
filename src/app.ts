@@ -5,12 +5,26 @@ import { Container } from "./container";
 import { Context } from "./context";
 import { getControllerMeta } from "./decorators";
 import { HttpError } from "./helpers/async-handler";
+import { toResponse } from "./helpers/response";
 import { logger } from "./logger";
 import { Router } from "./router";
 
 export interface WSData<DI = Record<string, unknown>> {
 	ctx: Context<DI>;
 	handler: WSHandler<DI>;
+}
+
+export interface WSOptions {
+	/** Per-message deflate — Bun native, default false */
+	perMessageDeflate?: boolean | object;
+	/** Max payload length bytes — default 16MB */
+	maxPayloadLength?: number;
+	/** Idle timeout seconds before close — default 120, 30 untuk heartbeat */
+	idleTimeout?: number;
+	/** Backpressure highWaterMark */
+	maxBackpressure?: number;
+	/** Publish to self? default false */
+	publishToSelf?: boolean;
 }
 
 export interface WSHandler<DI = Record<string, unknown>> {
@@ -22,6 +36,7 @@ export interface WSHandler<DI = Record<string, unknown>> {
 		reason: string,
 	) => void;
 	drain?: (ws: ServerWebSocket<WSData<DI>>) => void;
+	pong?: (ws: ServerWebSocket<WSData<DI>>) => void;
 	/**
 	 * Optional authentication handler.
 	 * Called on connection open. Return null to reject the connection.
@@ -109,26 +124,50 @@ export type ZodCtx<
 			: Record<string, string>
 >;
 
+export type HandlerReturn =
+	| Response
+	| string
+	| number
+	| boolean
+	| bigint
+	| Record<string, unknown>
+	| unknown[]
+	| null
+	| undefined
+	| void
+	| Promise<
+			| Response
+			| string
+			| number
+			| boolean
+			| bigint
+			| Record<string, unknown>
+			| unknown[]
+			| null
+			| undefined
+			| void
+	  >;
+
 export type Handler<
 	DI = Record<string, unknown>,
 	Path extends string = string,
-> = (ctx: Context<DI, ExtractParams<Path>>) => Response | Promise<Response>;
+> = (ctx: Context<DI, ExtractParams<Path>>) => HandlerReturn;
 export type Middleware<
 	DI = Record<string, unknown>,
 	Path extends string = string,
 > = (
 	ctx: Context<DI, ExtractParams<Path>>,
 	next: () => Promise<Response> | Response,
-) => Response | Promise<Response>;
+) => HandlerReturn;
 export type ErrorHandler<DI = Record<string, unknown>> = (
 	err: Error,
 	// biome-ignore lint/suspicious/noExplicitAny: generic
 	ctx: Context<DI, any>,
-) => Response | Promise<Response>;
+) => HandlerReturn;
 export type NotFoundHandler<DI = Record<string, unknown>> = (
 	// biome-ignore lint/suspicious/noExplicitAny: generic
 	ctx: Context<DI, any>,
-) => Response | Promise<Response>;
+) => HandlerReturn;
 
 export interface EnvValidationOptions {
 	/**
@@ -151,20 +190,44 @@ export interface EnvValidationOptions {
 	onError?: (errors: { field: string; message: string }[]) => void | never;
 }
 
+export interface StaticOptions {
+	/** Cache max-age in seconds (default: 3600) */
+	maxAge?: number;
+	/** Override the full Cache-Control header value */
+	cacheControl?: string;
+	/** Enable ETag generation and conditional requests (default: true) */
+	etag?: boolean;
+}
+
+export interface ApiDocsOptions {
+	/** URL path for the docs UI (default: "/docs") */
+	path?: string;
+	/** API title displayed in the docs (default: "API Documentation") */
+	title?: string;
+	/** API version (default: "1.0.0") */
+	version?: string;
+	/** API description */
+	description?: string;
+	/** Hide docs when NODE_ENV is "production" (default: false) */
+	safeOnProduction?: boolean;
+}
+
 export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private router: Router;
 	private middlewares: Middleware<DI>[] = [];
 	private compiledGlobalPipeline?: (
 		ctx: Context<DI>,
 		finalHandler: Handler<DI>,
-	) => Response | Promise<Response>;
+	) => HandlerReturn;
 	private iconPath: string = "./public/favicon.ico";
 	private isListening: boolean = false;
 	public di = {} as DI;
 	private wsRoutes: Map<string, WSHandler<DI>> = new Map();
+	private wsOpts: WSOptions = {};
 	private poweredByHeaderEnabled: boolean = true;
 	private _reusePort: boolean = false;
 	private _skipLogResponse: boolean = false;
+	public _apiDocsConfig: ApiDocsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: Required for internal OpenAPI registry
 	public openApiDocs: any[] = [];
 	private container: Container | null = null;
@@ -242,8 +305,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 	/**
 	 * Attach an IoC Container to the app. When set, `registerController()`
-	 * will auto-resolve `@Inject`-annotated properties from the container
-	 * before binding routes.
+	 * will resolve controllers via `container.resolve()` (use `FactoryProvider` for ctor deps).
 	 */
 	public setContainer(container: Container): this {
 		this.container = container;
@@ -281,21 +343,27 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return this;
 	}
 
+	/** Configure Bun WebSocket options — Bun-only, zero-deps */
+	public wsOptions(opts: WSOptions): this {
+		this.wsOpts = { ...this.wsOpts, ...opts };
+		return this;
+	}
+
 	/**
-	 * Type-safe Environment Variables Validator.
+	 * Type-safe Environment Variables Validator (static).
 	 * Validates `process.env` against a Zod schema object and returns the typed result.
 	 * If validation fails, it prints a beautiful error to the console and exits the process (stops booting).
 	 *
 	 * @example
-	 * // Default behavior - prints error and exits
-	 * const env = app.validateEnv({
+	 * // Static — no App instance needed (ideal for src/env.ts)
+	 * const env = App.validateEnv({
 	 *   DATABASE_URL: z.string().url(),
 	 *   PORT: z.coerce.number().default(3000),
 	 * });
 	 *
 	 * @example
 	 * // Custom error handler - send to monitoring before exiting
-	 * const env = app.validateEnv({
+	 * const env = App.validateEnv({
 	 *   DATABASE_URL: z.string().url(),
 	 * }, {
 	 *   onError: (errors) => {
@@ -306,7 +374,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 *   }
 	 * });
 	 */
-	public validateEnv<T extends z.ZodRawShape>(
+	static validateEnv<T extends z.ZodRawShape>(
 		schema: T,
 		options?: EnvValidationOptions,
 	): z.infer<z.ZodObject<T>> {
@@ -345,6 +413,24 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		}
 
 		return result.data;
+	}
+
+	/**
+	 * Type-safe Environment Variables Validator (instance).
+	 * Delegates to the static method. Kept for backward compatibility.
+	 *
+	 * @example
+	 * const app = new App();
+	 * const env = app.validateEnv({
+	 *   DATABASE_URL: z.string().url(),
+	 *   PORT: z.coerce.number().default(3000),
+	 * });
+	 */
+	public validateEnv<T extends z.ZodRawShape>(
+		schema: T,
+		options?: EnvValidationOptions,
+	): z.infer<z.ZodObject<T>> {
+		return App.validateEnv(schema, options);
 	}
 
 	/**
@@ -406,9 +492,77 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			const cleanPath = route.path === "/" ? "" : route.path;
 			const fullPath = `${normalizedPrefix}${cleanPath}` || "/";
 			// biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch by decorated property key
-			const handler = (instance as any)[route.propertyKey].bind(
+			let handler = (instance as any)[route.propertyKey].bind(
 				instance,
 			) as Handler<DI>;
+
+			// Apply zero-cost wrappers for @HttpCode/@Header/@Redirect (boot-time, no per-request alloc beyond wrapper closure)
+			const hasStatus = route.statusCode !== undefined;
+			const hasHeaders = route.headers && route.headers.length > 0;
+			const hasRedirect = !!route.redirect;
+			if (hasStatus || hasHeaders || hasRedirect) {
+				const original = handler;
+				const routeMeta = route;
+				// biome-ignore lint/suspicious/noExplicitAny: wrapper must accept any Context shape
+				handler = ((ctx: any) => {
+					// Redirect - static or dynamic override (Nest behavior)
+					if (hasRedirect) {
+						const result: any = original(ctx);
+						// If handler returns promise, handle async
+						if (result instanceof Promise) {
+							return result.then((val: any) => {
+								if (val && typeof val === "object" && "url" in val) {
+									const url = (val as any).url as string;
+									const sc = (val as any).statusCode ?? routeMeta.redirect!.statusCode;
+									return new Response(null, { status: sc, headers: { Location: url } });
+								}
+								// Also allow string return as url override
+								if (typeof val === "string" && val.startsWith("/")) {
+									return new Response(null, { status: routeMeta.redirect!.statusCode, headers: { Location: val } });
+								}
+								// Static redirect
+								return new Response(null, {
+									status: routeMeta.redirect!.statusCode,
+									headers: { Location: routeMeta.redirect!.url },
+								});
+							});
+						}
+						if (result && typeof result === "object" && "url" in result) {
+							const url = (result as any).url as string;
+							const sc = (result as any).statusCode ?? routeMeta.redirect!.statusCode;
+							return new Response(null, { status: sc, headers: { Location: url } });
+						}
+						if (typeof result === "string" && result.startsWith("/")) {
+							return new Response(null, { status: routeMeta.redirect!.statusCode, headers: { Location: result } });
+						}
+						return new Response(null, {
+							status: routeMeta.redirect!.statusCode,
+							headers: { Location: routeMeta.redirect!.url },
+						});
+					}
+					const raw: any = original(ctx);
+					const apply = (res: Response): Response => {
+						let r: Response = res;
+						if (hasStatus && r.status === 200) {
+							// Override status only if default 200 (preserve explicit ctx.status etc.)
+							r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
+						} else if (hasStatus && r.status === 204 && routeMeta.statusCode !== 204) {
+							// For void returns that became 204, respect HttpCode
+							r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
+						}
+						if (hasHeaders) {
+							for (const [k, v] of routeMeta.headers!) {
+								r.headers.set(k, v);
+							}
+						}
+						return r;
+					};
+					if (raw instanceof Promise) {
+						return raw.then((v: any) => apply(toResponse(v)));
+					}
+					return apply(toResponse(raw));
+				}) as Handler<DI>;
+			}
 
 			this.registerRoute(route.method, fullPath, [
 				...(route.middlewares as Middleware<DI>[]),
@@ -934,18 +1088,29 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 * directory-traversal vulnerability.
 	 *
 	 * Supports ETag-based conditional requests (If-None-Match → 304).
-	 * ETag is only computed when the client sends If-None-Match, keeping
-	 * the hot path (first request) free of metadata reads.
+	 * ETag is computed on every response and sent to the client, enabling
+	 * efficient caching on subsequent requests.
 	 */
-	public static(routePath: string, directory: string): this {
+	public static(routePath: string, directory: string, options?: StaticOptions): this {
 		const baseDir = join(process.cwd(), directory);
+		const maxAge = options?.maxAge ?? 3600;
+		const cacheControl = options?.cacheControl ?? `public, max-age=${maxAge}`;
+		const enableEtag = options?.etag !== false;
 
 		const handler: Handler<DI> = async (ctx) => {
 			const requestedPath = ctx.params["*"] || "";
-			const absolutePath = join(baseDir, requestedPath);
+			let absolutePath = join(baseDir, requestedPath);
 
 			if (absolutePath !== baseDir && !absolutePath.startsWith(baseDir + sep)) {
 				return ctx.json({ error: "Forbidden" }, 403);
+			}
+
+			// If file doesn't exist, check for directory with index.html
+			if (!(await Bun.file(absolutePath).exists())) {
+				const indexPath = join(absolutePath, "index.html");
+				if (await Bun.file(indexPath).exists()) {
+					absolutePath = indexPath;
+				}
 			}
 
 			const file = Bun.file(absolutePath);
@@ -954,10 +1119,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				return ctx.json({ error: "File Not Found" }, 404);
 			}
 
-			// Only compute ETag when client sends If-None-Match (conditional request)
-			const ifNoneMatch = ctx.request.headers.get("If-None-Match");
-			if (ifNoneMatch) {
-				const etag = `"${file.size}-${file.lastModified}"`;
+			const etag = enableEtag ? `"${file.size}-${file.lastModified}"` : null;
+
+			// ETag-based conditional request (If-None-Match → 304)
+			if (etag) {
+				const ifNoneMatch = ctx.request.headers.get("If-None-Match");
 				if (ifNoneMatch === etag) {
 					return new Response(null, {
 						status: 304,
@@ -966,17 +1132,43 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				}
 			}
 
-			return new Response(file, {
-				headers: {
-					"Cache-Control": "public, max-age=3600",
-				},
-			});
+			const headers: Record<string, string> = {
+				"Cache-Control": cacheControl,
+			};
+			if (etag) {
+				headers.ETag = etag;
+			}
+
+			return new Response(file, { headers });
 		};
 
 		const wildcardPath = routePath.endsWith("/")
 			? `${routePath}*`
 			: `${routePath}/*`;
 		this.get(wildcardPath, handler);
+		return this;
+	}
+
+	/**
+	 * Enable interactive API documentation at the specified path.
+	 *
+	 * Serves a built-in docs UI and the generated OpenAPI spec (swagger.json).
+	 * The docs routes are registered directly on the router and do NOT appear
+	 * in the generated swagger.json.
+	 *
+	 * @example
+	 * ```ts
+	 * app.apiDocs({ path: "/docs", title: "My API", version: "1.0.0" });
+	 * ```
+	 */
+	public apiDocs(options?: ApiDocsOptions): this {
+		this._apiDocsConfig = {
+			path: options?.path ?? "/docs",
+			title: options?.title ?? "API Documentation",
+			version: options?.version ?? "1.0.0",
+			description: options?.description,
+			safeOnProduction: options?.safeOnProduction ?? false,
+		};
 		return this;
 	}
 
@@ -1041,6 +1233,100 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return factory(fns) as Handler<DI>;
 	}
 
+	/**
+	 * Register API docs routes directly on the router.
+	 * These routes do NOT go through registerRoute() and therefore
+	 * do NOT appear in openApiDocs / swagger.json.
+	 */
+	private registerApiDocsRoutes(): void {
+		const config = this._apiDocsConfig!;
+		const basePath = (config.path ?? "/docs").replace(/\/+$/, "");
+
+		// Resolve template paths relative to this package's dist directory
+		const templatesDir = new URL("./cli/templates", import.meta.url).pathname;
+
+		// Handler for serving the HTML docs UI — safe injection via app.apiDocs()
+		const uiHandler: Handler<DI> = async () => {
+			const htmlPath = join(templatesDir, "index.html");
+			const file = Bun.file(htmlPath);
+			if (await file.exists()) {
+				let html = await file.text();
+				// Safe HTML escape for <title> (prevent </title> injection)
+				const rawTitle = config.title ?? "API Reference";
+				const escTitleHtml = String(rawTitle)
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;")
+					.replace(/"/g, "&quot;");
+				html = html.replace(
+					/<title>.*?<\/title>/,
+					`<title>${escTitleHtml} — API Reference</title>`,
+				);
+				// Safe JSON injection via JSON.stringify (handles quotes, newlines, unicode)
+				html = html.replace(
+					/"title":\s*"API Documentation"/,
+					`"title":${JSON.stringify(config.title ?? "API Documentation")}`,
+				);
+				html = html.replace(
+					/"version":\s*"1\.0\.0"/,
+					`"version":${JSON.stringify(config.version ?? "1.0.0")}`,
+				);
+				if (config.description) {
+					html = html.replace(
+						/"description":\s*"Loading API specification\.\.\."/,
+						`"description":${JSON.stringify(config.description)}`,
+					);
+				}
+				return new Response(html, {
+					headers: { "Content-Type": "text/html; charset=utf-8" },
+				});
+			}
+			return new Response("Docs UI not found. Run 'buntok make:docs' first.", { status: 404 });
+		};
+
+		// Handler for serving swagger.json (reads fresh on every request)
+		const swaggerHandler: Handler<DI> = async () => {
+			const swaggerPath = join(process.cwd(), "public/docs/swagger.json");
+			const file = Bun.file(swaggerPath);
+			if (await file.exists()) {
+				return new Response(file, {
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+			return new Response(JSON.stringify({ error: "swagger.json not found. Run 'buntok make:docs' first." }), {
+				status: 404,
+				headers: { "Content-Type": "application/json" },
+			});
+		};
+
+		// Handler for serving static assets (tailwind.js, font-googles.css)
+		const assetsHandler: Handler<DI> = async (ctx) => {
+			const assetName = ctx.params["*"] ?? "";
+			const assetPath = join(templatesDir, assetName);
+			const file = Bun.file(assetPath);
+			if (await file.exists()) {
+				const ext = assetName.split(".").pop()?.toLowerCase() ?? "";
+				const contentTypes: Record<string, string> = {
+					js: "application/javascript; charset=utf-8",
+					css: "text/css; charset=utf-8",
+					json: "application/json",
+					png: "image/png",
+					svg: "image/svg+xml",
+				};
+				return new Response(file, {
+					headers: { "Content-Type": contentTypes[ext] || "application/octet-stream" },
+				});
+			}
+			return new Response("Not Found", { status: 404 });
+		};
+
+		// Register routes directly on router (bypass openApiDocs)
+		this.router.insert("GET", `${basePath}/swagger.json`, swaggerHandler);
+		this.router.insert("GET", `${basePath}/index.html`, uiHandler);
+		this.router.insert("GET", `${basePath}/*`, assetsHandler);
+		this.router.insert("GET", basePath, uiHandler);
+	}
+
 	private compileGlobalPipeline(): void {
 		if (this.middlewares.length === 0) {
 			this.compiledGlobalPipeline = (ctx, finalHandler) =>
@@ -1062,7 +1348,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		this.compiledGlobalPipeline = factory(fns) as (
 			ctx: Context<DI>,
 			finalHandler: Handler<DI>,
-		) => Response | Promise<Response>;
+		) => HandlerReturn;
 	}
 
 	private compileAOTRouter(): (
@@ -1125,21 +1411,21 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				code += "      const ctx = new Context(request, EMPTY_PARAMS, di);\n";
 				code += "      try {\n";
 				code +=
-					"        const result = compiledGlobalPipeline(ctx, " +
+					"        const raw = compiledGlobalPipeline(ctx, " +
 					handlerRef +
 					");\n";
 				if (this._skipLogResponse) {
-					code += "        if (result instanceof Promise) {\n";
+					code += "        if (raw instanceof Promise) {\n";
 					code +=
-						"          return result.catch((e) => handleError(request, pathname, ctx, e));\n";
+						"          return raw.then((v) => toResponse(v)).catch((e) => handleError(request, pathname, ctx, e));\n";
 					code += "        }\n";
-					code += "        return result;\n";
+					code += "        return toResponse(raw);\n";
 				} else {
-					code += "        if (result instanceof Promise) {\n";
+					code += "        if (raw instanceof Promise) {\n";
 					code +=
-						"          return result.then((r) => logResponse(request, pathname, r)).catch((e) => handleError(request, pathname, ctx, e));\n";
+						"          return raw.then((v) => logResponse(request, pathname, toResponse(v))).catch((e) => handleError(request, pathname, ctx, e));\n";
 					code += "        }\n";
-					code += "        return logResponse(request, pathname, result);\n";
+					code += "        return logResponse(request, pathname, toResponse(raw));\n";
 				}
 				code += "      } catch (err) {\n";
 				code += "        return handleError(request, pathname, ctx, err);\n";
@@ -1163,6 +1449,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"handleError",
 			"fallback",
 			"wsRoutes",
+			"toResponse",
 			code,
 		);
 
@@ -1177,6 +1464,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			this.handleError,
 			this.fallbackHandleRequest.bind(this),
 			this.wsRoutes,
+			toResponse,
 		);
 	}
 
@@ -1211,6 +1499,33 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return response;
 	};
 
+	/**
+	 * Normalize flexible handler return (string | object | null etc.) to Response.
+	 * Used by both AOT and fallback paths.
+	 */
+	private normalizeReturn(value: unknown): Response | Promise<Response> {
+		if (value instanceof Promise) {
+			return value.then((v) => toResponse(v));
+		}
+		return toResponse(value);
+	}
+
+	/**
+	 * Normalize handler return then pass through logResponse.
+	 * Handles both sync and async flexible returns.
+	 */
+	private readonly logNormalized = (
+		request: Request,
+		pathname: string,
+		value: unknown,
+	): Response | Promise<Response> => {
+		const normalized = this.normalizeReturn(value);
+		if (normalized instanceof Promise) {
+			return normalized.then((res) => this.logResponse(request, pathname, res));
+		}
+		return this.logResponse(request, pathname, normalized);
+	};
+
 	private readonly handleError = (
 		request: Request,
 		pathname: string,
@@ -1222,8 +1537,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			error: errorObj.message,
 		});
 		const result = this.customErrorHandler(errorObj, ctx);
-		if (result instanceof Promise) {
-			return result.then((response) => {
+		// Normalize ErrorHandler flexible return as well
+		const normalized = this.normalizeReturn(result);
+		if (normalized instanceof Promise) {
+			return normalized.then((response) => {
 				if (this.poweredByHeaderEnabled) {
 					response.headers.set("X-Powered-By", "buntok");
 				}
@@ -1231,9 +1548,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			});
 		}
 		if (this.poweredByHeaderEnabled) {
-			result.headers.set("X-Powered-By", "buntok");
+			normalized.headers.set("X-Powered-By", "buntok");
 		}
-		return result;
+		return normalized;
 	};
 
 	/**
@@ -1248,7 +1565,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		init?: RequestInit,
 	): Promise<Response> {
 		if (!this.compiledGlobalPipeline) this.compileGlobalPipeline();
-		this._compiledAOTRouter = this.compileAOTRouter();
+		// Lazy AOT — compile sekali saja (fix speed murah: sebelumnya compile tiap request)
+		if (!this._aotReady) {
+			this._compiledAOTRouter = this.compileAOTRouter();
+			this._aotReady = true;
+		}
 		const request =
 			input instanceof Request && !init
 				? input
@@ -1262,6 +1583,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return this.handleRequest(request);
 	}
 
+	private _aotReady = false;
 	private _compiledAOTRouter: (
 		request: Request,
 		server?: Server<WSData<DI>>,
@@ -1313,13 +1635,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			const result = this.compiledGlobalPipeline!(ctx, finalHandler);
 
 			if (result instanceof Promise) {
-				// A closure is unavoidable here since .then/.catch need the
-				// per-request context, but this only happens on the async path.
 				return result
-					.then((response) => this.logResponse(request, pathname, response))
+					.then((value) => this.logNormalized(request, pathname, value))
 					.catch((err) => this.handleError(request, pathname, ctx, err));
 			}
-			return this.logResponse(request, pathname, result);
+			return this.logNormalized(request, pathname, result);
 		} catch (err) {
 			return this.handleError(request, pathname, ctx, err);
 		}
@@ -1334,9 +1654,18 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		// Pre-compute whether logResponse can be skipped entirely
 		this._skipLogResponse = !logger.logRequests && !this.poweredByHeaderEnabled;
 
+		// Register API docs routes directly on router (bypasses openApiDocs)
+		if (this._apiDocsConfig) {
+			const isProduction = process.env.NODE_ENV === "production";
+			if (!(this._apiDocsConfig.safeOnProduction && isProduction)) {
+				this.registerApiDocsRoutes();
+			}
+		}
+
 		// Perform AOT compilation for global middlewares
 		this.compileGlobalPipeline();
 		this._compiledAOTRouter = this.compileAOTRouter();
+		this._aotReady = true;
 
 		const finalPort = port || Number(process.env.PORT) || 1212;
 
@@ -1352,41 +1681,60 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		if (this.wsRoutes.size > 0) {
 			serveOptions.websocket = {
+				// Bun-only native options — pluggable, zero-deps
+				perMessageDeflate: this.wsOpts.perMessageDeflate ?? false,
+				maxPayloadLength: this.wsOpts.maxPayloadLength ?? 16 * 1024 * 1024,
+				idleTimeout: this.wsOpts.idleTimeout ?? 120,
+				maxBackpressure: this.wsOpts.maxBackpressure,
+				publishToSelf: this.wsOpts.publishToSelf ?? false,
 				open: async (ws: ServerWebSocket<WSData<DI>>) => {
-					// Run authentication if provided
-					if (ws.data.handler.authenticate) {
-						try {
+					try {
+						if (ws.data.handler.authenticate) {
 							const authData = await ws.data.handler.authenticate(ws);
 							if (authData === null) {
 								ws.close(4001, "Unauthorized");
 								return;
 							}
-							// Store auth data on ws.data
-							(ws.data as any).auth = authData;
-						} catch {
-							ws.close(4001, "Unauthorized");
-							return;
+							(ws.data as unknown as Record<string, unknown>).auth = authData;
 						}
+						ws.data.handler.open?.(ws);
+					} catch (err) {
+						logger.error("WS open error", { error: (err as Error).message });
+						try { ws.close(1011, "Internal error"); } catch {}
 					}
-					ws.data.handler.open?.(ws);
 				},
 				message: (
 					ws: ServerWebSocket<WSData<DI>>,
 					message: string | Buffer,
 				) => {
-					ws.data.handler.message?.(ws, message);
+					try {
+						ws.data.handler.message?.(ws, message);
+					} catch (err) {
+						logger.error("WS message error", { error: (err as Error).message });
+					}
 				},
 				close: (
 					ws: ServerWebSocket<WSData<DI>>,
 					code: number,
 					reason: string,
 				) => {
-					ws.data.handler.close?.(ws, code, reason);
+					try { ws.data.handler.close?.(ws, code, reason); } catch (err) {
+						logger.error("WS close error", { error: (err as Error).message });
+					}
 				},
 				drain: (ws: ServerWebSocket<WSData<DI>>) => {
-					ws.data.handler.drain?.(ws);
+					try { ws.data.handler.drain?.(ws); } catch {}
 				},
-			};
+				pong: (ws: ServerWebSocket<WSData<DI>>) => {
+					try {
+						// heartbeat pong — reset alive (fix: pong bukan message)
+						(ws.data.handler as unknown as { pong?: (ws: ServerWebSocket<WSData<DI>>) => void }).pong?.(ws);
+						// juga fallback untuk wsHeartbeat yang attach di ws.data
+						const hb = (ws.data as unknown as { heartbeat?: { alive: boolean } }).heartbeat;
+						if (hb) hb.alive = true;
+					} catch {}
+				},
+			} as unknown as Record<string, unknown>;
 		}
 
 		// Auto-increment port if already in use
@@ -1429,7 +1777,25 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 			if (this.server) {
 				// Stop accepting new connections
-				this.server.stop();
+				this.server.stop(false);
+
+				// Drain SSE — industrial graceful (close all streams dengan 30s heartbeat comment)
+				try {
+					const { SSE } = await import("./sse");
+					// kirim close event sebelum terminate
+					for (const c of SSE.getActiveConnections()) {
+						try { c.sendEvent("close", "Server shutting down"); } catch {}
+					}
+					// beri waktu 1s untuk flush
+					await new Promise((r) => setTimeout(r, 1000));
+					SSE.closeAll();
+				} catch {}
+
+				// Drain WS — close dengan 1001 Going Away
+				try {
+					// broadcast ke semua topic jika pakai publish
+					try { this.server.publish("buntok:shutdown", "shutting down"); } catch {}
+				} catch {}
 
 				// Give in-flight requests time to complete (max 30 seconds)
 				const shutdownTimeout = 30_000;
@@ -1437,9 +1803,14 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 					logger.warn("Forcing shutdown after timeout");
 					process.exit(1);
 				}, shutdownTimeout);
-
-				// Clear timeout if we exit normally
-				clearTimeout(forceExitTimeout);
+				// Jangan clear langsung — biarkan timeout jadi safety net
+				// Cleanup setelah graceful selesai
+				setTimeout(() => {
+					clearTimeout(forceExitTimeout);
+					logger.info("Server shut down gracefully");
+					process.exit(0);
+				}, 1500);
+				return;
 			}
 
 			logger.info("Server shut down gracefully");

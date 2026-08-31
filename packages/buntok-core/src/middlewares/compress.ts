@@ -50,6 +50,8 @@ export function compress(options: CompressOptions = {}): Middleware {
 		if (result.headers.get("Content-Encoding")) return result;
 
 		const contentType = result.headers.get("Content-Type") || "";
+		// Industrial: jangan compress SSE/WebSocket streaming — break spec
+		if (contentType.includes("text/event-stream")) return result;
 		const eligible = opts.types.some((t) => contentType.startsWith(t));
 		if (!eligible) return result;
 
