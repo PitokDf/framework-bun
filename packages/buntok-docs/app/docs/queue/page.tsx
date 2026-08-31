@@ -45,6 +45,13 @@ emailQueue.process(async (job) => {
 });`}
       />
 
+      <Callout type="warning">
+        The <strong>name</strong> (<code>&quot;emails&quot;</code>) is the first
+        argument and is <strong>required</strong>. Each queue must have a unique
+        name. This name is used for logging, debugging, and driver isolation.
+        Passing no name or an empty string will throw.
+      </Callout>
+
       {/* ──────────────── QUEUE API ──────────────── */}
       <Heading
         level={2}

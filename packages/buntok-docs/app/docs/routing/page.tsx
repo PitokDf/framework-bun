@@ -39,9 +39,15 @@ export default function RoutingPage() {
 
 const app = new App();
 
+// Classic style
 app.get("/", (ctx) => {
   return ctx.json({ message: "Hello, World!" });
 });
+
+// Elysia-style flexible return (also supported)
+app.get("/hello", () => "hello world");                    // text/plain
+app.get("/json", () => ({ hello: "buntok" }));             // application/json
+app.get("/users/:id", ({ params }) => params);               // { id: "123" }
 
 app.post("/users", async (ctx) => {
   const body = await ctx.body();
@@ -118,6 +124,16 @@ app.listen(1212);`}
         include QUERY.
       </Callout>
 
+      <Callout type="warning">
+        <strong>Route matching order:</strong> Routes are matched in the order
+        they are registered. If multiple routes could match the same URL, the{" "}
+        <strong>first registered</strong> route wins. For example, register{" "}
+        <code>app.get(&quot;/users/admin&quot;)</code>{" "}
+        <strong>before</strong>{" "}
+        <code>app.get(&quot;/users/:id&quot;)</code>, otherwise <code>:id</code>{" "}
+        will match &quot;admin&quot;.
+      </Callout>
+
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
@@ -147,17 +163,22 @@ app.listen(1212);`}
         <code>ctx.params</code>.
       </p>
       <CodeBlock
-        code={`// Single parameter
+        code={`// Single parameter — classic
 app.get("/users/:id", (ctx) => {
   const { id } = ctx.params;
   return ctx.json({ userId: id });
 });
 
+// Single parameter — Elysia-style
+app.get("/users/:id", ({ params }) => params);               // { id: "123" }
+app.get("/users/:id", ({ params: { id } }) => id);          // "123" text/plain
+
 // Multiple parameters
 app.get("/posts/:postId/comments/:commentId", (ctx) => {
   const { postId, commentId } = ctx.params;
   return ctx.json({ postId, commentId });
-});`}
+});
+app.get("/posts/:postId/comments/:commentId", ({ params }) => params);`}
       />
 
       <Callout type="warning">
@@ -201,6 +222,7 @@ app.get("/posts/:postId/comments/:commentId", (ctx) => {
   const path = ctx.params["*"];
   return ctx.json({ filePath: path });
 });
+app.get("/files/*", ({ params }) => params["*"]); // shorthand
 
 // GET /files/documents/report.pdf
 // Response: { "filePath": "documents/report.pdf" }`}
@@ -227,6 +249,7 @@ app.get("/posts/:postId/comments/:commentId", (ctx) => {
   const { q, page, limit } = ctx.query;
   return ctx.json({ query: q, page, limit });
 });
+app.get("/search", ({ query }) => query); // shorthand
 
 // GET /search?q=buntok&page=1&limit=10
 // Response: { "query": "buntok", "page": "1", "limit": "10" }`}

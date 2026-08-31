@@ -157,6 +157,13 @@ app.listen(1212);`}
 });`}
       />
 
+      <Callout type="warning">
+        If <code>authenticate</code> returns <code>null</code>, the connection is
+        immediately closed with code <code>4001</code>. The <code>open</code>{" "}
+        handler is never called. Always return <code>null</code> for
+        unauthenticated clients.
+      </Callout>
+
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"

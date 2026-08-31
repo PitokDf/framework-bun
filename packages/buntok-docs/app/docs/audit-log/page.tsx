@@ -37,8 +37,9 @@ app.use(auditLog());`}
       />
 
       <Callout type="info">
-        Without a <code>storage</code> option, logs go to console. 5xx = error,
-        4xx = warn, others = log.
+        Without a <code>storage</code> option, logs go to{" "}
+        <code>logger.info</code> (respects your logger config for format/file
+        output). 5xx = error, 4xx = warn, others = log.
       </Callout>
 
       {/* ──────────────── OPTIONS ──────────────── */}
@@ -71,7 +72,7 @@ app.use(auditLog());`}
               [
                 "storage",
                 "(entry) => Promise<void>",
-                "console",
+                "logger.info",
                 "Custom storage function",
               ],
               [

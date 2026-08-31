@@ -101,6 +101,14 @@ app.post("/chat", async (ctx) => {
         </table>
       </div>
 
+      <Callout type="info">
+        <strong>Supported chunk shapes:</strong>{" "}
+        <code>chunk.choices[0].delta.content</code> (OpenAI),{" "}
+        <code>chunk.message.content</code> (Anthropic), or plain{" "}
+        <code>string</code>. If your AI provider uses a different chunk shape,
+        content extraction may fail silently (empty chunks).
+      </Callout>
+
       {/* ──────────────── INJECT SYSTEM PROMPT ──────────────── */}
       <Heading
         level={2}

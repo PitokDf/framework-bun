@@ -123,6 +123,15 @@ cache.clear();`}
         </table>
       </div>
 
+      <Callout type="info">
+        The <code>keys()</code> method is <strong>optional</strong> in the{" "}
+        <code>CacheDriver</code> interface. Not all custom drivers implement it.
+        If you call <code>cache.keys()</code> on a driver without{" "}
+        <code>keys()</code>, it returns an empty array. The{" "}
+        <code>deletePattern</code> method also depends on <code>keys()</code>{" "}
+        being available.
+      </Callout>
+
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"

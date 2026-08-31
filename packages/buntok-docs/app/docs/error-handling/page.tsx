@@ -19,7 +19,9 @@ export default function ErrorHandlingPage() {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Built-in HTTP error classes and custom error handler. Throw errors in
-        route handlers - Buntok catches them and returns proper JSON responses.
+        route handlers <strong>and middlewares</strong> - Buntok catches them
+        automatically and returns proper JSON responses. You do NOT need{" "}
+        <code>try/catch</code> in every handler.
       </p>
 
       {/* ──────────────── BUILT-IN ERRORS ──────────────── */}

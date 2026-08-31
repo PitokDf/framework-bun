@@ -11,11 +11,9 @@ Complete reference for building applications with `@buntok/core`.
 
 ```bash
 bun add @buntok/core
-# or
-npm install @buntok/core
 ```
 
-Requirement: Bun >= 1.2.0
+**⚠️ IMPORTANT: Bun >= 1.2.0 is REQUIRED.** `@buntok/core` uses Bun-native APIs (like `Bun.CryptoHasher`, `Bun.gzipSync`, `Bun.Image`, `Bun.file`, etc.) that are NOT available in Node.js. Using `npm install` or running with Node.js will cause runtime errors. Always use `bun` for package management and execution.
 
 ---
 
@@ -26,13 +24,13 @@ Scaffold a production-ready project in seconds. The `buntok` CLI is included wit
 ### 1. Create project & init
 
 ```bash
-bun create buntok my-app      # or: bunx create-buntok my-app (if template exists)
-cd my-app
+mkdir my-app && cd my-app
+bun init -y                      # create package.json
 bun add @buntok/core
-bunx buntok init              # interactive setup
+bunx buntok init                 # interactive setup — generates all boilerplate
 ```
 
-`buntok init` does:
+`buntok init` generates the full project scaffold:
 - Copies `SKILL.md` → `.agents/skills/buntok-skill/SKILL.md`
 - Updates `package.json` scripts: `dev`, `build`, `start`, `check`, `format`, `lint`
 - Generates `tsconfig.json` (bundler, strict, `@/*` → `./src/*`, ESNext), `biome.json`, `.vscode/settings.json`
@@ -104,9 +102,15 @@ import { App } from "@buntok/core";
 
 const app = new App();
 
+// Classic style (explicit Response via ctx)
 app.get("/", (ctx) => {
   return ctx.json({ message: "Hello, Buntok!" });
 });
+
+// Elysia-style flexible return (also supported)
+app.get("/hello", () => "Hello, Buntok!");              // text/plain
+app.get("/json", () => ({ message: "Hello, Buntok!" })); // application/json
+app.get("/users/:id", ({ params }) => params);            // direct return + destructuring
 
 app.listen(1212);
 ```
@@ -141,12 +145,12 @@ const app = new App();
 | `app.ws` | `(path, handler)` | Register WebSocket endpoint — exact path only (no params), `WSHandler {open?, message?, close?, drain?, authenticate?}` |
 | `app.listen` | `(port?, callback?)` | Start server — respects `process.env.PORT` or `1212`, auto-increments 10 ports on `EADDRINUSE`, graceful `SIGTERM/SIGINT` 30s |
 | `app.request` | `(input, init?)` | Dispatch request (testing) — string without `http://` auto-prefixed `http://localhost` |
-| `app.onError` | `(handler)` | Override global error handler — `ErrorHandler<DI> (err, ctx) => Response` |
-| `app.notFound` | `(handler)` | Override 404 handler — `NotFoundHandler<DI> (ctx) => Response` |
+| `app.onError` | `(handler)` | Override global error handler — `ErrorHandler<DI> (err, ctx) => HandlerReturn` |
+| `app.notFound` | `(handler)` | Override 404 handler — `NotFoundHandler<DI> (ctx) => HandlerReturn` |
 | `app.set` | `(key, value)` | Store value in `app.di: DI` |
 | `app.setContainer` | `(container)` | Attach IoC Container |
 | `app.getContainer` | `()` | Get or create container |
-| `app.registerController` | `(ControllerClass \| instance)` | Register controller — accepts class **or** instance; resolves `@Inject` via attached container |
+| `app.registerController` | `(ControllerClass \| instance)` | Register controller — accepts class **or** instance; resolves via `container.resolve()` (use `FactoryProvider` for ctor deps) |
 | `app.validateEnv` | `(schema, options?)` / `App.validateEnv(schema, options?)` | Validate env vars with Zod — `options?: EnvValidationOptions {onError?: (errors:{field,message}[])=>void}` |
 | `app.disable` | `("x-powered-by")` | Disable built-in `X-Powered-By: buntok` header |
 | `app.enable` | `("x-powered-by")` | Re-enable disabled features |
@@ -274,9 +278,61 @@ app.enableReusePort(true); // SO_REUSEPORT
 
 ---
 
+## Handler & Context
+
+Handlers receive a single `ctx: Context` argument. Two ergonomic styles are supported.
+
+### Classic style (explicit Response via `ctx`)
+
+```ts
+app.get("/users/:id", (ctx) => {
+  return ctx.json({ id: ctx.params.id });
+});
+```
+
+### Elysia-style flexible return (also supported)
+
+Handlers may return primitives/objects directly — framework auto-serializes via `toResponse()`:
+
+| Return | Serialized as | Content-Type | Status |
+|--------|---------------|--------------|--------|
+| `string` | `new Response(string)` | `text/plain; charset=utf-8` | 200 |
+| `number`/`boolean`/`bigint` | `String(value)` | `text/plain; charset=utf-8` | 200 |
+| `object`/`array` | `Response.json(value)` | `application/json` | 200 |
+| `null`/`undefined`/`void` | empty body | — | 204 |
+| `Blob`/`ArrayBuffer`/`Uint8Array`/`ReadableStream` | `new Response(value)` | from value / none | 200 |
+| `Response` | passthrough | as-is | as-is |
+
+```ts
+app.get("/hello", () => "hello world");                    // text/plain
+app.get("/json", () => ({ hello: "buntok" }));             // json
+app.get("/num", () => 42);                                 // text/plain "42"
+app.get("/users", () => [{ id: 1 }, { id: 2 }]);           // json array
+app.get("/empty", () => null);                             // 204
+app.get("/custom", () => new Response("hi", { status: 201 })); // passthrough
+```
+
+### Elysia-style destructuring
+
+`ctx` is an instance with `params/query/store/ip/request/di/...` as own properties — you can destructure:
+
+```ts
+app.get("/users/:id", ({ params }) => params);               // { id: "123" }
+app.get("/users/:id", ({ params: { id } }) => id);          // "123"
+app.get("/search", ({ query }) => query.q);                  // ?q=...
+app.get("/files/*", ({ params }) => params["*"]);            // wildcard
+app.get("/profile", ({ store, request }) => store.user);
+```
+
+`async ({ request }) => await request.json()` works for body; `ctx.body()`/`ctx.valid()` remain for validated body.
+
+`HandlerReturn` type (`src/app.ts:112`, exported from `@buntok/core`) covers all of the above. `Handler = (ctx: Context) => HandlerReturn`.
+
+---
+
 ## Context
 
-`ctx` is the single argument passed to every handler.
+`ctx` is the single argument passed to every handler (also supports destructuring above).
 
 ### Request
 
@@ -318,15 +374,20 @@ app.enableReusePort(true); // SO_REUSEPORT
 ### Route Parameters
 
 ```ts
-// Named param
+// Named param — classic
 app.get("/users/:id", (ctx) => {
   return ctx.json({ id: ctx.params.id });
 });
+
+// Named param — Elysia-style
+app.get("/users/:id", ({ params }) => params);               // { id: "123" }
+app.get("/users/:id", ({ params: { id } }) => id);          // "123" text/plain
 
 // Catch-all wildcard
 app.get("/files/*", (ctx) => {
   return ctx.text(`File: ${ctx.params["*"]}`);
 });
+app.get("/files/*", ({ params }) => params["*"]);            // shorthand
 ```
 
 ### Route Group
@@ -362,19 +423,21 @@ app.query("/users", queryUsers);  // RFC 10008
 app.all("/users", allHandler);    // All methods
 ```
 
+> **⚠️ Route matching order:** Routes are matched in the order they are registered. If multiple routes could match the same URL, the **first registered** route wins. For example, `app.get("/users/:id", ...)` and `app.get("/users/admin", ...)` — register the static route (`/users/admin`) **before** the parameterized route (`/users/:id`), otherwise `:id` will match `"admin"`.
+
 ---
 
 ## Middleware
 
-Signature: `(ctx, next) => Response | Promise<Response>`
+Signature: `(ctx, next) => HandlerReturn` (alias for `Response | string | object | ... | Promise<...>` via `toResponse()`)
 
-**Must `return next()`** to pass to next handler.
+**Must `return next()`** to pass to next handler. If you return a `Response` without calling `next()`, the chain stops — subsequent middlewares and the route handler are skipped.
 
 ```ts
 // Global middleware
 app.use(async (ctx, next) => {
   const start = performance.now();
-  const res = await next();
+  const res = await next();        // <-- MUST call next() to continue the chain
   console.log(`${ctx.request.method} - ${(performance.now() - start).toFixed(2)}ms`);
   return res;
 });
@@ -388,6 +451,8 @@ app.get("/protected", authMiddleware, (ctx) => {
 const api = app.group("/api");
 api.use(rateLimiter({ max: 100, windowMs: 60_000 }));
 ```
+
+> **⚠️ Execution order:** Middlewares run in the order they are registered. Global (`app.use`) → Group (`group.use`) → Per-route (left-to-right in handler args). If any middleware throws an error, it is caught by the framework and passed to `app.onError` handler (or the default 500 handler).
 
 ---
 
@@ -617,11 +682,79 @@ Stage 3 TC39 decorators — no `experimentalDecorators` needed.
 | `@All(path)` | All (GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS) — `method="ALL"` |
 | `@Query(path)` | QUERY (RFC 10008) |
 
+### Response Decorators (zero-cost, AOT <1%)
+
+Boot-time metadata — no per-request overhead. Same reference alias kept for backward compat (`UseGuard`/`UseGuards`, `Header`/`SetHeader`).
+
+| Decorator | Effect | AOT cost |
+|-----------|--------|----------|
+| `@HttpCode(status)` | Override status for flexible return (e.g. `@HttpCode(201)` for POST) | Inlined constant |
+| `@SetHeader(name, value)` | Set static response header (repeatable) | `headers.set` after `toResponse` |
+| `@Header(name, value)` | **Deprecated** alias to `SetHeader` — use `SetHeader` | same as above |
+| `@Redirect(url, status=302)` | Static redirect (handler not executed; handler `{url,statusCode}` overrides) | `new Response(null,{headers:{Location}})` |
+| `@Version("1"\|"1,2")` | Version metadata (for guards/docs) | metadata only |
+| `@SetMetadata(key, val)` | Arbitrary metadata (read via `getMetadata`) | WeakMap |
+| `@Public()` | `SetMetadata("isPublic",true)` shorthand | same |
+
+```ts
+import { HttpCode, SetHeader, Redirect, Version } from "@buntok/core";
+
+@Controller("/users")
+class UserController {
+  @Post("/")
+  @HttpCode(201)
+  create() { return { id: 1 }; } // 201 not 200
+
+  @Get("/")
+  @SetHeader("x-cache", "hit")
+  @SetHeader("x-cache", "hit2") // repeatable
+  list() { return []; }
+
+  @Get("/old")
+  @Redirect("/new", 301)
+  old() {} // 301 -> /new, handler ignored
+
+  @Get("/v")
+  @Version("2")
+  versioned() { return { v: 2 }; }
+}
+```
+
+`Version` is metadata-only (no automatic `/v1` prefix) — use for `getMetadata()` in guards or OpenAPI.
+
+### Metadata & Composition
+
+```ts
+import { SetMetadata, Public, getMetadata, applyDecorators } from "@buntok/core";
+
+// SetMetadata + getMetadata
+@SetMetadata("roles", ["admin"])
+@Get("/admin")
+admin() {}
+
+const roles = getMetadata(AdminController, "admin", "roles"); // ["admin"]
+
+// Public shorthand
+@Public()
+@Get("/health")
+health() { return { ok: true }; }
+
+// Compose multiple decorators (Nest applyDecorators)
+const Auth = (...roles: string[]) => applyDecorators(
+  SetMetadata("roles", roles),
+  UseGuard(async (ctx) => checkRoles(ctx, roles))
+);
+@Auth("admin")
+@Get("/secret")
+secret() {}
+```
+
 ### Middleware & Guard Decorators
 
 ```ts
-import { Use, UseGuard } from "@buntok/core";
+import { Use, UseGuard, UseGuards } from "@buntok/core";
 // Type: GuardFn = (ctx: Context) => boolean | Promise<boolean>
+// UseGuards is alias to UseGuard (UseGuard deprecated -> use UseGuards)
 
 @Use(authMiddleware)
 @Get("/profile")
@@ -633,18 +766,35 @@ async getProfile(ctx: Context) { ... }
 @Get("/secret")
 async secret(ctx: Context) { ... }
 
-// UseGuard signature: UseGuard(...guards: GuardFn[]) — if any guard returns false, framework responds 403 { success:false, error:"Forbidden", message:"Forbidden resource" }
+// Plural Nest-style (recommended)
+@UseGuards(async (ctx) => !!ctx.user)
+@Get("/guarded")
+guarded() {}
+
+ // UseGuard signature: UseGuard(...guards: GuardFn[]) — if any guard returns false, framework responds 403 { success:false, error:"Forbidden", message:"Forbidden resource" }
+ // UseGuards — same reference as UseGuard, kept for Nest compatibility (UseGuard flagged deprecated in types)
 ```
 
-### DI Decorators
+### DI (Container without decorators)
+
+> **🚫 BREAKING CHANGE:** `@Inject` and `@Injectable` decorators have been **removed**. Using them will cause compile/runtime errors. Use constructor injection via `FactoryProvider` instead (see below).
 
 ```ts
-import { Injectable, Inject } from "@buntok/core";
+import { Container } from "@buntok/core";
 
-@Injectable()
-@Injectable({ scope: "transient" })
+class UserRepository { async findAll() { return []; } }
+class UserService {
+  constructor(private repo: UserRepository) {}
+  async getAll() { return this.repo.findAll(); }
+}
 
-@Inject(UserService) private userService: UserService;
+const container = new Container();
+container.registerClass(UserRepository);
+container.register(UserService, {
+  useFactory: (c) => new UserService(c.resolve(UserRepository)),
+});
+app.setContainer(container);
+// or without container: app.registerController(new UserController(new UserService(new UserRepository())))
 ```
 
 ### Full Controller Example
@@ -744,6 +894,8 @@ app.get("/users/:id", async (ctx) => {
 });
 ```
 
+> **⚠️ Errors thrown in handlers AND middlewares are caught automatically.** If a middleware throws (e.g., `throw new UnauthorizedError()`), the framework catches it and sends the appropriate error response. You do NOT need `try/catch` in every handler — only use it if you want to transform the error before it reaches the error handler.
+
 ### Override Error Handler
 
 ```ts
@@ -772,24 +924,28 @@ app.get("/users/:id", asyncHandler(async (ctx) => {
 
 ## IoC Container
 
+Without decorators — explicit `FactoryProvider` for ctor deps:
+
 ```ts
-import { Container, Injectable, Inject } from "@buntok/core";
+import { Container } from "@buntok/core";
 
-@Injectable()
-class UserRepository {
-  async findAll() { return []; }
-}
-
-@Injectable()
+class UserRepository { async findAll() { return []; } }
 class UserService {
-  @Inject(UserRepository) private repo: UserRepository;
+  constructor(private repo: UserRepository) {}
   async getAll() { return this.repo.findAll(); }
 }
 
 const container = new Container();
-container.registerClass(UserRepository);
-container.registerClass(UserService);
+container.registerClass(UserRepository); // singleton by default
+container.register(UserService, {
+  useFactory: (c) => new UserService(c.resolve(UserRepository)),
+});
+// transient example
+container.registerClass(Logger, "transient");
 app.setContainer(container);
+
+// alternative without Container at all
+// app.registerController(new UserController(new UserService(new UserRepository())));
 ```
 
 ### Container API
@@ -798,7 +954,7 @@ app.setContainer(container);
 |--------|-------------|
 | `container.register(token, provider)` | Register provider manually — `Provider = ClassProvider{useClass,scope}\|ValueProvider{useValue}\|FactoryProvider{useFactory,scope}` |
 | `container.registerClass(cls, scope?)` | Auto-register class provider — `Scope = "singleton" (default) \| "transient"` |
-| `container.resolve(token)` | Resolve instance with DI — auto-instantiates and injects `@Inject` via `Symbol.metadata` |
+| `container.resolve(token)` | Resolve instance (ctor via FactoryProvider) |
 | `container.get(token)` | Resolve or `undefined` |
 | `container.has(token)` | Check if registered |
 | `container.hasResolved(token)` | Check if instance already created (singleton cache) |
@@ -1121,6 +1277,8 @@ app.ws("/chat", {
   },
 });
 ```
+
+> **⚠️ If `authenticate` returns `null`, the connection is immediately closed with code `4001`.** The `open` handler is never called. Always return `null` for unauthenticated clients. The return value is stored in `ws.data.auth` and accessible in `open`/`message`/`close` handlers.
 
 ### Message Validation
 
@@ -1663,6 +1821,8 @@ interface OAuthUser {
 import { requireRole, requirePermission } from "@buntok/core";
 ```
 
+> **⚠️ KEY DIFFERENCE:** `requireRole` uses **OR** logic (user needs ANY of the specified roles). `requirePermission` uses **AND** logic (user needs ALL of the specified permissions). Mixing them up is a common security mistake.
+
 ### requireRole
 
 Requires user to have at least one of the specified roles. Must be used AFTER `requireAuth`.
@@ -1690,12 +1850,12 @@ app.get("/admin", requireAuth(secret), requireRole({
 ### Decorator Usage
 
 ```ts
-// ⚠️ Decorators execute dari bawah ke atas (karena internal pakai unshift)
-//    Jadi @Use(requireAuth) harus DI ATAS @Use(requireRole)
+// Stage 3: evaluated top→bottom, applied bottom→top (via unshift)
+// @Use(requireAuth) di ATAS agar run pertama (auth sebelum role)
 
 @Get("/admin")
-@Use(requireAuth(secret))    // ← execute PERTAMA
-@Use(requireRole("admin"))   // ← execute KEDUA
+@Use(requireAuth(secret))    // ← evaluated 2nd, applied 3rd → run 1st
+@Use(requireRole("admin"))   // ← evaluated 3rd, applied 2nd → run 2nd
 async getAdmin(ctx: Context) {
   const user = ctx.user as { userId: number; role: string };
   return ctx.json({ admin: true });
@@ -1737,16 +1897,16 @@ app.delete("/users/:id",
 ### Decorator Usage
 
 ```ts
-// Same as requireAuth — decorators execute dari bawah ke atas
+// Stage 3: evaluated top→bottom, applied bottom→top — ATAS run duluan
 
 @Delete("/users/:id")
-@Use(requireAuth(secret))                        // ← execute PERTAMA
-@Use(requirePermission("users:delete"))          // ← execute KEDUA
+@Use(requireAuth(secret))                        // ← evaluated 2nd, applied 3rd → run 1st
+@Use(requirePermission("users:delete"))          // ← evaluated 3rd, applied 2nd → run 2nd
 async deleteUser(ctx: Context) {
   // ...
 }
 
-// Multiple permissions (harus semua)
+// Multiple permissions (harus semua) — auth tetap di ATAS
 @Post("/posts")
 @Use(requireAuth(secret))
 @Use(requirePermission("posts:create", "posts:publish"))
@@ -1851,6 +2011,8 @@ import { Cache, MemoryCacheDriver, type CacheDriver } from "@buntok/core";
 
 `CacheDriver {get(key), set(key,value,ttl?), delete(key), clear(), keys?()}` — `Cache` uses `MemoryCacheDriver` (LRU) by default.
 
+> **⚠️ `keys?()` is optional.** Not all custom drivers implement it. If you call `cache.keys()` on a driver that doesn't implement `keys`, it will return an empty array. The `deletePattern` method also depends on `keys()` being available.
+
 ### Usage
 
 ```ts
@@ -1917,7 +2079,7 @@ import { Mailer } from "@buntok/core";
 | resend | apiKey | Zero-deps, HTTP-based |
 | sendgrid | apiKey | Zero-deps, HTTP-based |
 | mailgun | apiKey + domain | Zero-deps, HTTP-based |
-| smtp | smtp config | Requires nodemailer (bun add nodemailer) |
+| smtp | smtp config | **⚠️ Requires `bun add nodemailer`** — will throw if not installed |
 
 ### Basic Usage
 
@@ -2030,6 +2192,8 @@ Handlebars-like template engine with zero dependencies. Perfect for email templa
 import { render, TemplateEngine } from "@buntok/core";
 ```
 
+> **⚠️ Strict mode is ON by default.** If you reference a variable that doesn't exist in the context (e.g., `{{ usre.name }}` instead of `{{ user.name }}`), the template will throw an error with a "did you mean?" suggestion. To disable strict mode, pass `{ strict: false }` as the third argument to `render()` or set it in `TemplateEngine` constructor options.
+
 ### Types
 
 ```ts
@@ -2108,11 +2272,13 @@ render("Hello {{ usre.name }}", { user: { name: "Budi" } });
 
 ## Queue
 
-In-memory job queue with pluggable drivers. Queue name is required (first arg).
+In-memory job queue with pluggable drivers.
 
 ```ts
 import { Queue, MemoryQueueDriver } from "@buntok/core";
 ```
+
+> **⚠️ `name` is the first argument and is REQUIRED.** Each queue must have a unique name (e.g., `"email"`, `"notifications"`). This name is used for logging, debugging, and driver isolation. Passing no name or an empty string will throw.
 
 ### Usage
 
@@ -2212,6 +2378,8 @@ export class TaskController {
 // Decorator schedules when class is instantiated (e.g. app.registerController(new TaskController()))
 ```
 
+> **⚠️ `@CronJob` schedules when the class is instantiated**, not when the decorator is defined. If you create the class with `new TaskController()` but never call `app.registerController()` or otherwise instantiate it, the cron job will NOT run. The `this` context is bound to the instance via `context.addInitializer`, so injected services work correctly.
+
 ---
 
 ## Audit Log
@@ -2221,6 +2389,8 @@ Request logging middleware with customizable storage.
 ```ts
 import { auditLog } from "@buntok/core";
 ```
+
+> **⚠️ Default storage is `logger.info`.** If you call `app.use(auditLog())` without a `storage` function, audit entries are logged via `logger.info()` (which writes to console/file based on your logger config). To persist to a database, provide a custom `storage` function.
 
 ### Usage
 
@@ -2265,12 +2435,12 @@ interface AuditLogEntry {
 
 ## Health Check
 
-`healthCheck` **registers** the route itself — do NOT wrap with `app.get`.
+> **🚫 DO NOT wrap `healthCheck` with `app.get`.** The `healthCheck()` function registers the route itself. Wrapping it will create duplicate routes or cause unexpected behavior.
 
 ```ts
 import { healthCheck, createHealthCheck, createDatabaseCheck } from "@buntok/core";
 
-// Registers GET /health automatically
+// ✅ CORRECT — registers GET /health automatically
 healthCheck(app, {
   path: "/health",            // default "/health"
   includeUptime: true,
@@ -2353,10 +2523,10 @@ const now = nowInTimezone("Asia/Jakarta");
 
 ### getTimezoneOffset
 
-Get offset in minutes (negative = ahead of UTC):
+Get offset in minutes. **Negative = ahead of UTC** (e.g., UTC+7 = -420 minutes).
 
 ```ts
-const offset = getTimezoneOffset("Asia/Jakarta");  // -420 (UTC+7)
+const offset = getTimezoneOffset("Asia/Jakarta");  // -420 (UTC+7 means 7 hours AHEAD of UTC)
 const offsetStr = getTimezoneOffsetString("Asia/Jakarta"); // "+07:00"
 ```
 
@@ -2441,6 +2611,8 @@ app.post("/chat", async (ctx) => {
 ```
 
 Supports chunk shapes: `chunk.choices[0].delta.content`, `chunk.message.content`, or plain `string`.
+
+> **⚠️ If your AI provider uses a different chunk shape**, the stream will still work but content extraction may fail silently (empty chunks). Check your provider's stream format and ensure the chunk has a `content` string somewhere in the response delta.
 
 ### AICache
 

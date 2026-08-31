@@ -22,6 +22,12 @@ export default function HealthCheckPage() {
         connectivity, and dependencies.
       </p>
 
+      <Callout type="warning">
+        <strong>Do NOT wrap <code>healthCheck()</code> with{" "}
+        <code>app.get()</code>.</strong> The function registers the route itself.
+        Wrapping it will create duplicate routes or cause unexpected behavior.
+      </Callout>
+
       {/* ──────────────── BASIC USAGE ──────────────── */}
       <Heading
         level={2}

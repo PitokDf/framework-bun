@@ -166,18 +166,21 @@ app.get("/", handler);`}
         code={`@Controller("/users")
 class UserController {
   @Get("/")
-  @Use(requireAuth(secret))    // ← executes FIRST (bottom-to-top)
-  @Use(requireRole("admin"))   // ← executes SECOND
+  @Use(requireAuth(secret))    // ← evaluated 2nd, applied 3rd → runs 1st
+  @Use(requireRole("admin"))   // ← evaluated 3rd, applied 2nd → runs 2nd
   async list(ctx: Context) {
     return ctx.json({ users: [] });
   }
-}`}
+}
+// Evaluate: Controller → requireAuth → requireRole → Get (top-to-bottom)
+// Apply:    Get → requireRole → requireAuth → Controller (bottom-to-top)`}
       />
 
       <Callout type="info">
-        <strong>Decorator ordering:</strong> Decorators execute bottom-to-top
-        (because they use <code>unshift</code> internally). Place{" "}
-        <code>@Use(requireAuth)</code> ABOVE <code>@Use(requireRole)</code>.
+        <strong>Stage 3 ordering:</strong> factories evaluated top-to-bottom but
+        applied bottom-to-top (via <code>unshift</code>). Place{" "}
+        <code>@Use(requireAuth)</code> <strong>ABOVE</strong>{" "}
+        <code>@Use(requireRole)</code> so auth runs first.
       </Callout>
 
       {/* ──────────────── GROUP MIDDLEWARE ──────────────── */}
@@ -205,6 +208,14 @@ admin.use(requireAuth(secret));
 admin.get("/dashboard", handler); // /admin/dashboard
 admin.get("/settings", handler);  // /admin/settings`}
       />
+
+      <Callout type="info">
+        <strong>Execution order:</strong> Global middleware (<code>app.use</code>)
+        runs first, then Group middleware (<code>group.use</code>), then
+        Route-level middleware (left-to-right in handler args). If any middleware
+        throws an error, it is caught by the framework and passed to the error
+        handler.
+      </Callout>
 
       {/* ──────────────── MIDDLEWARE WITH DATA ──────────────── */}
       <Heading
