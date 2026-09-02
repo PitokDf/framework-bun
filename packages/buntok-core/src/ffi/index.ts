@@ -71,7 +71,7 @@ function tryLoadNative(): void {
 
 // ─── Trie ────────────────────────────────────────────────────────────────────
 
-// Native trie removed — JS trie is faster when not doing double-walk.
+// Native trie removed - JS trie is faster when not doing double-walk.
 // Benchmark: native+JS was 38% SLOWER than JS-only due to syncing overhead.
 // JS engines optimize Map.get/set in native C++, so pure JS is optimal.
 

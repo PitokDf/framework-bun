@@ -30,7 +30,8 @@ export default function CLIPage() {
       <p className="my-3 text-text-secondary leading-relaxed">
         During initialization, you'll be asked:
       </p>
-      <CodeBlock code={`? Do you want to deploy to Vercel? (y/N):`} />
+      <CodeBlock code={`? Do you want to deploy to Vercel? (y/N):
+? Do you want to add Docker support? (Y/n):`} />
       <p className="my-3 text-text-secondary leading-relaxed">
         If you answer <code>y</code>, a <code>vercel.json</code> file will be created with the recommended configuration for Bun projects.
       </p>
@@ -54,7 +55,11 @@ export default function CLIPage() {
 ✓ Created .gitignore
 
 ? Do you want to deploy to Vercel? (y/N): y
-✓ Created vercel.json`}
+✓ Created vercel.json
+
+? Do you want to add Docker support? (Y/n): y
+✓ Created Dockerfile
+✓ Created .dockerignore`}
       />
 
       <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
@@ -295,6 +300,8 @@ bunx buntok db status`}
 │   └── settings.json
 ├── biome.json
 ├── tsconfig.json
+├── Dockerfile?          # buntok init (optional)
+├── .dockerignore?       # buntok init (optional)
 └── package.json`}
       />
     </div>

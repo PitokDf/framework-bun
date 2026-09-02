@@ -1,5 +1,5 @@
 /**
- * Async sleep — returns a promise that resolves after `ms` milliseconds.
+ * Async sleep - returns a promise that resolves after `ms` milliseconds.
  *
  * @example
  * await delay(1000); // wait 1 second

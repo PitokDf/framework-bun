@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light dark">
   <title>Scalar API Reference & Interactive Client</title>
   <script>
-    // Sync theme with buntok-docs (next-themes) — evaluated before paint, tetap orange #f97316
+    // Sync theme with buntok-docs (next-themes) - evaluated before paint, tetap orange #f97316
     (function(){ try{
       var t = localStorage.getItem('theme') || localStorage.getItem('scalar_theme') || localStorage.getItem('buntok-docs-theme');
       var m = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -21,7 +21,7 @@
   <script src="./tailwind.js"></script>
   <link href="./font-googles.css" rel="stylesheet">
   <style>
-    /* Sync tokens with buntok-docs app/globals.css — tetap orange #f97316, no AI slop */
+    /* Sync tokens with buntok-docs app/globals.css - tetap orange #f97316, no AI slop */
     :root {
       --bg-primary: #ffffff;
       --bg-secondary: #fafafa;
@@ -305,7 +305,7 @@
   <!-- ================= NAVBAR (glass, h-12, nuance buntok-docs orange) ================= -->
   <header class="h-12 sticky top-0 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]/85 backdrop-blur-xl px-4 lg:px-6 flex items-center justify-between z-30 shrink-0 supports-[backdrop-filter]:bg-[var(--bg-secondary)]/70">
     <div class="flex items-center gap-3">
-      <!-- Sidebar Toggle — single button for desktop collapse & mobile drawer (was double) -->
+      <!-- Sidebar Toggle - single button for desktop collapse & mobile drawer (was double) -->
       <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar (⌘B)" aria-label="Toggle sidebar" class="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] border border-transparent hover:border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition flex items-center justify-center shrink-0">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
       </button>
@@ -389,7 +389,17 @@
           </div>
         </div>
         <div class="relative">
-          <input type="text" id="sidebar-search" oninput="handleSidebarSearch(this.value)" placeholder="Filter endpoints..." class="w-full text-xs pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+          <input
+            type="search"
+            name="sidebar-filter"
+            id="sidebar-search"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            oninput="handleSidebarSearch(this.value)"
+            placeholder="Filter endpoints..."
+            class="w-full text-xs pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]"
+          >
           <svg class="w-3.5 h-3.5 absolute left-2.5 top-2 text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </div>
       </div>
@@ -406,7 +416,7 @@
     </aside>
 
     <!-- Resizer handle (desktop only) -->
-    <div id="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" title="Drag to resize — double-click to reset">
+    <div id="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" title="Drag to resize - double-click to reset">
       <div class="handle-dot">
         <svg width="8" height="12" viewBox="0 0 8 12" fill="none"><circle cx="2" cy="2" r="1" fill="currentColor" opacity="0.5"/><circle cx="6" cy="2" r="1" fill="currentColor" opacity="0.5"/><circle cx="2" cy="6" r="1" fill="currentColor" opacity="0.5"/><circle cx="6" cy="6" r="1" fill="currentColor" opacity="0.5"/><circle cx="2" cy="10" r="1" fill="currentColor" opacity="0.5"/><circle cx="6" cy="10" r="1" fill="currentColor" opacity="0.5"/></svg>
       </div>
@@ -615,7 +625,7 @@
           </div>
         </div>
 
-        <!-- Postman-style Interactive Client Console — sticky dengan max-h agar Send tidak hilang -->
+        <!-- Postman-style Interactive Client Console - sticky dengan max-h agar Send tidak hilang -->
         <div class="xl:col-span-5 space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
           <div class="rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 space-y-4 shadow-md">
             
@@ -660,7 +670,7 @@
               </button>
             </div>
 
-            <!-- Client Tabs — HTTP only -->
+            <!-- Client Tabs - HTTP only -->
             <div class="border-b border-[var(--border-primary)] flex gap-4 text-xs font-medium overflow-x-auto">
               <button onclick="setClientTab('headers')" id="tab-btn-headers" class="pb-2 border-b-2 border-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap">Headers</button>
               <button onclick="setClientTab('cookies')" id="tab-btn-cookies" class="pb-2 border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap">Cookies</button>
@@ -1025,9 +1035,8 @@
     let envVars = {};
     try { envVars = JSON.parse(localStorage.getItem('scalar_env_vars') || '{}'); } catch (e) { envVars = {}; }
 
-    // Response persistence per endpoint
+    // Response persistence per endpoint (in-memory only)
     let endpointResponses = {};
-    try { endpointResponses = JSON.parse(localStorage.getItem('scalar_endpoint_responses') || '{}'); } catch (e) { endpointResponses = {}; }
 
     function saveEndpointResponse(epId, statusText, statusOk, duration, bodyHtml, headers) {
       endpointResponses[epId] = {
@@ -1045,11 +1054,136 @@
           delete endpointResponses[keys[i]];
         }
       }
-      localStorage.setItem('scalar_endpoint_responses', JSON.stringify(endpointResponses));
     }
 
     function getSavedResponse(epId) {
       return endpointResponses[epId] || null;
+    }
+
+    // File persistence via IndexedDB for multipart form data
+    const FileStorage = {
+      DB_NAME: 'buntok-file-storage',
+      DB_VERSION: 1,
+      STORE_NAME: 'files',
+
+      openDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+              db.createObjectStore(this.STORE_NAME, { keyPath: 'id' });
+            }
+          };
+          request.onsuccess = (e) => resolve(e.target.result);
+          request.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async storeFile(endpointId, rowIndex, file) {
+        const db = await this.openDB();
+        const buffer = await file.arrayBuffer();
+        const record = {
+          id: `${endpointId}__${rowIndex}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified,
+          data: buffer
+        };
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(this.STORE_NAME, 'readwrite');
+          tx.objectStore(this.STORE_NAME).put(record);
+          tx.oncomplete = () => resolve();
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async getFile(endpointId, rowIndex) {
+        const db = await this.openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(this.STORE_NAME, 'readonly');
+          const request = tx.objectStore(this.STORE_NAME).get(`${endpointId}__${rowIndex}`);
+          request.onsuccess = (e) => {
+            const result = e.target.result;
+            if (result) {
+              const file = new File([result.data], result.name, {
+                type: result.type,
+                lastModified: result.lastModified
+              });
+              resolve(file);
+            } else {
+              resolve(null);
+            }
+          };
+          request.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async removeFile(endpointId, rowIndex) {
+        const db = await this.openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(this.STORE_NAME, 'readwrite');
+          tx.objectStore(this.STORE_NAME).delete(`${endpointId}__${rowIndex}`);
+          tx.oncomplete = () => resolve();
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      }
+    };
+
+    // Endpoint state persistence (params, body, form data, url encoded)
+    let isRestoringState = false;
+
+    function getEndpointStateKey(epId) {
+      return `scalar_ep_state_${epId}`;
+    }
+
+    function saveEndpointState() {
+      if (!selectedEndpoint || isRestoringState) return;
+      const state = {
+        params: { ...currentParamValues },
+        body: document.getElementById('doc-body-input')?.value || '',
+        bodyType: activeBodyType,
+        rawBody: rawBodyText,
+        xmlBody: xmlBodyText,
+        formData: formDataRows.map(r => ({
+          key: r.key,
+          value: r.type === 'file' ? '' : r.value,
+          type: r.type,
+          enabled: r.enabled,
+          fileInfo: r.fileInfo || null
+        })),
+        urlEncoded: urlEncodedRows.map(r => ({
+          key: r.key,
+          value: r.value,
+          enabled: r.enabled
+        }))
+      };
+      try {
+        localStorage.setItem(getEndpointStateKey(selectedEndpoint.id), JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    async function loadEndpointState(epId) {
+      try {
+        const raw = localStorage.getItem(getEndpointStateKey(epId));
+        if (!raw) return null;
+        const state = JSON.parse(raw);
+        // Restore file objects from IndexedDB
+        if (state.formData) {
+          for (let i = 0; i < state.formData.length; i++) {
+            if (state.formData[i].type === 'file' && state.formData[i].fileInfo) {
+              const file = await FileStorage.getFile(epId, i);
+              if (file) {
+                state.formData[i].fileObject = file;
+              }
+            }
+          }
+        }
+        return state;
+      } catch (e) {
+        return null;
+      }
     }
 
     function substituteEnvVars(str) {
@@ -1140,7 +1274,7 @@
         const collapsed = sidebar.classList.contains('collapsed');
         setSidebarCollapsed(!collapsed);
         if (collapsed) showToast('Sidebar expanded', 'info');
-        else showToast('Sidebar collapsed — press ⌘B to restore', 'info');
+        else showToast('Sidebar collapsed - press ⌘B to restore', 'info');
       }
     }
     function toggleMobileSidebar() {
@@ -1309,7 +1443,7 @@
       if (schema.default !== undefined) return schema.default;
       if (schema.enum && schema.enum.length > 0) return schema.enum[0];
 
-      // Handle nullable — deterministik: return null only jika type explicitly nullable dan tidak ada value (jangan random)
+      // Handle nullable - deterministik: return null only jika type explicitly nullable dan tidak ada value (jangan random)
       if (schema.nullable && schema.type === 'null') return null;
 
       // Handle $ref if present in components
@@ -1326,7 +1460,7 @@
         const obj = {};
         if (schema.properties) {
           Object.entries(schema.properties).forEach(([key, prop]) => {
-            // nullable per-property — deterministik: tetap isi value, tidak random null
+            // nullable per-property - deterministik: tetap isi value, tidak random null
             if (prop.nullable && prop.type === 'null') { obj[key] = null; return; }
 
             if (prop.example !== undefined) {
@@ -1426,7 +1560,7 @@
       updateAuthIndicator();
       renderSidebar();
 
-      // Restore endpoint from URL hash if present — hash is encodeURIComponent(id)
+      // Restore endpoint from URL hash if present - hash is encodeURIComponent(id)
       const hash = decodeURIComponent(window.location.hash.slice(1));
       if (hash) {
         const endpoints = getAllEndpoints();
@@ -1645,15 +1779,16 @@
       renderSidebar();
     }
 
-    function selectEndpoint(ep) {
+    async function selectEndpoint(ep) {
       selectedEndpoint = ep;
+      isRestoringState = true;
       document.getElementById('view-overview').classList.add('hidden');
       document.getElementById('view-endpoint').classList.remove('hidden');
       renderSidebar();
       // close mobile drawer after selection
       if (window.innerWidth <= 1024) closeMobileSidebar();
 
-      // Update URL hash for persistence across refresh — encode to handle "/" ":" etc.
+      // Update URL hash for persistence across refresh - encode to handle "/" ":" etc.
       window.location.hash = encodeURIComponent(ep.id);
       updateBreadcrumb(ep.tags[0] || 'API', ep.path);
 
@@ -1805,6 +1940,47 @@
       renderUrlEncodedTable();
       renderCookieTable();
 
+      // Restore saved endpoint state (params, body, form data, etc.)
+      isRestoringState = false;
+      const savedState = await loadEndpointState(ep.id);
+      if (savedState) {
+        // Restore params
+        if (savedState.params) {
+          currentParamValues = { ...currentParamValues, ...savedState.params };
+          // Update input fields in the params table
+          ep.parameters.forEach(p => {
+            if (currentParamValues[p.name] !== undefined) {
+              const inputs = document.querySelectorAll('#doc-params-tbody input, #doc-params-tbody select');
+              inputs.forEach(input => {
+                if (input.closest('tr')?.querySelector('td:first-child')?.textContent?.includes(p.name)) {
+                  input.value = currentParamValues[p.name];
+                }
+              });
+            }
+          });
+        }
+        // Restore body
+        if (savedState.body !== undefined) {
+          document.getElementById('doc-body-input').value = savedState.body;
+        }
+        if (savedState.rawBody) rawBodyText = savedState.rawBody;
+        if (savedState.xmlBody) xmlBodyText = savedState.xmlBody;
+        // Restore body type
+        if (savedState.bodyType) {
+          setBodyType(savedState.bodyType);
+        }
+        // Restore form data
+        if (savedState.formData && savedState.formData.length > 0) {
+          formDataRows = savedState.formData;
+          renderFormDataTable();
+        }
+        // Restore url encoded
+        if (savedState.urlEncoded && savedState.urlEncoded.length > 0) {
+          urlEncodedRows = savedState.urlEncoded;
+          renderUrlEncodedTable();
+        }
+      }
+
       // MP9: Display response schema with property table + collapsible JSON
       const resList = document.getElementById('doc-responses-list');
       resList.innerHTML = '';
@@ -1944,6 +2120,7 @@
       }
 
       generateSnippet(currentSnippetLang);
+      saveEndpointState();
     }
 
     function renderFormDataTable() {
@@ -2011,6 +2188,10 @@
         formDataRows[idx].fileObject = file;
         renderFormDataTable();
         setBodyType('form-data');
+        // Store file in IndexedDB for persistence
+        if (selectedEndpoint) {
+          FileStorage.storeFile(selectedEndpoint.id, idx, file).catch(() => {});
+        }
       }
     }
 
@@ -2157,6 +2338,7 @@
       if (activeBodyType === 'raw') {
         generateSnippet(currentSnippetLang);
       }
+      saveEndpointState();
     }
 
     function handleXmlBodyChange(val) {
@@ -2164,12 +2346,14 @@
       if (activeBodyType === 'xml') {
         generateSnippet(currentSnippetLang);
       }
+      saveEndpointState();
     }
 
     function updateParamValue(name, val) {
       currentParamValues[name] = val;
       updateClientUrl();
       generateSnippet(currentSnippetLang);
+      saveEndpointState();
     }
 
     function updateClientUrl() {
@@ -2193,6 +2377,7 @@
 
     function syncBodyToClient(val) {
       generateSnippet(currentSnippetLang);
+      saveEndpointState();
     }
 
     function prettifyClientBody() {
@@ -2237,7 +2422,7 @@
         const headers = {};
         if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
         if (apiKey) headers['X-API-KEY'] = apiKey;
-        // MP10: Basic Auth — unicode-safe
+        // MP10: Basic Auth - unicode-safe
         if (basicAuthUser) {
           const raw = `${basicAuthUser}:${basicAuthPass}`;
           const encoded = btoa(unescape(encodeURIComponent(raw)));
@@ -2251,7 +2436,7 @@
           }
         });
 
-        // Cookie header from cookie rows — persist dulu
+        // Cookie header from cookie rows - persist dulu
         saveCookiesToStorage();
         const enabledCookies = cookieRows.filter(r => r.enabled && r.key);
         if (enabledCookies.length > 0) {
@@ -2343,7 +2528,7 @@
 
         let errorMsg = err.message || 'Unknown error';
         if (err.name === 'TypeError' && errorMsg.includes('fetch')) {
-          errorMsg = 'Network Error — possibly CORS blocked or server unreachable';
+          errorMsg = 'Network Error - possibly CORS blocked or server unreachable';
         }
         const errorHtml = `<div class="space-y-2">
           <div class="text-red-400 font-bold text-xs">REQUEST FAILED</div>
@@ -2425,12 +2610,12 @@
         } catch {}
       }
     }
-    // Realtime — WS/SSE standalone tester (no spec detection)
+    // Realtime - WS/SSE standalone tester (no spec detection)
     let _ws = null;
     let _wsHeartbeatTimer = null;
     let _sseController = null;
     let _sseReader = null;
-    // Postman-like top mode: HTTP | WebSocket | SSE — outside inner tabs
+    // Postman-like top mode: HTTP | WebSocket | SSE - outside inner tabs
     function switchConsoleMode(mode) {
       const httpPanel = document.getElementById('console-http-panel');
       const wsPanel = document.getElementById('console-ws-panel');
@@ -2543,7 +2728,7 @@
       };
       _ws.onerror = () => {
         appendWSLog(`<span class="text-red-400">[${new Date().toLocaleTimeString()}] ⚠ WebSocket error</span>`);
-        showToast('WebSocket error — check URL/CORS', 'error');
+        showToast('WebSocket error - check URL/CORS', 'error');
       };
     }
     function sendWS() {
@@ -2625,10 +2810,10 @@
         }
         const ctype = res.headers.get('content-type') || '';
         if (!ctype.includes('text/event-stream')) {
-          appendSSELog(`<span class="text-amber-400">[${new Date().toLocaleTimeString()}] ⚠ Content-Type not event-stream: ${escapeHtml(ctype)} — still reading</span>`);
+          appendSSELog(`<span class="text-amber-400">[${new Date().toLocaleTimeString()}] ⚠ Content-Type not event-stream: ${escapeHtml(ctype)} - still reading</span>`);
         }
         setSSEStatus('OPEN', true);
-        appendSSELog(`<span class="text-emerald-500">[${new Date().toLocaleTimeString()}] ✓ Connected — streaming</span>`);
+        appendSSELog(`<span class="text-emerald-500">[${new Date().toLocaleTimeString()}] ✓ Connected - streaming</span>`);
         const reader = res.body.getReader();
         _sseReader = reader;
         const decoder = new TextDecoder();
@@ -2662,7 +2847,7 @@
             appendSSELog(`<div class="border-l-2 border-[var(--accent)]/40 pl-2"><div class="flex gap-1.5 text-[10px]"><span class="text-[var(--accent)] font-bold">${escapeHtml(event)}</span>${idHtml}<span class="text-[var(--text-secondary)]">[${new Date().toLocaleTimeString()}]</span></div><div class="break-all">${prettyData}</div></div>`);
           }
         }
-        appendSSELog(`<span class="text-zinc-500">[${new Date().toLocaleTimeString()}] — Stream ended</span>`);
+        appendSSELog(`<span class="text-zinc-500">[${new Date().toLocaleTimeString()}] - Stream ended</span>`);
         setSSEStatus('DISCONNECTED', false);
       } catch (e) {
         if (e.name === 'AbortError') {

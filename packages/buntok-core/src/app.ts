@@ -8,6 +8,7 @@ import { HttpError } from "./helpers/async-handler";
 import { toResponse } from "./helpers/response";
 import { logger } from "./logger";
 import { Router } from "./router";
+import { VERSION } from "./core-exports";
 
 export interface WSData<DI = Record<string, unknown>> {
 	ctx: Context<DI>;
@@ -270,7 +271,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				error: errorName,
 				message:
 					process.env.NODE_ENV === "production"
-						? "Terjadi kesalahan pada server"
+						? "An unexpected error occurred"
 						: err.message,
 			},
 			status,
@@ -1489,9 +1490,15 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		}
 		// Skip building the log string entirely when request logging is off
 		if (logger.logRequests) {
-			logger.info(`${request.method} ${pathname}`, {
-				status: response.status,
-			});
+			const status = response.status;
+			const logData = { status };
+			if (status >= 500) {
+				logger.error(`${request.method} ${pathname}`, logData);
+			} else if (status >= 400) {
+				logger.warn(`${request.method} ${pathname}`, logData);
+			} else {
+				logger.info(`${request.method} ${pathname}`, logData);
+			}
 		}
 		if (this.poweredByHeaderEnabled) {
 			response.headers.set("X-Powered-By", "buntok");
@@ -1651,6 +1658,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (this.isListening) return;
 		this.isListening = true;
 
+		const startTime = performance.now();
+
 		// Pre-compute whether logResponse can be skipped entirely
 		this._skipLogResponse = !logger.logRequests && !this.poweredByHeaderEnabled;
 
@@ -1761,7 +1770,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		// Setup graceful shutdown handlers
 		this.setupGracefulShutdown();
 
-		logger.info(`Server listening at http://localhost:${currentPort}`);
+		const startupTime = Math.round(performance.now() - startTime);
+		const env = process.env.NODE_ENV || "development";
+		console.log(
+			`\n  \x1b[36mBuntok v${VERSION}\x1b[0m ready in \x1b[32m${startupTime}ms\x1b[0m\n`,
+		);
+		console.log(`  Environment: \x1b[33m${env}\x1b[0m`);
+		console.log(`  Listening on: \x1b[36mhttp://localhost:${currentPort}\x1b[0m\n`);
 
 		if (callback) callback();
 	}

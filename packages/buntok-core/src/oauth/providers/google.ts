@@ -96,7 +96,7 @@ export class GoogleProvider extends BaseOAuthProvider {
   }
 
   async getUserInfo(tokens: OAuth2Tokens): Promise<GoogleUser> {
-    // Try to decode ID token first (OIDC — no extra API call needed)
+    // Try to decode ID token first (OIDC - no extra API call needed)
     if (tokens.idToken) {
       const claims = decodeIdToken(tokens.idToken);
 

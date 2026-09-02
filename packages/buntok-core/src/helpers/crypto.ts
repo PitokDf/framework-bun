@@ -42,7 +42,7 @@ export function sha512(data: string | ArrayBuffer | Uint8Array): string {
 }
 
 /**
- * MD5 hash — uses a pure JS implementation since WebCrypto doesn't support MD5.
+ * MD5 hash - uses a pure JS implementation since WebCrypto doesn't support MD5.
  * Intended for legacy compatibility and cache keys, NOT for security.
  */
 export async function md5(

@@ -30,12 +30,12 @@ const DEFAULT_HEADERS: Record<string, string> = {
 };
 
 /**
- * Security headers middleware — adds common security headers to all responses.
+ * Security headers middleware - adds common security headers to all responses.
  *
  * @example
  * import { helmet } from "@buntok/core";
  *
- * // Default — all standard headers
+ * // Default - all standard headers
  * app.use(helmet());
  *
  * // Custom options
@@ -64,7 +64,7 @@ export function helmet(options?: HelmetOptions): Middleware {
 
 	return async (_ctx, next) => {
 		const response = await next();
-		// Set headers directly on the response — avoids copying Headers + creating new Response
+		// Set headers directly on the response - avoids copying Headers + creating new Response
 		for (const [key, value] of Object.entries(headers)) {
 			if (!response.headers.has(key)) {
 				response.headers.set(key, value);

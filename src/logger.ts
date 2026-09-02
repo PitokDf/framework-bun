@@ -13,6 +13,9 @@ interface LoggerOptions {
 	format?: "text" | "json";
 	// Disable request logging (useful for benchmarks)
 	logRequests?: boolean;
+	// Buffer settings
+	flushInterval?: number; // ms between auto-flush (default: 2000)
+	flushThreshold?: number; // lines before forced flush (default: 100)
 }
 
 // Pre-computed ANSI colors for each log level
@@ -31,6 +34,15 @@ export class Logger {
 	private logDir: string | undefined;
 	private isProd: boolean;
 	private _logRequests: boolean;
+
+	// Buffered file writer
+	private fileBuffer: string[] = [];
+	private flushTimer: ReturnType<typeof setInterval> | null = null;
+	private flushInterval: number;
+	private flushThreshold: number;
+	private flushing = false;
+
+	// Stdout/stderr buffer (non-blocking terminal output)
 	private flushScheduled = false;
 	private stdoutBuffer: string[] = [];
 	private stderrBuffer: string[] = [];
@@ -41,13 +53,25 @@ export class Logger {
 			options?.level ?? (this.isProd ? LogLevel.WARN : LogLevel.INFO);
 		this.format = options?.format ?? (this.isProd ? "json" : "text");
 		this._logRequests = options?.logRequests ?? true;
+		this.flushInterval = options?.flushInterval ?? 2000;
+		this.flushThreshold = options?.flushThreshold ?? 100;
 
 		this.logDir = process.env.LOG_DIR;
 		if (this.logDir && !existsSync(this.logDir)) {
 			mkdirSync(this.logDir, { recursive: true });
 		}
+
+		// Start flush timer if file logging is enabled
+		if (this.logDir) {
+			this.flushTimer = setInterval(() => this.flushFileBuffer(), this.flushInterval);
+			// Allow process to exit even if timer is running
+			if (this.flushTimer && typeof this.flushTimer.unref === "function") {
+				this.flushTimer.unref();
+			}
+		}
 	}
 
+	// Flush stdout/stderr to terminal
 	private flush() {
 		if (this.stdoutBuffer.length > 0) {
 			process.stdout.write(this.stdoutBuffer.join(""));
@@ -64,6 +88,37 @@ export class Logger {
 		if (this.flushScheduled) return;
 		this.flushScheduled = true;
 		queueMicrotask(() => this.flush());
+	}
+
+	// Flush buffered log lines to file (batch write)
+	private flushFileBuffer() {
+		if (this.fileBuffer.length === 0 || !this.logDir) return;
+		if (this.flushing) return; // prevent concurrent writes
+
+		this.flushing = true;
+		const lines = this.fileBuffer.splice(0); // take all buffered lines
+		const data = lines.join("");
+
+		// Determine date from first line's timestamp
+		const now = new Date();
+		const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+		const filePath = join(this.logDir, `app-${dateStr}.log`);
+
+		appendFile(filePath, data, (err) => {
+			if (err) {
+				// Write failed lines back to buffer for retry
+				this.fileBuffer.unshift(...lines);
+			}
+			this.flushing = false;
+		});
+	}
+
+	// Enqueue a line for file writing
+	private enqueueFile(line: string) {
+		this.fileBuffer.push(line);
+		if (this.fileBuffer.length >= this.flushThreshold) {
+			this.flushFileBuffer();
+		}
 	}
 
 	private print(
@@ -90,11 +145,9 @@ export class Logger {
 			}
 			this.scheduleFlush();
 
-			// File logging (already async with appendFile)
+			// File logging (buffered batch write)
 			if (this.logDir) {
-				const dateStr = timestamp.split("T")[0];
-				const filePath = join(this.logDir, `app-${dateStr}.log`);
-				appendFile(filePath, line, () => {});
+				this.enqueueFile(line);
 			}
 		} else {
 			const now = Date.now();
@@ -121,6 +174,12 @@ export class Logger {
 				this.stdoutBuffer.push(`${logString}\n`);
 			}
 			this.scheduleFlush();
+
+			// File logging (buffered batch write) - strip ANSI for clean log files
+			if (this.logDir) {
+				const cleanLine = `[${now}] [${levelName}] ${message}${meta ? ` ${JSON.stringify(meta)}` : ""}\n`;
+				this.enqueueFile(cleanLine);
+			}
 		}
 	}
 
@@ -144,8 +203,9 @@ export class Logger {
 		return this._logRequests;
 	}
 
-	// Flush remaining logs (useful for graceful shutdown)
+	// Flush all buffers (useful for graceful shutdown)
 	public flushSync() {
+		// Flush terminal
 		if (this.stdoutBuffer.length > 0) {
 			process.stdout.write(this.stdoutBuffer.join(""));
 			this.stdoutBuffer.length = 0;
@@ -153,6 +213,26 @@ export class Logger {
 		if (this.stderrBuffer.length > 0) {
 			process.stderr.write(this.stderrBuffer.join(""));
 			this.stderrBuffer.length = 0;
+		}
+		// Flush file buffer synchronously
+		if (this.flushTimer) {
+			clearInterval(this.flushTimer);
+			this.flushTimer = null;
+		}
+		// One final async flush for remaining file lines
+		if (this.fileBuffer.length > 0 && this.logDir) {
+			const lines = this.fileBuffer.splice(0);
+			const data = lines.join("");
+			const now = new Date();
+			const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+			const filePath = join(this.logDir, `app-${dateStr}.log`);
+			// Synchronous append for shutdown
+			try {
+				const { writeFileSync, appendFileSync } = require("node:fs");
+				appendFileSync(filePath, data);
+			} catch {
+				// Best effort
+			}
 		}
 	}
 }

@@ -13,9 +13,9 @@ interface WSDataWithHeartbeat<DI> extends WSData<DI> {
 
 // ── Pluggable PubSub (mirip StorageDriver) ──
 export interface WSPubSub {
-	/** Publish ke channel — memory default, Redis pluggable */
+	/** Publish ke channel - memory default, Redis pluggable */
 	publish(channel: string, message: string | object): Promise<void> | void;
-	/** Subscribe — return unsubscribe */
+	/** Subscribe - return unsubscribe */
 	subscribe(channel: string, handler: (message: string | object) => void): () => void;
 }
 
@@ -88,7 +88,7 @@ export function validateWSMessage<T>(
 }
 
 /**
- * Room class — in-memory default, pluggable ke Redis via pubSub
+ * Room class - in-memory default, pluggable ke Redis via pubSub
  * Mirip LocalDiskStorage vs MemoryStorage pattern.
  *
  * @example Memory (default)
@@ -148,7 +148,7 @@ export class Room<DI = Record<string, unknown>> {
 
 	broadcast(message: string | object, exclude?: ServerWebSocket<WSData<DI>>): void {
 		if (this.pubSub) {
-			// via pubSub (Redis) — akan di-fanout ke semua instance termasuk self via subscribe
+			// via pubSub (Redis) - akan di-fanout ke semua instance termasuk self via subscribe
 			const r = this.pubSub.publish(this.channel, message);
 			if (r instanceof Promise) r.catch(() => this.localBroadcast(message, exclude));
 			return;
@@ -211,7 +211,7 @@ export class Room<DI = Record<string, unknown>> {
 }
 
 /**
- * WebSocket heartbeat — 30s fixed, Bun-only
+ * WebSocket heartbeat - 30s fixed, Bun-only
  * Fix: pong event reset alive (bukan message/drain)
  */
 export function wsHeartbeat<DI = Record<string, unknown>>(
@@ -236,7 +236,7 @@ export function wsHeartbeat<DI = Record<string, unknown>>(
 				try { ws.ping(); } catch {}
 			}, interval);
 		},
-		// `pong` handler khusus — akan di-wire di app.ts websocket.pong
+		// `pong` handler khusus - akan di-wire di app.ts websocket.pong
 		// fallback untuk Bun versi lama: message juga reset (compat)
 		message: (ws: ServerWebSocket<WSData<DI>>) => {
 			const wsData = ws.data as WSDataWithHeartbeat<DI>;
@@ -250,14 +250,14 @@ export function wsHeartbeat<DI = Record<string, unknown>>(
 	} as unknown as WSHandler<DI>;
 }
 
-/** Internal helper untuk app.ts — reset pong */
+/** Internal helper untuk app.ts - reset pong */
 export function wsHeartbeatPong<DI>(ws: ServerWebSocket<WSData<DI>>): void {
 	const wsData = ws.data as unknown as WSDataWithHeartbeat<DI>;
 	if (wsData.heartbeat) wsData.heartbeat.alive = true;
 }
 
 /**
- * WebSocket rate limiter — in-memory default, pluggable ke Redis
+ * WebSocket rate limiter - in-memory default, pluggable ke Redis
  * @example
  * const limiter = wsRateLimit({ windowMs: 1000, max: 10 })
  * app.ws("/chat", { ...limiter, message: (ws,msg)=>{} })
@@ -294,7 +294,7 @@ export function wsRateLimit<DI = Record<string, unknown>>(opts: WSRateLimitOptio
 }
 
 /**
- * WebSocket authentication middleware — pluggable
+ * WebSocket authentication middleware - pluggable
  */
 export function wsAuth<DI extends Record<string, unknown>, TAuth = unknown>(
 	authenticate: (ws: ServerWebSocket<WSData<DI>>) => Promise<TAuth | null>,

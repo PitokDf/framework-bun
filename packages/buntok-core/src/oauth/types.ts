@@ -86,7 +86,7 @@ export class OAuthError extends Error {
 
 export class OAuthStateError extends OAuthError {
   constructor(provider: string) {
-    super("OAuth state mismatch — possible CSRF attack", "STATE_MISMATCH", provider);
+    super("OAuth state mismatch - possible CSRF attack", "STATE_MISMATCH", provider);
     this.name = "OAuthStateError";
   }
 }

@@ -1,4 +1,28 @@
 // Core
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+let _version = "0.0.0-dev";
+try {
+	// 1. Check framework's own package.json (dev/monorepo context)
+	let pkgPath = join(__dirname, "..", "package.json");
+	if (!existsSync(pkgPath)) {
+		// 2. CLI bundle context (dist/cli/)
+		pkgPath = join(__dirname, "..", "..", "package.json");
+	}
+	if (!existsSync(pkgPath)) {
+		// 3. User project — read from node_modules/@buntok/core/package.json
+		pkgPath = join(process.cwd(), "node_modules", "@buntok", "core", "package.json");
+	}
+	if (existsSync(pkgPath)) {
+		const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+		if (typeof pkg.version === "string") _version = pkg.version;
+	}
+} catch {}
+export const VERSION: string = _version;
+
 export { z } from "zod";
 // AI
 export {

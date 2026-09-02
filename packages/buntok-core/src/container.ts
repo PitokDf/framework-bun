@@ -79,13 +79,23 @@ export class Container {
 
 		if (this.resolving.has(token)) {
 			const name = typeof token === "function" ? token.name : String(token);
-			throw new Error(`Circular dependency detected: ${name}`);
+			const chain = [...this.resolving].map((t) =>
+				typeof t === "function" ? t.name : String(t),
+			);
+			throw new Error(
+				`Circular dependency detected: ${name}\n` +
+					`  Resolution chain: ${chain.join(" -> ")} -> ${name}\n` +
+					`  Hint: Use FactoryProvider to break the cycle.`,
+			);
 		}
 
 		const provider = this.providers.get(token);
 		if (!provider) {
 			const name = typeof token === "function" ? token.name : String(token);
-			throw new Error(`No provider registered for: ${name}`);
+			throw new Error(
+				`No provider registered for: ${name}\n` +
+					`  Hint: Register it with container.registerClass(${name}) or container.register("${name}", { useClass: ${name} })`,
+			);
 		}
 
 		this.resolving.add(token);

@@ -111,7 +111,7 @@ export class Context<
 	}
 
 	/**
-	 * Parsed query string parameters — accessed as a plain property.
+	 * Parsed query string parameters - accessed as a plain property.
 	 * Parsed lazily and cached after first access.
 	 *
 	 * @example
@@ -193,7 +193,7 @@ export class Context<
 
 	/**
 	 * Parse and cache the multipart/form-data body.
-	 * Safe to call multiple times — the parsed FormData is cached after the first read,
+	 * Safe to call multiple times - the parsed FormData is cached after the first read,
 	 * so `zValidator("form", ...)` and `uploader()` can both be used in the same route
 	 * without conflicting over the body stream.
 	 */
@@ -323,7 +323,7 @@ export class Context<
 	}
 
 	/**
-	 * Start a Server-Sent Events (SSE) stream — Bun-only
+	 * Start a Server-Sent Events (SSE) stream - Bun-only
 	 */
 	public sse(
 		callback: (stream: SSE) => void | Promise<void>,
@@ -331,7 +331,7 @@ export class Context<
 	): Response {
 		const stream = createSSE(this.request, options);
 
-		// queueMicrotask lebih cepat dari setTimeout(0) — tanpa macrotask latency
+		// queueMicrotask lebih cepat dari setTimeout(0) - tanpa macrotask latency
 		queueMicrotask(async () => {
 			try {
 				await callback(stream);

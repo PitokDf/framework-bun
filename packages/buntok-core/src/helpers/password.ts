@@ -1,7 +1,7 @@
 import { scryptSync, randomBytes, timingSafeEqual } from "node:crypto";
 
 const SCRYPT_OPTIONS = {
-	N: 16384, // 2^14 — memory cost (16 MB)
+	N: 16384, // 2^14 - memory cost (16 MB)
 	r: 8, // block size
 	p: 1, // parallelization
 };

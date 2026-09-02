@@ -21,7 +21,7 @@ export interface AppleUser extends OAuthUser {
   email?: string;
   emailVerified?: boolean;
   // Apple only sends these ONCE (first auth)
-  /** Raw Apple name object — only available on first authentication */
+  /** Raw Apple name object - only available on first authentication */
   appleName?: {
     firstName?: string;
     lastName?: string;
@@ -238,7 +238,7 @@ export class AppleProvider extends BaseOAuthProvider {
       sub: claims.sub as string,
       email: claims.email as string | undefined,
       emailVerified: claims.email_verified as boolean | undefined,
-      // Apple only sends name on FIRST auth — may be undefined
+      // Apple only sends name on FIRST auth - may be undefined
       appleName: claims.name as AppleUser["appleName"],
     };
   }

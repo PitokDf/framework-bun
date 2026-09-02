@@ -123,7 +123,7 @@ export interface StorageDriver {
 	deleteFile?(path: string): Promise<boolean>;
 }
 
-// Single source of truth — all supported MIME types and their magic bytes signatures.
+// Single source of truth - all supported MIME types and their magic bytes signatures.
 // The MimeType type is inferred from the keys.
 const MAGIC_BYTES = {
 	// Images
@@ -238,7 +238,7 @@ const MAGIC_BYTES = {
 	"application/octet-stream": [],
 } as const;
 
-/** Supported MIME types — inferred from the MAGIC_BYTES keys. */
+/** Supported MIME types - inferred from the MAGIC_BYTES keys. */
 export type MimeType = keyof typeof MAGIC_BYTES;
 
 export interface UploadFieldConfig {
@@ -310,7 +310,7 @@ export interface ParseUploadResult<
 	>,
 > {
 	/**
-	 * All form fields — text fields are `string`, file fields are typed based on config.
+	 * All form fields - text fields are `string`, file fields are typed based on config.
 	 *
 	 * When `outputFormat` is set, the field narrows to `ImageUploadedFile`
 	 * with `width`, `height`, `format`, and optional `originalType`/`originalExt`.
@@ -392,7 +392,7 @@ export class MemoryStorage implements StorageDriver {
 	}
 
 	async deleteFile(_filePath: string): Promise<boolean> {
-		// MemoryStorage holds files in memory — nothing to delete on disk.
+		// MemoryStorage holds files in memory - nothing to delete on disk.
 		return true;
 	}
 }
@@ -511,7 +511,7 @@ export async function handleUploads<
 			// Per-field config
 			const fieldConfig = fieldWhitelist?.[key];
 
-			// Validation: Size — per-field config overrides global
+			// Validation: Size - per-field config overrides global
 			const maxFileSize = fieldConfig?.maxFileSize ?? options.maxFileSize;
 			if (maxFileSize && value.size > maxFileSize) {
 				throw new BadRequestError(
@@ -519,7 +519,7 @@ export async function handleUploads<
 				);
 			}
 
-			// Validation: MIME Type — per-field config overrides global
+			// Validation: MIME Type - per-field config overrides global
 			const allowedMimeTypes =
 				fieldConfig?.allowedMimeTypes ?? options.allowedMimeTypes;
 			if (allowedMimeTypes && !allowedMimeTypes.includes(value.type as MimeType)) {
@@ -528,7 +528,7 @@ export async function handleUploads<
 				);
 			}
 
-			// Validation: Magic Bytes — verify file signature matches claimed MIME type
+			// Validation: Magic Bytes - verify file signature matches claimed MIME type
 			if (options.verifyMagicBytes !== false) {
 				const isValid = await verifyFileSignature(value, value.type);
 				if (!isValid) {
@@ -625,7 +625,7 @@ export async function handleUploads<
  * Middleware that automatically parses multipart uploads and populates
  * `ctx.store.files` and `ctx.store.fields`.
  *
- * ⚠️ Throws `BadRequestError` on validation failure — ensure your route
+ * ⚠️ Throws `BadRequestError` on validation failure - ensure your route
  * handler uses `asyncHandler()` or has try/catch to propagate the error
  * to the global error handler.
  */

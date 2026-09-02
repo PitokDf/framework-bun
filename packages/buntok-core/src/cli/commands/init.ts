@@ -408,6 +408,45 @@ npm-debug.log*
 coverage/
 `;
 
+const DOCKERFILE_TEMPLATE = `# Builder
+FROM oven/bun:1-alpine AS builder
+WORKDIR /app
+
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile --production
+
+COPY src/ src/
+COPY tsconfig.json ./
+COPY package.json ./
+
+RUN bunx buntok build
+
+# Production
+FROM oven/bun:1-distroless
+WORKDIR /app
+
+COPY --from=builder /app/.buntok .buntok
+COPY --from=builder /app/node_modules node_modules
+COPY --from=builder /app/package.json ./
+
+USER bun
+EXPOSE 1212
+
+ENV NODE_ENV=production
+ENV PORT=1212
+
+CMD ["bun", ".buntok/index.js"]
+`;
+
+const DOCKERIGNORE_CONTENT = `node_modules
+dist
+.buntok
+*.log
+.env
+.env.*
+coverage
+`;
+
 function createEnvFiles(projectRoot: string): boolean {
 	const envPath = join(projectRoot, ".env");
 	const envExamplePath = join(projectRoot, ".env.example");
@@ -458,6 +497,31 @@ function createVercelJson(projectRoot: string): boolean {
 	return true;
 }
 
+function createDockerfile(projectRoot: string): boolean {
+	const dockerfilePath = join(projectRoot, "Dockerfile");
+	const dockerignorePath = join(projectRoot, ".dockerignore");
+
+	let created = false;
+
+	if (!existsSync(dockerfilePath)) {
+		writeFileSync(dockerfilePath, DOCKERFILE_TEMPLATE, "utf-8");
+		console.log("\x1b[32m✓ Created\x1b[0m Dockerfile");
+		created = true;
+	} else {
+		console.log("\x1b[90m• Dockerfile: already exists, skipping\x1b[0m");
+	}
+
+	if (!existsSync(dockerignorePath)) {
+		writeFileSync(dockerignorePath, DOCKERIGNORE_CONTENT, "utf-8");
+		console.log("\x1b[32m✓ Created\x1b[0m .dockerignore");
+		created = true;
+	} else {
+		console.log("\x1b[90m• .dockerignore: already exists, skipping\x1b[0m");
+	}
+
+	return created;
+}
+
 export async function initCommand() {
 	const projectRoot = process.cwd();
 
@@ -482,5 +546,18 @@ export async function initCommand() {
 		}
 	} else {
 		console.log("\x1b[90m• vercel.json: already exists, skipping\x1b[0m");
+	}
+
+	const dockerfilePath = join(projectRoot, "Dockerfile");
+	if (!existsSync(dockerfilePath)) {
+		console.log("");
+		const useDocker = await askQuestion(
+			"\x1b[36mDo you want to add Docker support? (Y/n): \x1b[0m",
+		);
+		if (useDocker) {
+			createDockerfile(projectRoot);
+		}
+	} else {
+		console.log("\x1b[90m• Dockerfile: already exists, skipping\x1b[0m");
 	}
 }

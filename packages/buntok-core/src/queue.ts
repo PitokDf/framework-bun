@@ -30,8 +30,8 @@ export interface QueueOptions {
 	retryDelay?: number;
 	/**
 	 * Retry backoff strategy.
-	 *  - `"fixed"` (default) — always waits `retryDelay` ms
-	 *  - `"exponential"` — waits `retryDelay * 2^attempt` ms
+	 *  - `"fixed"` (default) - always waits `retryDelay` ms
+	 *  - `"exponential"` - waits `retryDelay * 2^attempt` ms
 	 */
 	backoff?: "fixed" | "exponential";
 }

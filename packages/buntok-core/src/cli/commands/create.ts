@@ -10,6 +10,7 @@ interface CreateOptions {
 	service: boolean;
 	controller: boolean;
 	all: boolean;
+	dryRun: boolean;
 }
 
 function parseOptions(args: string[]): CreateOptions {
@@ -18,6 +19,7 @@ function parseOptions(args: string[]): CreateOptions {
 		service: false,
 		controller: false,
 		all: true,
+		dryRun: false,
 	};
 
 	for (const arg of args) {
@@ -34,6 +36,9 @@ function parseOptions(args: string[]): CreateOptions {
 				options.controller = true;
 				options.all = false;
 				break;
+			case "--dry-run":
+				options.dryRun = true;
+				break;
 		}
 	}
 
@@ -48,6 +53,7 @@ function parseOptions(args: string[]): CreateOptions {
 		service: true,
 		controller: true,
 		all: false,
+		dryRun: options.dryRun,
 	};
 }
 
@@ -74,10 +80,13 @@ export async function createCommand(entityName: string, args: string[]) {
 	const options = parseOptions(args);
 	const pascalName = toPascalCase(entityName);
 
-	console.log(`\n\x1b[36mCreating ${pascalName} entity...\x1b[0m\n`);
+	const prefix = options.dryRun ? "\x1b[33m[DRY RUN]\x1b[0m " : "";
+	console.log(`\n${prefix}\x1b[36mCreating ${pascalName} entity...\x1b[0m\n`);
 
-	// Ensure directories exist
-	await ensureDirectories(entityName);
+	// Ensure directories exist (skip in dry-run)
+	if (!options.dryRun) {
+		await ensureDirectories(entityName);
+	}
 
 	const results: string[] = [];
 	const generatedFiles: string[] = [];
@@ -89,6 +98,14 @@ export async function createCommand(entityName: string, args: string[]) {
 		contentGenerator: () => string,
 		type: string,
 	) => {
+		if (options.dryRun) {
+			const content = contentGenerator();
+			results.push(`[DRY RUN] ${type}: ${path}`);
+			console.log(`\n\x1b[90m--- ${path} ---\x1b[0m`);
+			console.log(content);
+			console.log(`\x1b[90m--- end ---\x1b[0m\n`);
+			return;
+		}
 		if (!existsSync(path)) {
 			await fs.writeFile(path, contentGenerator());
 			results.push(`✓ ${type}: ${path}`);
@@ -131,8 +148,8 @@ export async function createCommand(entityName: string, args: string[]) {
 	// Execute all file generations concurrently
 	await Promise.all(tasks);
 
-	// Auto-format generated files with Biome if available
-	if (generatedFiles.length > 0) {
+	// Auto-format generated files with Biome if available (skip in dry-run)
+	if (generatedFiles.length > 0 && !options.dryRun) {
 		const biomeProc = Bun.spawnSync(
 			["bunx", "biome", "format", "--write", ...generatedFiles],
 			{
@@ -146,9 +163,9 @@ export async function createCommand(entityName: string, args: string[]) {
 		}
 	}
 
-	// Auto-register in src/index.ts
+	// Auto-register in src/index.ts (skip in dry-run)
 	const indexPath = join("src", "index.ts");
-	if (existsSync(indexPath)) {
+	if (existsSync(indexPath) && !options.dryRun) {
 		const indexContent = readFileSync(indexPath, "utf-8");
 
 		// Build imports
@@ -215,13 +232,17 @@ export async function createCommand(entityName: string, args: string[]) {
 	}
 
 	// Print results
-	console.log("\x1b[32mGenerated files:\x1b[0m");
+	console.log(options.dryRun ? "\x1b[33mWould generate:\x1b[0m" : "\x1b[32mGenerated files:\x1b[0m");
 	for (const result of results.sort()) {
 		console.log(`  ${result}`);
 	}
 
-	console.log(`
+	if (options.dryRun) {
+		console.log(`\n\x1b[33mRun without --dry-run to create these files.\x1b[0m\n`);
+	} else {
+		console.log(`
 \x1b[36mNext steps:\x1b[0m
   1. Start dev server: \x1b[33mbun run dev\x1b[0m
 `);
+	}
 }

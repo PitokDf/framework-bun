@@ -1,6 +1,6 @@
 /**
  * Industrial SSE - Bun-only, in-memory default, pluggable to Redis/storage
- * Pattern mirip `StorageDriver` di `upload.ts:24` — default Memory, swap ke Redis tinggal inject.
+ * Pattern mirip `StorageDriver` di `upload.ts:24` - default Memory, swap ke Redis tinggal inject.
  */
 
 export interface SSEMessage {
@@ -22,7 +22,7 @@ export interface SSEHistoryStore {
 	clear?(): Promise<void> | void;
 }
 
-/** Default in-memory ring buffer 1000 msg — zero-deps */
+/** Default in-memory ring buffer 1000 msg - zero-deps */
 export class MemorySSEHistory implements SSEHistoryStore {
 	private messages: SSEMessage[] = [];
 	constructor(private maxSize = 1000) {}
@@ -87,7 +87,7 @@ export interface SSEOptions {
 	 * Callback to replay missed events on reconnection.
 	 * Receives the Last-Event-ID header value from the client.
 	 * Return an array of messages to replay.
-	 * Jika `historyStore` disediakan, callback ini opsional — store akan dipakai otomatis.
+	 * Jika `historyStore` disediakan, callback ini opsional - store akan dipakai otomatis.
 	 */
 	onReconnect?: (lastEventId: string) => Promise<SSEMessage[]>;
 	/** Pluggable history store - default MemorySSEHistory (mirip StorageDriver) */
@@ -132,7 +132,7 @@ export class SSE {
 	}
 
 	/**
-	 * Create SSE response with ReadableStream — Bun-only, no external deps
+	 * Create SSE response with ReadableStream - Bun-only, no external deps
 	 */
 	connect(): Response {
 		if (this.closed && this.request.signal.aborted) {
@@ -166,7 +166,7 @@ export class SSE {
 					this.sendMessage({ event: eventName, data: "connected" });
 				}
 
-				// Send retry timeout — default 3000 jika tidak diisi tapi client expect
+				// Send retry timeout - default 3000 jika tidak diisi tapi client expect
 				if (this.options.retry !== undefined) {
 					this.sendRaw(`retry: ${this.options.retry}\n\n`);
 				} else {
@@ -176,11 +176,11 @@ export class SSE {
 				// Start heartbeat 30s fixed (industrial keep-alive)
 				this.startHeartbeat();
 
-				// Handle client disconnect — once:true + cleanup
+				// Handle client disconnect - once:true + cleanup
 				this.abortHandler = () => this.close();
 				this.request.signal.addEventListener("abort", this.abortHandler, { once: true } as AddEventListenerOptions);
 
-				// Replay missed events on reconnection — pakai store dulu, fallback onReconnect
+				// Replay missed events on reconnection - pakai store dulu, fallback onReconnect
 				if (this.lastEventId) {
 					// async tanpa block initial event
 					queueMicrotask(() => this.replayMissedEvents());
@@ -239,7 +239,7 @@ export class SSE {
 	}
 
 	/**
-	 * Send a message to the client — auto persist ke historyStore jika ada id
+	 * Send a message to the client - auto persist ke historyStore jika ada id
 	 */
 	send(message: SSEMessage): void {
 		if (this.closed) return;
@@ -275,7 +275,7 @@ export class SSE {
 	}
 
 	/**
-	 * Send SSE comment — untuk heartbeat custom
+	 * Send SSE comment - untuk heartbeat custom
 	 */
 	sendComment(comment: string): void {
 		const sanitized = String(comment).replace(/[\r\n]/g, " ");
@@ -303,7 +303,7 @@ export class SSE {
 	}
 
 	/**
-	 * Send raw string to the stream — dengan backpressure check
+	 * Send raw string to the stream - dengan backpressure check
 	 */
 	private sendRaw(raw: string): void {
 		if (this.closed || !this.controller) return;
@@ -311,7 +311,7 @@ export class SSE {
 		try {
 			const desired = (this.controller as unknown as { desiredSize?: number | null }).desiredSize;
 			if (desired !== null && desired !== undefined && desired <= 0) {
-				if (raw.startsWith(":")) return; // drop heartbeat jika penuh — jangan warn
+				if (raw.startsWith(":")) return; // drop heartbeat jika penuh - jangan warn
 			}
 			this.controller.enqueue(this.encoder.encode(raw));
 		} catch (_error) {
@@ -328,7 +328,7 @@ export class SSE {
 	}
 
 	/**
-	 * Format and send SSE message — sanitized
+	 * Format and send SSE message - sanitized
 	 */
 	private sendMessage(message: SSEMessage): void {
 		let raw = "";
@@ -362,17 +362,17 @@ export class SSE {
 	}
 
 	/**
-	 * Start heartbeat 30s fixed — keep-alive untuk LB/ALB
+	 * Start heartbeat 30s fixed - keep-alive untuk LB/ALB
 	 */
 	private startHeartbeat(): void {
-		// 30s fixed sesuai instruksi — tidak configurable per request (industrial default)
+		// 30s fixed sesuai instruksi - tidak configurable per request (industrial default)
 		this.heartbeatInterval = setInterval(() => {
 			this.sendRaw(": heartbeat\n\n");
 		}, 30000);
 	}
 
 	/**
-	 * Close the SSE connection — idempotent + cleanup listener
+	 * Close the SSE connection - idempotent + cleanup listener
 	 */
 	close(): void {
 		if (this.closed) return;
@@ -431,14 +431,14 @@ export class SSE {
 		return connectionTracker.connections;
 	}
 
-	/** Graceful close all — dipakai di App.setupGracefulShutdown */
+	/** Graceful close all - dipakai di App.setupGracefulShutdown */
 	static closeAll(): void {
 		for (const c of [...connectionTracker.connections]) c.close();
 	}
 }
 
 /**
- * SSE Broadcaster — in-memory default, pluggable ke Redis via pubSub
+ * SSE Broadcaster - in-memory default, pluggable ke Redis via pubSub
  *
  * @example Memory (default)
  * ```ts
@@ -501,7 +501,7 @@ export class SSEBroadcaster {
 	}
 
 	/**
-	 * Broadcast a named event to all connected clients — via pubSub jika ada
+	 * Broadcast a named event to all connected clients - via pubSub jika ada
 	 */
 	broadcast(event: string, data: string | object): void {
 		const msg: SSEMessage = { event, data };
@@ -600,7 +600,7 @@ export class SSEBroadcaster {
 }
 
 /**
- * Create SSE helper from Buntok context — Bun-only
+ * Create SSE helper from Buntok context - Bun-only
  */
 export function createSSE(request: Request, options?: SSEOptions): SSE {
 	return new SSE(request, options);

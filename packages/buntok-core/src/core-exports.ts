@@ -1,4 +1,28 @@
 // Core
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+let _version = "0.0.0-dev";
+try {
+	// 1. Check framework's own package.json (dev/monorepo context)
+	let pkgPath = join(__dirname, "..", "package.json");
+	if (!existsSync(pkgPath)) {
+		// 2. CLI bundle context (dist/cli/)
+		pkgPath = join(__dirname, "..", "..", "package.json");
+	}
+	if (!existsSync(pkgPath)) {
+		// 3. User project — read from node_modules/@buntok/core/package.json
+		pkgPath = join(process.cwd(), "node_modules", "@buntok", "core", "package.json");
+	}
+	if (existsSync(pkgPath)) {
+		const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+		if (typeof pkg.version === "string") _version = pkg.version;
+	}
+} catch {}
+export const VERSION: string = _version;
+
 export { z } from "zod";
 // AI
 export {
@@ -282,6 +306,51 @@ export {
 	type QueueOptions,
 } from "./queue";
 export { Router } from "./router";
+// Payment
+export {
+	PaymentConfigurationError,
+	PaymentError,
+	PaymentIdempotencyError,
+	PaymentProviderError,
+	PaymentVerificationError,
+	paymentWebhook,
+	createPayment,
+	generateIdempotencyKey,
+	normalizeCheckoutStatus,
+	normalizeRefundStatus,
+	normalizeSubscriptionStatus,
+	CreateCheckoutInputSchema,
+	CreatePaymentLinkInputSchema,
+	CreateRefundInputSchema,
+	CreateSubscriptionInputSchema,
+	MoneyAmountSchema,
+	StripeDriver,
+	MidtransDriver,
+	XenditDriver,
+	PayPalDriver,
+} from "./payment";
+export type {
+	CheckoutResult,
+	CheckoutStatus,
+	CreateCheckoutInput,
+	CreatePaymentLinkInput,
+	CreateRefundInput,
+	CreateSubscriptionInput,
+	PaymentDriver,
+	PaymentLinkResult,
+	PaymentOptions,
+	RefundResult,
+	RefundStatus,
+	StripeDriverConfig,
+	MidtransDriverConfig,
+	XenditDriverConfig,
+	PayPalDriverConfig,
+	SubscriptionResult,
+	SubscriptionStatus,
+	WebhookEvent,
+	WebhookEventType,
+	WebhookMiddlewareOptions,
+} from "./payment";
 // Scheduler / CronJob
 export {
 	BunCronSchedulerDriver,
@@ -291,7 +360,7 @@ export {
 	type SchedulerDriver,
 	setDefaultSchedulerDriver,
 } from "./schedule";
-// SSE — industrial, pluggable (mirip StorageDriver)
+// SSE - industrial, pluggable (mirip StorageDriver)
 export type { SSEBroadcasterOptions, SSEHistoryStore, SSEMessage, SSEOptions, SSEPubSub } from "./sse";
 export { MemorySSEHistory, MemorySSEPubSub, SSE, SSEBroadcaster, createSSE } from "./sse";
 // Upload
@@ -310,7 +379,7 @@ export {
 	handleUploads,
 	uploader,
 } from "./upload";
-// WebSocket helpers — industrial, pluggable
+// WebSocket helpers - industrial, pluggable
 export type { RoomOptions, WSPubSub, WSRateLimitOptions, WSRateLimitStore } from "./ws-helpers";
 export {
 	MemoryWSPubSub,

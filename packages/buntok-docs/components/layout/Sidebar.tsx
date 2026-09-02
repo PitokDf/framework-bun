@@ -3,7 +3,8 @@
 import { ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { DOC_ROUTES } from "@/lib/doc-routes";
 
 interface NavItem {
   title: string;
@@ -11,67 +12,28 @@ interface NavItem {
   items?: NavItem[];
 }
 
-const navigation: NavItem[] = [
-  { title: "Getting Started", href: "/docs" },
-  {
-    title: "Fundamentals",
-    items: [
-      { title: "Routing", href: "/docs/routing" },
-      { title: "Controllers", href: "/docs/controllers" },
-      { title: "Decorators", href: "/docs/decorators" },
-      { title: "Context", href: "/docs/context" },
-      { title: "Validation", href: "/docs/validation" },
-      { title: "Middleware", href: "/docs/middleware" },
-      { title: "Error Handling", href: "/docs/error-handling" },
-      { title: "File Upload", href: "/docs/upload" },
-    ],
-  },
-  {
-    title: "Authentication",
-    items: [
-      { title: "JWT Authentication", href: "/docs/auth" },
-      { title: "OAuth Social Login", href: "/docs/oauth" },
-      { title: "RBAC", href: "/docs/rbac" },
-    ],
-  },
-  {
-    title: "Advanced",
-    items: [
-      { title: "App Configuration", href: "/docs/app-config" },
-      { title: "IoC Container", href: "/docs/ioc" },
-      { title: "Logger", href: "/docs/logger" },
-      { title: "SSE", href: "/docs/sse" },
-      { title: "WebSocket", href: "/docs/websocket" },
-      { title: "Static Files", href: "/docs/static-files" },
-      { title: "Event Emitter", href: "/docs/emitter" },
-      { title: "Testing", href: "/docs/testing" },
-    ],
-  },
-  {
-    title: "Integrations",
-    items: [
-      { title: "Cache", href: "/docs/cache" },
-      { title: "Mailer", href: "/docs/mailer" },
-      { title: "Template Engine", href: "/docs/template" },
-      { title: "Queue", href: "/docs/queue" },
-      { title: "Scheduler", href: "/docs/scheduler" },
-    ],
-  },
-  {
-    title: "Utilities",
-    items: [
-      { title: "Helpers", href: "/docs/helpers" },
-      { title: "Timezone", href: "/docs/timezone" },
-      { title: "AI Module", href: "/docs/ai" },
-      { title: "Vector Search", href: "/docs/vector-search" },
-      { title: "API Docs", href: "/docs/api-docs" },
-      { title: "Repository", href: "/docs/repository" },
-      { title: "Audit Log", href: "/docs/audit-log" },
-      { title: "Health Check", href: "/docs/health-check" },
-      { title: "CLI", href: "/docs/cli" },
-    ],
-  },
-];
+function buildNavigation(): NavItem[] {
+  const groups: NavItem[] = [];
+  let currentSection: string | null = null;
+  let currentGroup: NavItem | null = null;
+
+  for (const route of DOC_ROUTES) {
+    if (route.section === "Getting Started") {
+      groups.push({ title: route.title, href: route.href });
+      continue;
+    }
+
+    if (route.section !== currentSection) {
+      currentSection = route.section;
+      currentGroup = { title: route.section, items: [] };
+      groups.push(currentGroup);
+    }
+
+    currentGroup!.items!.push({ title: route.title, href: route.href });
+  }
+
+  return groups;
+}
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -81,6 +43,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
+  const navigation = useMemo(() => buildNavigation(), []);
 
   return (
     <>

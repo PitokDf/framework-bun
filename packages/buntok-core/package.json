@@ -1,6 +1,6 @@
 {
 	"name": "@buntok/core",
-	"version": "2.1.5",
+	"version": "2.1.6",
 	"description": "Core HTTP framework for Bun, bring your own structure",
 	"module": "dist/core-exports.js",
 	"type": "module",

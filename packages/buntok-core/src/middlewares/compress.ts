@@ -30,14 +30,14 @@ const DEFAULT_OPTIONS: Required<CompressOptions> = {
 
 /**
  * Compress response bodies with gzip or brotli, negotiated from the
- * request's `Accept-Encoding` header. Opt-in via `app.use(compress())` —
+ * request's `Accept-Encoding` header. Opt-in via `app.use(compress())` -
  * compression is real CPU work, so routes that don't need it (or that
  * already stream pre-compressed/binary content) shouldn't pay for it.
  *
  * Uses Bun's native `Bun.gzipSync` (Zig, not a JS gzip implementation) and
  * falls back to `node:zlib`'s brotli when the client prefers `br`.
  *
- * Brotli defaults to level 4 for a good speed/ratio tradeoff — roughly
+ * Brotli defaults to level 4 for a good speed/ratio tradeoff - roughly
  * 3-5x faster than level 11 with only ~15% larger output.
  */
 export function compress(options: CompressOptions = {}): Middleware {
@@ -50,7 +50,7 @@ export function compress(options: CompressOptions = {}): Middleware {
 		if (result.headers.get("Content-Encoding")) return result;
 
 		const contentType = result.headers.get("Content-Type") || "";
-		// Industrial: jangan compress SSE/WebSocket streaming — break spec
+		// Industrial: jangan compress SSE/WebSocket streaming - break spec
 		if (contentType.includes("text/event-stream")) return result;
 		const eligible = opts.types.some((t) => contentType.startsWith(t));
 		if (!eligible) return result;
@@ -66,7 +66,7 @@ export function compress(options: CompressOptions = {}): Middleware {
 			return result;
 		}
 
-		// If no Content-Length, we must buffer to check size — but only compress
+		// If no Content-Length, we must buffer to check size - but only compress
 		// if above threshold. For small responses without Content-Length, skip
 		// compression entirely to avoid unnecessary buffering + new Response.
 		if (!contentLength) return result;

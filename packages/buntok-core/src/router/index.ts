@@ -10,7 +10,7 @@ export interface LookupResult {
 const EMPTY_PARAMS: Record<string, string> = Object.freeze({});
 
 // Simple fixed-size LRU cache for trie lookup results on dynamic routes.
-// Avoids re-walking the trie for the same (method, pathname) pair —
+// Avoids re-walking the trie for the same (method, pathname) pair -
 // common in real apps where the same resource is hit repeatedly.
 const CACHE_MAX = 2048;
 
@@ -186,7 +186,7 @@ export class Router {
 			}
 		}
 
-		// LRU cache for dynamic routes — avoids re-walking the trie for
+		// LRU cache for dynamic routes - avoids re-walking the trie for
 		// repeated (method, pathname) pairs (e.g. same user ID hit often)
 		const cached = this.lookupCache.get(method, path);
 		if (cached) return cached;

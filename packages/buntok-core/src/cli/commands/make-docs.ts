@@ -26,7 +26,7 @@ function sanitizeSchema(schema: any): any {
 		return z.string().openapi({ format: "binary", description: "Binary file" });
 	}
 
-	// For all other types, return as-is — zod-to-openapi handles them
+	// For all other types, return as-is - zod-to-openapi handles them
 	// Only recurse into containers we know how to handle safely
 	if (typeName === "ZodObject" || typeName === "object") {
 		const shape =

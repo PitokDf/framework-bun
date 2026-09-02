@@ -66,7 +66,7 @@ export type ValidationTarget = "body" | "query" | "params";
  */
 export type BodyContentType =
 	/**
-	 * Standard JSON body — default behavior when `contentType` is omitted.
+	 * Standard JSON body - default behavior when `contentType` is omitted.
 	 *
 	 * Parsed via `JSON.parse`. Zod schema receives the parsed JavaScript object.
 	 *
@@ -88,7 +88,7 @@ export type BodyContentType =
 	| "multipart/form-data"
 	/**
 	 * Parse fields from an `application/x-www-form-urlencoded` body.
-	 * All values are strings — use `z.coerce.number()`, `z.coerce.boolean()`, etc. for coercion.
+	 * All values are strings - use `z.coerce.number()`, `z.coerce.boolean()`, etc. for coercion.
 	 *
 	 * Zod schema receives `Record<string, string>`.
 	 *
@@ -108,7 +108,7 @@ export type BodyContentType =
 	| "text/plain"
 	/**
 	 * Parse an XML body (W3C standard MIME type).
-	 * Zod schema receives the raw XML as a `string` — parse it further with your preferred XML library.
+	 * Zod schema receives the raw XML as a `string` - parse it further with your preferred XML library.
 	 *
 	 * @example
 	 * zValidator("body", z.string(), { contentType: "application/xml" })
@@ -124,7 +124,7 @@ export type BodyContentType =
 	| "text/xml"
 	/**
 	 * Parse a raw binary body.
-	 * Zod schema receives an `ArrayBuffer` — use `z.instanceof(ArrayBuffer)` or process it manually.
+	 * Zod schema receives an `ArrayBuffer` - use `z.instanceof(ArrayBuffer)` or process it manually.
 	 *
 	 * @example
 	 * zValidator("body", z.instanceof(ArrayBuffer), { contentType: "application/octet-stream" })
@@ -136,8 +136,8 @@ export interface ZValidatorOptions {
 	 * Override the expected request body content type.
 	 * Only applies when `target` is `"body"`. Defaults to `application/json`.
 	 *
-	 * - `"multipart/form-data"` — text and file fields from FormData; validate files with `z.file()`
-	 * - `"application/x-www-form-urlencoded"` — URL-encoded key=value body
+	 * - `"multipart/form-data"` - text and file fields from FormData; validate files with `z.file()`
+	 * - `"application/x-www-form-urlencoded"` - URL-encoded key=value body
 	 *
 	 * Omit this option (or the entire `options` argument) for standard JSON bodies.
 	 */
@@ -155,7 +155,7 @@ function wrapSchema(schema: SchemaType): z.ZodType {
 
 /**
  * Validate request body/query/params against a Zod schema and expose the
- * parsed, typed result via `ctx.valid(target)` — no manual casting needed.
+ * parsed, typed result via `ctx.valid(target)` - no manual casting needed.
  *
  * ```ts
  * const schema = z.object({ name: z.string(), age: z.number() });

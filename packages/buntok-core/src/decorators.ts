@@ -2,14 +2,14 @@ import type { Middleware } from "./app";
 import type { Context } from "./context";
 
 /**
- * Decorator-based controller routing, built on Stage 3 (TC39) decorators —
+ * Decorator-based controller routing, built on Stage 3 (TC39) decorators -
  * the same kind natively supported by Bun/TypeScript 5+ without setting
  * `experimentalDecorators`.
  *
  * This is a thin layer on top of the existing functional API: decorators
  * only run once at class-definition/bootstrap time, and end up calling the
  * exact same `app.registerRoute()` used by `app.get()`/`app.post()`. There
- * is zero per-request overhead — the router has no idea (and doesn't care)
+ * is zero per-request overhead - the router has no idea (and doesn't care)
  * whether a route came from a decorator or a direct `.get()` call.
  *
  * ```ts
@@ -125,7 +125,7 @@ export const All = createRouteDecorator("ALL");
 
 /**
  * Attach middleware to a single decorated route. Stack multiple `@Use()`
- * calls to chain several — they run in the order listed, same as passing
+ * calls to chain several - they run in the order listed, same as passing
  * multiple middleware args to `app.get(path, mw1, mw2, handler)`.
  */
 // biome-ignore lint/suspicious/noExplicitAny: Flexible middleware signature for decorators

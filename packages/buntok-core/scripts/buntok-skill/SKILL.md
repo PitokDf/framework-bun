@@ -36,7 +36,7 @@ bunx buntok init                 # interactive setup — generates all boilerpla
 - Generates `tsconfig.json` (bundler, strict, `@/*` → `./src/*`, ESNext), `biome.json`, `.vscode/settings.json`
 - Creates `src/index.ts` (Hello Buntok + `export const app`) and `src/env.ts` (`App.validateEnv` for `PORT`, `AUTH_STORE`, `AUTH_COOKIE`, `NODE_ENV`)
 - Creates `.env` / `.env.example` (`PORT=1212`, `AUTH_STORE=header`, `AUTH_COOKIE=session`)
-- Creates `.gitignore`, optionally `vercel.json` (prompt: "Do you want to deploy to Vercel?")
+- Creates `.gitignore`, optionally `vercel.json` (prompt), optionally `Dockerfile` + `.dockerignore` (prompt: "Do you want to add Docker support?")
 
 ### 2. Project Structure (after `buntok init`)
 
@@ -52,7 +52,7 @@ bunx buntok init                 # interactive setup — generates all boilerpla
 │   └── repositories/         # buntok create <entity> --repo
 ├── public/docs/swagger.json  # buntok make:docs
 ├── .env / .env.example
-├── tsconfig.json / biome.json / vercel.json? / .gitignore
+├── tsconfig.json / biome.json / vercel.json? / Dockerfile? / .dockerignore? / .gitignore
 ├── package.json
 └── .buntok/                  # buntok build output
 ```
@@ -1619,6 +1619,39 @@ app.listen(1212);
 
 ---
 
+## Docker
+
+`buntok init` optionally generates a `Dockerfile` and `.dockerignore` (prompt: "Do you want to add Docker support?").
+
+### Generated Files
+
+**Dockerfile** — multi-stage build:
+- **Builder** (`oven/bun:1-alpine`): installs prod deps via `--production`, runs `bunx buntok build`
+- **Runtime** (`oven/bun:1-distroless`): copies `.buntok/`, `node_modules/`, `package.json`
+
+**.dockerignore** — excludes `node_modules`, `dist`, `.buntok`, `.env`, logs
+
+### Usage
+
+```bash
+# Build & run with Docker Compose
+docker compose up --build
+
+# Or build manually
+docker build -t my-app .
+docker run -p 1212:1212 my-app
+```
+
+### Configuration
+
+Port is configurable via `PORT` env var (default: 1212):
+
+```bash
+docker run -e PORT=8080 -p 8080:8080 my-app
+```
+
+---
+
 ## Authentication (JWT)
 
 Zero-dependency JWT implementation using WebCrypto (built-in). Supports HMAC-SHA256 with expiration.
@@ -2056,6 +2089,118 @@ class RedisCacheDriver implements CacheDriver {
   async delete(key: string) { ... }
   async clear() { ... }
 }
+```
+
+---
+
+## Payment
+
+Pluggable payment gateway integration supporting Stripe, Midtrans, Xendit, and PayPal. All providers share a unified `PaymentDriver` interface with normalized types.
+
+```ts
+import { createPayment } from "@buntok/core";
+
+const stripe = createPayment.stripe({
+  secretKey: process.env.STRIPE_SECRET_KEY!,
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+});
+```
+
+### Drivers
+
+| Driver | Config | Notes |
+|--------|--------|-------|
+| `createPayment.stripe(config)` | `StripeDriverConfig` | Stripe Checkout Sessions, PaymentIntents, Refunds, Subscriptions, Payment Links |
+| `createPayment.midtrans(config)` | `MidtransDriverConfig` | Midtrans Snap + REST API, VA/retail/OTC payments |
+| `createPayment.xendit(config)` | `XenditDriverConfig` | Xendit Payment Requests, e-wallets, VA, retail |
+| `createPayment.paypal(config)` | `PayPalDriverConfig` | PayPal Orders + Billing, OAuth2 token management |
+
+### Checkout
+
+```ts
+const result = await stripe.createCheckout({
+  amount: 100000,
+  currency: "IDR",
+  description: "Order #123",
+  customerEmail: "user@example.com",
+  successUrl: "https://myapp.com/success",
+  cancelUrl: "https://myapp.com/cancel",
+}, {
+  idempotencyKey: "order-123",
+});
+
+// result.checkoutUrl → redirect customer
+// result.status → "pending" | "processing" | "completed" | "failed" | ...
+```
+
+### Refund
+
+```ts
+const refund = await stripe.createRefund({
+  paymentId: "pi_xxx",
+  amount: 50000,      // partial refund (omit for full)
+  reason: "customer_request",
+});
+```
+
+### Subscription
+
+```ts
+const sub = await stripe.createSubscription({
+  planId: "price_xxx",
+  customerEmail: "user@example.com",
+  trialPeriodDays: 14,
+});
+
+// Cancel
+await stripe.cancelSubscription(sub.id);
+```
+
+### Payment Link
+
+```ts
+const link = await stripe.createPaymentLink({
+  amount: 100000,
+  currency: "IDR",
+  description: "One-time payment",
+});
+// link.url → share with customer
+```
+
+### Webhooks
+
+```ts
+import { paymentWebhook } from "@buntok/core";
+
+app.post("/webhooks/stripe",
+  paymentWebhook({
+    driver: stripe,
+    secret: process.env.STRIPE_WEBHOOK_SECRET!,
+  }),
+  (ctx) => {
+    const event = ctx.store.paymentEvent;
+    // event.type → "payment.completed" | "payment.failed" | ...
+    return ctx.json({ received: true });
+  }
+);
+```
+
+Default signature headers per provider:
+- Stripe: `stripe-signature`
+- Midtrans: `x-signature`
+- Xendit: `x-callback-token`
+- PayPal: `paypal-transmission-sig`
+
+### Error Handling
+
+```ts
+import {
+  PaymentError,              // base class (extends HttpError)
+  PaymentProviderError,      // 502 — provider API error
+  PaymentVerificationError,  // 400 — webhook signature mismatch
+  PaymentIdempotencyError,   // 409 — idempotency key reuse
+  PaymentConfigurationError, // 500 — invalid driver config
+} from "@buntok/core";
 ```
 
 ---

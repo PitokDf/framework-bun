@@ -40,7 +40,7 @@ export class MemorySchedulerDriver implements SchedulerDriver {
  * Scheduler driver that uses Bun's native `Bun.cron()` API.
  *
  * Jobs are registered with the OS scheduler (crontab on Linux, launchd on
- * macOS, Task Scheduler on Windows) — they survive process restarts and
+ * macOS, Task Scheduler on Windows) - they survive process restarts and
  * don't rely on an in-memory timer.
  *
  * Requires Bun >= 1.3.11.
@@ -120,7 +120,7 @@ export class Scheduler {
  *
  *   @CronJob("0 0 * * *")
  *   async dailyCleanup() {
- *     // `this` is the TaskController instance — fully works!
+ *     // `this` is the TaskController instance - fully works!
  *     await this.cache.deletePattern("tmp:*");
  *   }
  * }

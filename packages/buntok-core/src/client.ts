@@ -7,7 +7,7 @@
  * way Hono's `hc()` does. Instead, you declare each route's shape once as
  * a `RouteContract`, and the client is fully typed from that declaration.
  * Zero changes needed on the server side, and no runtime cost added to
- * request handling — this only affects client-side code.
+ * request handling - this only affects client-side code.
  *
  * ```ts
  * import { createClient, type RouteContract } from "buntok/client";
@@ -41,7 +41,7 @@ export interface RouteContract<
 	TResponse = unknown,
 > {
 	method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS";
-	/** Path template, e.g. "/users/:id" — `:params` are substituted at call time. */
+	/** Path template, e.g. "/users/:id" - `:params` are substituted at call time. */
 	path: string;
 	/** Type-only fields; never read at runtime, only used for inference. */
 	params?: TParams;
