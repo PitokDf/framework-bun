@@ -68,6 +68,7 @@ export const CreateCheckoutInputSchema = z.object({
 	items: z
 		.array(
 			z.object({
+				id: z.string().optional(),
 				name: z.string(),
 				quantity: z.number().int().positive(),
 				amount: z.number().positive(),
@@ -109,9 +110,58 @@ export type CreatePaymentLinkInput = z.infer<typeof CreatePaymentLinkInputSchema
 
 // ─── Payment Options ──────────────────────────────────────────────────────────
 
-export interface PaymentOptions {
-	idempotencyKey?: string;
+/** Snap checkout (default) — redirect to hosted page */
+export interface SnapPaymentOptions {
+	orderId?: string;
 }
+
+/** QRIS — generate QR code directly via Core API */
+export interface QrisPaymentOptions {
+	orderId?: string;
+	paymentType: "qris";
+	acquirer?: "gopay" | "shopeepay" | "other";
+}
+
+/** Bank transfer — generate VA number via Core API */
+export interface BankTransferPaymentOptions {
+	orderId?: string;
+	paymentType: "bank_transfer";
+	bank: "bca" | "bni" | "bri" | "permata" | "cimb" | "mandiri";
+}
+
+/** GoPay — deep link via Core API */
+export interface GopayPaymentOptions {
+	orderId?: string;
+	paymentType: "gopay";
+}
+
+/** ShopeePay — deep link via Core API */
+export interface ShopeepayPaymentOptions {
+	orderId?: string;
+	paymentType: "shopeepay";
+}
+
+/** Mandiri e-channel — bill code via Core API */
+export interface EchannelPaymentOptions {
+	orderId?: string;
+	paymentType: "echannel";
+}
+
+/** Convenience store (Indomaret/Alfamart) — payment code via Core API */
+export interface CstorePaymentOptions {
+	orderId?: string;
+	paymentType: "cstore";
+	store?: "indomaret" | "alfamart";
+}
+
+export type PaymentOptions =
+	| SnapPaymentOptions
+	| QrisPaymentOptions
+	| BankTransferPaymentOptions
+	| GopayPaymentOptions
+	| ShopeepayPaymentOptions
+	| EchannelPaymentOptions
+	| CstorePaymentOptions;
 
 // ─── Result Types ─────────────────────────────────────────────────────────────
 

@@ -12,14 +12,10 @@ function pluralize(unit: string, value: number): string {
 	return value === 1 ? unit : `${unit}s`;
 }
 
-function toTemporal(date: Date | string | number): Temporal.Instant {
-	if (date instanceof Date) {
-		return Temporal.Instant.fromEpochMilliseconds(date.getTime());
-	}
-	if (typeof date === "number") {
-		return Temporal.Instant.fromEpochMilliseconds(date);
-	}
-	return Temporal.Instant.from(date);
+function toDate(date: Date | string | number): Date {
+	if (date instanceof Date) return date;
+	if (typeof date === "number") return new Date(date);
+	return new Date(date);
 }
 
 /**
@@ -29,7 +25,7 @@ function toTemporal(date: Date | string | number): Temporal.Instant {
  * formatDate(new Date()); // "2024-01-15T10:30:00.000Z"
  */
 export function formatDate(date: Date | string | number): string {
-	return toTemporal(date).toString();
+	return toDate(date).toISOString();
 }
 
 /**
@@ -63,8 +59,8 @@ export function daysBetween(
 	date1: Date | string | number,
 	date2: Date | string | number,
 ): number {
-	const ms1 = toTemporal(date1).epochMilliseconds;
-	const ms2 = toTemporal(date2).epochMilliseconds;
+	const ms1 = toDate(date1).getTime();
+	const ms2 = toDate(date2).getTime();
 	return Math.round((ms2 - ms1) / 86400000);
 }
 
@@ -94,7 +90,7 @@ export function isBefore(
 	date1: Date | string | number,
 	date2: Date | string | number,
 ): boolean {
-	return toTemporal(date1).epochMilliseconds < toTemporal(date2).epochMilliseconds;
+	return toDate(date1).getTime() < toDate(date2).getTime();
 }
 
 /**
@@ -107,7 +103,7 @@ export function isAfter(
 	date1: Date | string | number,
 	date2: Date | string | number,
 ): boolean {
-	return toTemporal(date1).epochMilliseconds > toTemporal(date2).epochMilliseconds;
+	return toDate(date1).getTime() > toDate(date2).getTime();
 }
 
 /**

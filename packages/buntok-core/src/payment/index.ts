@@ -9,6 +9,13 @@ export type {
 	LineItem,
 	PaymentLinkResult,
 	PaymentOptions,
+	SnapPaymentOptions,
+	QrisPaymentOptions,
+	BankTransferPaymentOptions,
+	GopayPaymentOptions,
+	ShopeepayPaymentOptions,
+	EchannelPaymentOptions,
+	CstorePaymentOptions,
 	RefundResult,
 	RefundStatus,
 	SubscriptionResult,
@@ -35,7 +42,7 @@ export {
 } from "./errors";
 
 // ─── Driver Interface ─────────────────────────────────────────────────────────
-export type { PaymentDriver } from "./driver";
+export type { PaymentDriver, TransactionStatusResult } from "./driver";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export {

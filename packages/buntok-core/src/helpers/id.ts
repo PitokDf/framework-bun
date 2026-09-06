@@ -7,19 +7,20 @@ const urlAlphabet =
  * Generate a sequential code with prefix and auto-incrementing counter.
  *
  * @example
- * generateCode("T");      // "T0001"
- * generateCode("T");      // "T0002"
- * generateCode("INV");    // "INV0001"
- * generateCode("ORD", 42); // "ORD0042"
+ * generateCode("T");        // "T0001"
+ * generateCode("T");        // "T0002"
+ * generateCode("INV");      // "INV0001"
+ * generateCode("ORD", 42);  // "ORD0042"
+ * generateCode("ORD", 42, 6); // "ORD000042"
  */
-export function generateCode(prefix: string, counter?: number): string {
+export function generateCode(prefix: string, counter?: number, length = 4): string {
 	if (counter === undefined) {
 		// Use module-level counter per prefix
 		const current = counters.get(prefix) ?? 0;
 		counter = current + 1;
 		counters.set(prefix, counter);
 	}
-	return `${prefix}${counter.toString().padStart(4, "0")}`;
+	return `${prefix}${counter.toString().padStart(length, "0")}`;
 }
 
 const counters = new Map<string, number>();

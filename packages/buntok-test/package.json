@@ -11,7 +11,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@buntok/core": "file:../buntok-core",
+    "@buntok/core": "2.1.7-alpha.1",
     "@types/ioredis": "^5.0.0",
     "ioredis": "^6.0.0",
     "nodemailer": "^10.0.0"

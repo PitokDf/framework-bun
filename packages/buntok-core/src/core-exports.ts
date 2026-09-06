@@ -228,6 +228,36 @@ export {
 } from "./helpers/object";
 // Password helpers
 export { hashPassword, verifyPassword } from "./helpers/password";
+// Avatar helpers
+export {
+	generateInitials,
+	avatarColor,
+	generateInitialAvatar,
+	type InitialAvatarOptions,
+} from "./helpers/avatar";
+// File helpers
+export {
+	serveFileOrFallback,
+	type ServeFileOptions,
+} from "./helpers/file";
+// Download helpers
+export {
+	downloadFile,
+	downloadBuffer,
+	type DownloadOptions,
+} from "./helpers/download";
+// Export helpers
+export {
+	exportCSV,
+	exportJSON,
+	type CSVOptions,
+} from "./helpers/export";
+// Archive helpers
+export {
+	createZIP,
+	type ZIPEntry,
+	type ArchiveOptions,
+} from "./helpers/archive";
 // String helpers
 export {
 	camelCase,
@@ -303,8 +333,23 @@ export {
 	MemoryQueueDriver,
 	Queue,
 	type QueueDriver,
+	type QueueDriverOptions,
 	type QueueOptions,
+	type RedisDriverOptions,
+	type BunRedisDriverOptions,
+	type BullmqDriverOptions,
+	type RabbitmqDriverOptions,
 } from "./queue";
+export {
+	RedisQueueDriver,
+	type RedisQueueDriverOptions,
+	BunRedisQueueDriver,
+	type BunRedisQueueDriverOptions,
+	BullmqQueueDriver,
+	type BullmqQueueDriverOptions,
+	RabbitmqQueueDriver,
+	type RabbitmqQueueDriverOptions,
+} from "./queue-drivers";
 export { Router } from "./router";
 // Payment
 export {
@@ -391,3 +436,13 @@ export {
 	wsHeartbeatPong,
 	wsRateLimit,
 } from "./ws-helpers";
+// Plugin system
+export { createPlugin } from "./plugin";
+export type { Plugin } from "./plugin";
+// htmlStream is on Context (exported via Context class)
+// Enhanced client
+export { createClient, ClientError } from "./client";
+export type {
+	CreateClientOptions,
+	RouteContract,
+} from "./client";

@@ -27,7 +27,7 @@ export default function GettingStartedPage() {
       </p>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
         <li>
-          <strong>Bun</strong> &gt;= 1.0.0 -{" "}
+          <strong>Bun</strong> &gt;= 1.2.0 -{" "}
           <a
             href="https://bun.sh"
             target="_blank"
@@ -76,18 +76,57 @@ bunx buntok init`}
       <Callout type="info">
         <code>buntok init</code> will automatically set up your project with an
         optimal configuration. You'll be asked if you want to deploy to Vercel —
-        if yes, a <code>vercel.json</code> file will be created.
+        if yes, a <code>vercel.json</code> and <code>server.ts</code> will be
+        created for you.
       </Callout>
 
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Generated <code>src/index.ts</code>
+        Generated <code>src/index.ts</code> (Vercel)
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        After running <code>buntok init</code>, your entry point looks like
-        this:
+        When Vercel is selected, your entry point is a clean export — no{" "}
+        <code>app.listen()</code>:
+      </p>
+      <CodeBlock
+        code={`import { App } from "@buntok/core";
+import { env } from "./env";
+
+export const app = new App();
+
+app.get("/", (ctx) => {
+  return ctx.json({ message: "Hello from Buntok!" });
+});
+
+export default app;`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Generated <code>server.ts</code> (local dev)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        A separate file for local development with <code>bun run dev</code>:
+      </p>
+      <CodeBlock
+        code={`import { app } from "./src/index";
+import { env } from "./src/env";
+
+app.listen(env.PORT);`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Generated <code>src/index.ts</code> (non-Vercel)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Without Vercel, <code>app.listen()</code> is included directly:
       </p>
       <CodeBlock
         code={`import { App } from "@buntok/core";
@@ -150,7 +189,7 @@ export const env = App.validateEnv({
               <td className="px-4 py-2">
                 <code>src/index.ts</code>
               </td>
-              <td className="px-4 py-2">Entry point with example routes</td>
+              <td className="px-4 py-2">Application entry point (clean export for Vercel, or with app.listen())</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
@@ -163,12 +202,6 @@ export const env = App.validateEnv({
                 <code>src/env.ts</code>
               </td>
               <td className="px-4 py-2">Type-safe environment schema</td>
-            </tr>
-            <tr className="border-b border-border-primary">
-              <td className="px-4 py-2">
-                <code>src/index.ts</code>
-              </td>
-              <td className="px-4 py-2">Application entry point</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
@@ -205,6 +238,18 @@ export const env = App.validateEnv({
                 <code>.agents/skills/buntok-skill/SKILL.md</code>
               </td>
               <td className="px-4 py-2">Skill guide for AI assistants</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>vercel.json</code> <span className="text-xs text-text-secondary">(optional)</span>
+              </td>
+              <td className="px-4 py-2">Vercel deployment config (when prompted)</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>server.ts</code> <span className="text-xs text-text-secondary">(optional)</span>
+              </td>
+              <td className="px-4 py-2">Local dev entry point with app.listen() (when Vercel selected)</td>
             </tr>
           </tbody>
         </table>
@@ -290,14 +335,19 @@ export const env = App.validateEnv({
         Project Structure
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Project structure after <code>buntok init</code>:
+        Project structure after <code>buntok init</code> (with Vercel selected):
       </p>
 
       <CodeBlock
         code={`my-app/
 ├── src/
-│   ├── index.ts              # Entry point
-│   └── env.ts                # Type-safe env schema
+│   ├── index.ts              # export default app (clean — no listen)
+│   ├── env.ts                # Type-safe env schema
+│   ├── controllers/
+│   ├── services/
+│   └── repositories/
+├── server.ts                 # import { app }; app.listen(env.PORT) — local dev only
+├── vercel.json               # Vercel deployment config
 ├── .agents/
 │   └── skills/
 │       └── buntok-skill/
@@ -311,6 +361,11 @@ export const env = App.validateEnv({
 ├── tsconfig.json             # TypeScript config
 └── package.json`}
       />
+
+      <Callout type="info">
+        Without Vercel, <code>server.ts</code> and <code>vercel.json</code> are not created, and{" "}
+        <code>src/index.ts</code> contains <code>app.listen(env.PORT)</code> directly.
+      </Callout>
 
       {/* ──────────────── DATABASE SETUP ──────────────── */}
       <Heading
@@ -760,7 +815,7 @@ export class UserController {
       <CodeBlock
         code={`{
   "scripts": {
-    "dev": "bun --watch src/index.ts",
+    "dev": "bun --watch server.ts",    // or: bun --watch src/index.ts (without Vercel)
     "build": "bunx buntok build",
     "start": "bun .buntok/index.js",
     "check": "bunx @biomejs/biome check --write .",
@@ -788,7 +843,10 @@ export class UserController {
         code={`# Hot reload with file watching
 bun run dev
 
-# Or directly
+# Or directly (Vercel)
+bun run server.ts
+
+# Or directly (non-Vercel)
 bun run src/index.ts`}
       />
 
@@ -804,6 +862,23 @@ bun run build
 
 # Run the built output
 bun run start`}
+      />
+
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Deploy to Vercel
+      </Heading>
+      <CodeBlock
+        code={`# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+
+# Production deploy
+vercel --prod`}
       />
 
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -954,6 +1029,36 @@ PORT=3000 bun run dev`}
             Context
           </a>{" "}
           - Access request and response
+        </li>
+        <li>
+          <a href="/docs/plugins" className="text-accent hover:underline">
+            Plugins
+          </a>{" "}
+          - Extend apps with the plugin system
+        </li>
+        <li>
+          <a href="/docs/graphql" className="text-accent hover:underline">
+            GraphQL
+          </a>{" "}
+          - Apollo Server and Yoga integration
+        </li>
+        <li>
+          <a href="/docs/opentelemetry" className="text-accent hover:underline">
+            OpenTelemetry
+          </a>{" "}
+          - Distributed tracing with per-request spans
+        </li>
+        <li>
+          <a href="/docs/client" className="text-accent hover:underline">
+            Client SDK
+          </a>{" "}
+          - Type-safe RPC client with retry and interceptors
+        </li>
+        <li>
+          <a href="/docs/vercel" className="text-accent hover:underline">
+            Vercel Deploy
+          </a>{" "}
+          - Deploy to Vercel with Bun runtime
         </li>
         <li>
           <a href="/docs/validation" className="text-accent hover:underline">

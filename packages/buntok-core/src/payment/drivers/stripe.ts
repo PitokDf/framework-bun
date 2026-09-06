@@ -21,7 +21,7 @@ export interface StripeDriverConfig {
 	secretKey: string;
 	/** Your Stripe webhook signing secret (e.g., "whsec_...") */
 	webhookSecret?: string;
-	/** API version override (default: "2024-12-18.acacia") */
+	/** API version override (default: "2026-04-22.dahlia") */
 	apiVersion?: string;
 }
 
@@ -43,7 +43,7 @@ export class StripeDriver implements PaymentDriver {
 		}
 		this.secretKey = config.secretKey;
 		this.webhookSecret = config.webhookSecret ?? "";
-		this.apiVersion = config.apiVersion ?? "2024-12-18.acacia";
+		this.apiVersion = config.apiVersion ?? "2026-04-22.dahlia";
 	}
 
 	// ─── HTTP ──────────────────────────────────────────────────────────────
@@ -52,12 +52,17 @@ export class StripeDriver implements PaymentDriver {
 		method: string,
 		path: string,
 		body?: Record<string, unknown>,
+		idempotencyKey?: string,
 	): Promise<T> {
 		const url = `${API_BASE}${path}`;
 		const headers: Record<string, string> = {
 			Authorization: `Bearer ${this.secretKey}`,
 			"Stripe-Version": this.apiVersion,
 		};
+
+		if (idempotencyKey) {
+			headers["Idempotency-Key"] = idempotencyKey;
+		}
 
 		let res: Response;
 		if (method === "GET") {
@@ -71,7 +76,17 @@ export class StripeDriver implements PaymentDriver {
 			res = await fetch(url, { method, headers, body: formBody });
 		}
 
-		const data = await res.json();
+		const raw = await res.text();
+		let data: Record<string, unknown>;
+		try {
+			data = JSON.parse(raw) as Record<string, unknown>;
+		} catch {
+			throw new PaymentProviderError(
+				this.id,
+				"api_error",
+				`Stripe returned non-JSON response (status ${res.status}): ${raw.slice(0, 200)}`,
+			);
+		}
 
 		if (!res.ok) {
 			const err = data as { error?: { message?: string; type?: string; code?: string } };
@@ -145,9 +160,6 @@ export class StripeDriver implements PaymentDriver {
 		if (input.metadata) {
 			params.metadata = input.metadata;
 		}
-		if (opts?.idempotencyKey) {
-			// Passed as header, not body
-		}
 
 		const res = await this.request<{
 			id: string;
@@ -159,7 +171,7 @@ export class StripeDriver implements PaymentDriver {
 			expires_at: number;
 			created: number;
 			metadata: Record<string, unknown>;
-		}>("POST", "/checkout/sessions", params);
+		}>("POST", "/checkout/sessions", params, opts?.orderId);
 
 		return {
 			id: res.id,
@@ -212,7 +224,7 @@ export class StripeDriver implements PaymentDriver {
 			reason: string | null;
 			created: number;
 			metadata: Record<string, unknown>;
-		}>("POST", "/refunds", params);
+		}>("POST", "/refunds", params, opts?.orderId);
 
 		return {
 			id: res.id,

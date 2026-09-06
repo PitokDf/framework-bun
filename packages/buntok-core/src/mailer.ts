@@ -347,7 +347,6 @@ export class Mailer {
 			return { success: false, error: "SMTP configuration missing" };
 		try {
 			// Dynamic import to keep Buntok dependency-free
-			// @ts-expect-error
 			const nodemailer = await import("nodemailer");
 			const transporter = nodemailer.createTransport(this.config.smtp);
 

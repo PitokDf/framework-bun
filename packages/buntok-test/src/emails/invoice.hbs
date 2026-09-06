@@ -1,0 +1,38 @@
+<h1 style="font-size: 20px; margin-bottom: 16px;">Invoice #{{invoiceNumber}}</h1>
+<p style="margin-bottom: 24px; line-height: 1.6;">
+  Hi {{name}},
+</p>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+  <thead>
+    <tr style="background: #f9fafb;">
+      <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb;">Item</th>
+      <th style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">Qty</th>
+      <th style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each items}}
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">{{name}}</td>
+      <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">{{quantity}}</td>
+      <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">{{amount}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+  <tfoot>
+    <tr style="font-weight: 700;">
+      <td colspan="2" style="padding: 12px; text-align: right;">Total:</td>
+      <td style="padding: 12px; text-align: right;">{{total}}</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div style="text-align: center; margin-bottom: 24px;">
+  <a href="{{paymentUrl}}" class="btn">Pay Now</a>
+</div>
+
+<div class="divider"></div>
+<p style="font-size: 14px; color: #666; line-height: 1.6;">
+  Due date: <strong>{{dueDate}}</strong>
+</p>

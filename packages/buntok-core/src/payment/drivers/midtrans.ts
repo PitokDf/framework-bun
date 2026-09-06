@@ -1,10 +1,17 @@
-import type { PaymentDriver } from "../driver";
+import type { PaymentDriver, TransactionStatusResult } from "../driver";
 import type {
 	CreateCheckoutInput,
 	CreateRefundInput,
 	CreateSubscriptionInput,
 	CheckoutResult,
 	PaymentOptions,
+	SnapPaymentOptions,
+	QrisPaymentOptions,
+	BankTransferPaymentOptions,
+	GopayPaymentOptions,
+	ShopeepayPaymentOptions,
+	EchannelPaymentOptions,
+	CstorePaymentOptions,
 	RefundResult,
 	SubscriptionResult,
 	WebhookEvent,
@@ -101,6 +108,83 @@ interface MidtransErrorResponse {
 	[key: string]: unknown;
 }
 
+// ─── Core API Types ─────────────────────────────────────────────────────────
+
+interface MidtransChargeRequest {
+	payment_type: string;
+	transaction_details: {
+		order_id: string;
+		gross_amount: number;
+	};
+	qris?: { acquirer?: string };
+	bank_transfer?: { bank?: string };
+	gopay?: { enable_callback?: boolean; callback_url?: string };
+	shopeepay?: { callback_url?: string };
+	echannel?: { bill_info1?: string; bill_info2?: string };
+	cstore?: { store?: string; message?: string };
+	item_details?: Array<{
+		id: string;
+		price: number;
+		quantity: number;
+		name: string;
+	}>;
+	customer_details?: {
+		first_name?: string;
+		last_name?: string;
+		email?: string;
+		phone?: string;
+	};
+	custom_expiry?: { expiry_duration?: number; unit?: string };
+}
+
+interface MidtransChargeResponse {
+	status_code: string;
+	status_message: string;
+	transaction_id: string;
+	order_id: string;
+	merchant_id?: string;
+	gross_amount: string;
+	currency?: string;
+	payment_type: string;
+	transaction_time: string;
+	transaction_status: string;
+	fraud_status?: string;
+	actions?: Array<{
+		name: string;
+		method: string;
+		url: string;
+	}>;
+	qr_string?: string;
+	payment_code?: string;
+	// Bank transfer
+	permata_va_number?: string;
+	bca_va_number?: string;
+	bni_va_number?: string;
+	bri_va_number?: string;
+	cimb_va_number?: string;
+	va_numbers?: Array<{ bank: string; va_number: string }>;
+	// E-wallet
+	deeplink?: string;
+	web_url?: string;
+	// E-channel
+	bill_key?: string;
+	biller_code?: string;
+}
+
+interface MidtransStatusResponse {
+	status_code: string;
+	status_message: string;
+	transaction_id: string;
+	order_id: string;
+	gross_amount: string;
+	currency?: string;
+	payment_type: string;
+	transaction_time: string;
+	transaction_status: string;
+	fraud_status?: string;
+	signature_key?: string;
+}
+
 // ─── Base URLs ────────────────────────────────────────────────────────────────
 
 const SNAP_BASE_DEV = "https://app.sandbox.midtrans.com/snap";
@@ -144,7 +228,7 @@ export class MidtransDriver implements PaymentDriver {
 		method: string,
 		base: string,
 		path: string,
-		body?: MidtransSnapRequest | MidtransRefundRequest | MidtransSubscriptionRequest,
+		body?: MidtransSnapRequest | MidtransChargeRequest | MidtransRefundRequest | MidtransSubscriptionRequest,
 	): Promise<T> {
 		const url = `${base}${path}`;
 		const headers: Record<string, string> = {
@@ -158,7 +242,17 @@ export class MidtransDriver implements PaymentDriver {
 			body: body ? JSON.stringify(body) : undefined,
 		});
 
-		const data = (await res.json()) as Record<string, unknown>;
+		const raw = await res.text();
+		let data: Record<string, unknown>;
+		try {
+			data = JSON.parse(raw) as Record<string, unknown>;
+		} catch {
+			throw new PaymentProviderError(
+				this.id,
+				"api_error",
+				`Midtrans returned non-JSON response (status ${res.status}): ${raw.slice(0, 200)}`,
+			);
+		}
 
 		if (!res.ok || data.error_messages) {
 			const errData = data as unknown as MidtransErrorResponse;
@@ -174,13 +268,34 @@ export class MidtransDriver implements PaymentDriver {
 		return data as T;
 	}
 
+	// ─── Core API ────────────────────────────────────────────────────────
+
+	private async charge<T>(
+		body: MidtransChargeRequest,
+	): Promise<T> {
+		return this.request<T>("POST", this.apiBase, "/charge", body);
+	}
+
 	// ─── Checkout ─────────────────────────────────────────────────────────
 
 	async createCheckout(
 		input: CreateCheckoutInput,
 		opts?: PaymentOptions,
 	): Promise<CheckoutResult> {
-		const orderId = opts?.idempotencyKey ?? `ORDER-${crypto.randomUUID().slice(0, 8)}`;
+		// Core API path — direct charge (QRIS, bank transfer, e-wallet)
+		if (opts && "paymentType" in opts) {
+			return this.createCoreCheckout(input, opts);
+		}
+
+		// Snap path — redirect to hosted checkout page
+		return this.createSnapCheckout(input, opts);
+	}
+
+	private async createSnapCheckout(
+		input: CreateCheckoutInput,
+		opts?: SnapPaymentOptions,
+	): Promise<CheckoutResult> {
+		const orderId = opts?.orderId ?? `ORDER-${crypto.randomUUID().slice(0, 8)}`;
 
 		const params: MidtransSnapRequest = {
 			transaction_details: {
@@ -201,7 +316,14 @@ export class MidtransDriver implements PaymentDriver {
 			};
 		}
 
-		if (input.description) {
+		if (input.items && input.items.length > 0) {
+			params.item_details = input.items.map((item) => ({
+				id: item.id ?? orderId,
+				price: item.amount,
+				quantity: item.quantity,
+				name: item.name,
+			}));
+		} else if (input.description) {
 			params.item_details = [
 				{
 					id: orderId,
@@ -225,7 +347,7 @@ export class MidtransDriver implements PaymentDriver {
 		const res = await this.request<MidtransSnapResponse>(
 			"POST",
 			this.snapBase,
-			"/transactions",
+			"/v1/transactions",
 			params,
 		);
 
@@ -239,6 +361,119 @@ export class MidtransDriver implements PaymentDriver {
 			providerPaymentId: res.token,
 			metadata: input.metadata,
 			createdAt: new Date(),
+		};
+	}
+
+	private async createCoreCheckout(
+		input: CreateCheckoutInput,
+		opts: QrisPaymentOptions | BankTransferPaymentOptions | GopayPaymentOptions | ShopeepayPaymentOptions | EchannelPaymentOptions | CstorePaymentOptions,
+	): Promise<CheckoutResult> {
+		const orderId = opts.orderId ?? `ORDER-${crypto.randomUUID().slice(0, 8)}`;
+		const paymentType = opts.paymentType;
+
+		const params: MidtransChargeRequest = {
+			payment_type: paymentType,
+			transaction_details: {
+				order_id: orderId,
+				gross_amount: input.amount,
+			},
+		};
+
+		// Payment method specific params
+		if (paymentType === "qris") {
+			params.qris = { acquirer: opts.acquirer };
+		} else if (paymentType === "bank_transfer") {
+			params.bank_transfer = { bank: opts.bank };
+		} else if (paymentType === "gopay") {
+			params.gopay = {
+				enable_callback: true,
+				callback_url: input.successUrl ?? "https://example.com/success",
+			};
+		} else if (paymentType === "shopeepay") {
+			params.shopeepay = {
+				callback_url: input.successUrl ?? "https://example.com/success",
+			};
+		}
+
+		if (input.items && input.items.length > 0) {
+			params.item_details = input.items.map((item) => ({
+				id: item.id ?? orderId,
+				price: item.amount,
+				quantity: item.quantity,
+				name: item.name,
+			}));
+		} else if (input.description) {
+			params.item_details = [
+				{
+					id: orderId,
+					price: input.amount,
+					quantity: 1,
+					name: input.description,
+				},
+			];
+		}
+
+		if (input.customerEmail || input.customerName) {
+			const nameParts = input.customerName?.split(" ") ?? [];
+			params.customer_details = {
+				email: input.customerEmail,
+				first_name: nameParts[0],
+				last_name: nameParts.slice(1).join(" ") || undefined,
+			};
+		}
+
+		const res = await this.charge<MidtransChargeResponse>(params);
+
+		// Extract QR code URL from actions
+		const qrAction = res.actions?.find((a) => a.name === "generate-qr-code");
+
+		// Extract bank/VA info
+		const vaNumber = res.bca_va_number ?? res.bni_va_number ?? res.bri_va_number ?? res.permata_va_number;
+
+		return {
+			id: orderId,
+			status: normalizeCheckoutStatus(this.id, res.transaction_status),
+			amount: input.amount,
+			currency: input.currency.toUpperCase(),
+			provider: this.id,
+			checkoutUrl: qrAction?.url,
+			providerPaymentId: res.transaction_id,
+			metadata: {
+				...input.metadata,
+				payment_type: res.payment_type,
+				qr_string: res.qr_string,
+				payment_code: res.payment_code,
+				va_number: vaNumber,
+				bank: "bank" in opts ? opts.bank : undefined,
+				acquirer: "acquirer" in opts ? opts.acquirer : undefined,
+				deeplink: res.deeplink,
+				bill_key: res.bill_key,
+				biller_code: res.biller_code,
+			},
+			createdAt: new Date(),
+		};
+	}
+
+	// ─── Transaction Status ──────────────────────────────────────────────
+
+	async getTransactionStatus(
+		orderId: string,
+	): Promise<TransactionStatusResult> {
+		const res = await this.request<MidtransStatusResponse>(
+			"GET",
+			this.apiBase,
+			`/${orderId}/status`,
+		);
+
+		return {
+			orderId: res.order_id,
+			transactionId: res.transaction_id,
+			status: res.transaction_status,
+			paymentType: res.payment_type,
+			amount: res.gross_amount ? Number(res.gross_amount) : undefined,
+			currency: res.currency,
+			createdAt: res.transaction_time ? new Date(res.transaction_time) : undefined,
+			rawData: res,
 		};
 	}
 
@@ -323,11 +558,11 @@ export class MidtransDriver implements PaymentDriver {
 	): Promise<boolean> {
 		try {
 			const body = JSON.parse(payload) as MidtransWebhookBody;
-			if (!body.signature_key || !body.order_id || !body.status_code) {
+			if (!body.signature_key || !body.order_id || !body.status_code || !body.gross_amount) {
 				return false;
 			}
 			const serverKey = secret || this.serverKey;
-			const raw = `${body.order_id}${body.status_code}${serverKey}`;
+			const raw = `${body.order_id}${body.status_code}${body.gross_amount}${serverKey}`;
 			const computed = await this.sha512(raw);
 			return computed === body.signature_key;
 		} catch {

@@ -40,3 +40,5 @@ my-app
 # Benchmark output
 benchmark-output.json
 dashboard-data.json
+.vercel
+.env*

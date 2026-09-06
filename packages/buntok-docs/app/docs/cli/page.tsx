@@ -56,6 +56,8 @@ export default function CLIPage() {
 
 ? Do you want to deploy to Vercel? (y/N): y
 ✓ Created vercel.json
+✓ Created server.ts
+✓ Updated dev script to: bun --watch server.ts
 
 ? Do you want to add Docker support? (Y/n): y
 ✓ Created Dockerfile

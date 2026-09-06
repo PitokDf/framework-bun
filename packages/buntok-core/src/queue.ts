@@ -166,31 +166,152 @@ export class MemoryQueueDriver<T> implements QueueDriver<T> {
 	}
 }
 
+// ─── Queue Driver Options (discriminated union) ────────────────────────────────
+
+export interface RedisDriverOptions {
+	/** Use ioredis driver */
+	driver: "redis";
+	/** ioredis client instance */
+	client?: any;
+	/** Redis connection URL (used if client not provided) */
+	url?: string;
+	/** Queue namespace prefix (default: "buntok:queue") */
+	prefix?: string;
+	/** Max retry attempts (default: 0) */
+	maxRetries?: number;
+	/** Base retry delay in ms (default: 1000) */
+	retryDelay?: number;
+	/** Backoff strategy (default: "fixed") */
+	backoff?: "fixed" | "exponential";
+}
+
+export interface BunRedisDriverOptions {
+	/** Use Bun's native Redis client */
+	driver: "bun-redis";
+	/** Bun.RedisClient instance */
+	client?: any;
+	/** Redis connection URL (used if client not provided) */
+	url?: string;
+	/** Queue namespace prefix (default: "buntok:queue") */
+	prefix?: string;
+	/** Max retry attempts (default: 0) */
+	maxRetries?: number;
+	/** Base retry delay in ms (default: 1000) */
+	retryDelay?: number;
+	/** Backoff strategy (default: "fixed") */
+	backoff?: "fixed" | "exponential";
+}
+
+export interface BullmqDriverOptions {
+	/** Use BullMQ driver */
+	driver: "bullmq";
+	/** BullMQ connection options (default: { host: "localhost", port: 6379 }) */
+	connection?: {
+		host?: string;
+		port?: number;
+		url?: string;
+		[key: string]: unknown;
+	};
+	/** Queue namespace prefix (default: "buntok:queue") */
+	prefix?: string;
+	/** Default job options */
+	defaultJobOptions?: {
+		attempts?: number;
+		backoff?: {
+			type?: "fixed" | "exponential";
+			delay?: number;
+		};
+		removeOnComplete?: boolean | { age?: number; count?: number };
+		removeOnFail?: boolean | { age?: number; count?: number };
+	};
+}
+
+export interface RabbitmqDriverOptions {
+	/** Use RabbitMQ (AMQP) driver */
+	driver: "rabbitmq";
+	/** AMQP connection URL (default: "amqp://localhost") */
+	url?: string;
+	/** Queue name (default: uses queue name from Queue constructor) */
+	queue?: string;
+	/** Whether queue survives broker restart (default: true) */
+	durable?: boolean;
+	/** Max unacknowledged messages per consumer (default: 1) */
+	prefetch?: number;
+	/** Max retry attempts (default: 0) */
+	maxRetries?: number;
+	/** Base retry delay in ms (default: 1000) */
+	retryDelay?: number;
+	/** Backoff strategy (default: "fixed") */
+	backoff?: "fixed" | "exponential";
+}
+
+export type QueueDriverOptions =
+	| RedisDriverOptions
+	| BunRedisDriverOptions
+	| BullmqDriverOptions
+	| RabbitmqDriverOptions;
+
 // ─── Queue (high-level API) ────────────────────────────────────────────────────
 
 export class Queue<T = unknown> {
 	private driver: QueueDriver<T>;
 
+	/** Redis (ioredis) driver */
+	constructor(name: string, options: RedisDriverOptions);
+	/** Bun native Redis driver */
+	constructor(name: string, options: BunRedisDriverOptions);
+	/** BullMQ driver */
+	constructor(name: string, options: BullmqDriverOptions);
+	/** RabbitMQ driver */
+	constructor(name: string, options: RabbitmqDriverOptions);
+	/** Custom driver instance */
+	constructor(name: string, driver: QueueDriver<T>);
+	/** Memory driver (default) */
+	constructor(name: string, options?: QueueOptions);
 	constructor(
 		public name: string,
-		driverOrOptions?: QueueDriver<T> | QueueOptions,
+		driverOrOptions?: QueueDriver<T> | QueueDriverOptions | QueueOptions,
 		options?: QueueOptions,
 	) {
-		// Overloads:
-		//   new Queue("email")
-		//   new Queue("email", { maxRetries: 3 })
-		//   new Queue("email", redisDriver)
-		//   new Queue("email", redisDriver, { maxRetries: 3 })
 		if (
 			driverOrOptions &&
 			typeof (driverOrOptions as QueueDriver<T>).add === "function"
 		) {
 			this.driver = driverOrOptions as QueueDriver<T>;
+		} else if (
+			driverOrOptions &&
+			"driver" in driverOrOptions
+		) {
+			this.driver = this.createDriver(driverOrOptions as QueueDriverOptions);
 		} else {
 			this.driver = new MemoryQueueDriver<T>(
 				name,
 				(driverOrOptions as QueueOptions) ?? options ?? {},
 			);
+		}
+	}
+
+	private createDriver(options: QueueDriverOptions): QueueDriver<T> {
+		// Dynamic imports to keep bundle size small
+		switch (options.driver) {
+			case "redis": {
+				const { RedisQueueDriver } = require("./queue-drivers/redis");
+				return new RedisQueueDriver(this.name, options);
+			}
+			case "bun-redis": {
+				const { BunRedisQueueDriver } = require("./queue-drivers/bun-redis");
+				return new BunRedisQueueDriver(this.name, options);
+			}
+			case "bullmq": {
+				const { BullmqQueueDriver } = require("./queue-drivers/bullmq");
+				return new BullmqQueueDriver(this.name, options);
+			}
+			case "rabbitmq": {
+				const { RabbitmqQueueDriver } = require("./queue-drivers/rabbitmq");
+				return new RabbitmqQueueDriver(this.name, options);
+			}
+			default:
+				throw new Error(`Unknown queue driver: ${(options as any).driver}`);
 		}
 	}
 

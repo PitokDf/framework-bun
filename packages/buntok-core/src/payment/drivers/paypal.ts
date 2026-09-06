@@ -159,7 +159,17 @@ export class PayPalDriver implements PaymentDriver {
 			body: "grant_type=client_credentials",
 		});
 
-		const data = (await res.json()) as PayPalAccessTokenResponse;
+		const raw = await res.text();
+		let data: PayPalAccessTokenResponse;
+		try {
+			data = JSON.parse(raw) as PayPalAccessTokenResponse;
+		} catch {
+			throw new PaymentProviderError(
+				this.id,
+				"AUTH_ERROR",
+				`PayPal returned non-JSON response (status ${res.status}): ${raw.slice(0, 200)}`,
+			);
+		}
 
 		if (!res.ok || !data.access_token) {
 			throw new PaymentProviderError(
@@ -200,7 +210,17 @@ export class PayPalDriver implements PaymentDriver {
 			return {} as T;
 		}
 
-		const data = (await res.json()) as Record<string, unknown>;
+		const raw = await res.text();
+		let data: Record<string, unknown>;
+		try {
+			data = JSON.parse(raw) as Record<string, unknown>;
+		} catch {
+			throw new PaymentProviderError(
+				this.id,
+				"api_error",
+				`PayPal returned non-JSON response (status ${res.status}): ${raw.slice(0, 200)}`,
+			);
+		}
 
 		if (!res.ok) {
 			const errData = data as unknown as PayPalErrorResponse;

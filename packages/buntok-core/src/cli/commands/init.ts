@@ -119,7 +119,7 @@ app.get("/", (ctx) => {
   return ctx.json({ message: "Hello from Buntok!" });
 });
 
-app.listen(env.PORT);
+export default app;
 `;
 
 const ENV_TS_TEMPLATE = `import { App, z } from "@buntok/core";
@@ -361,19 +361,16 @@ AUTH_COOKIE=session
 `;
 
 const VERCEL_JSON_TEMPLATE = {
-	builds: [
-		{
-			src: "src/index.ts",
-			use: "@vercel/rest",
-		},
-	],
-	routes: [
-		{
-			src: "/(.*)",
-			dest: "src/index.ts",
-		},
-	],
+	$schema: "https://openapi.vercel.sh/vercel.json",
+	bunVersion: "1.4.x",
+	buildCommand: null,
 };
+
+const SERVER_TS_TEMPLATE = `import { app } from "./src/index";
+import { env } from "./src/env";
+
+app.listen(env.PORT);
+`;
 
 const GITIGNORE_CONTENT = `# Dependencies
 node_modules/
@@ -497,6 +494,36 @@ function createVercelJson(projectRoot: string): boolean {
 	return true;
 }
 
+function createServerTsFile(projectRoot: string): boolean {
+	const serverPath = join(projectRoot, "server.ts");
+
+	if (existsSync(serverPath)) {
+		console.log("\x1b[90m• server.ts: already exists, skipping\x1b[0m");
+		return false;
+	}
+
+	writeFileSync(serverPath, SERVER_TS_TEMPLATE, "utf-8");
+	console.log("\x1b[32m✓ Created\x1b[0m server.ts");
+	return true;
+}
+
+function updateDevScript(projectRoot: string): boolean {
+	const pkgPath = join(projectRoot, "package.json");
+	if (!existsSync(pkgPath)) return false;
+
+	const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+	if (!pkg.scripts) return false;
+
+	if (pkg.scripts.dev === "bun --watch src/index.ts") {
+		pkg.scripts.dev = "bun --watch server.ts";
+		writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+		console.log("\x1b[32m✓ Updated\x1b[0m package.json (dev → server.ts)");
+		return true;
+	}
+
+	return false;
+}
+
 function createDockerfile(projectRoot: string): boolean {
 	const dockerfilePath = join(projectRoot, "Dockerfile");
 	const dockerignorePath = join(projectRoot, ".dockerignore");
@@ -543,6 +570,8 @@ export async function initCommand() {
 		);
 		if (useVercel) {
 			createVercelJson(projectRoot);
+			createServerTsFile(projectRoot);
+			updateDevScript(projectRoot);
 		}
 	} else {
 		console.log("\x1b[90m• vercel.json: already exists, skipping\x1b[0m");

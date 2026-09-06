@@ -61,4 +61,22 @@ export interface PaymentDriver {
 
 	/** Parse raw webhook payload into a normalized WebhookEvent */
 	parseWebhookEvent(payload: string): WebhookEvent;
+
+	/** Get transaction status from the provider (optional) */
+	getTransactionStatus?(
+		orderId: string,
+	): Promise<TransactionStatusResult>;
+}
+
+// ─── Transaction Status Result ──────────────────────────────────────────────
+
+export interface TransactionStatusResult {
+	orderId: string;
+	transactionId?: string;
+	status: string;
+	paymentType?: string;
+	amount?: number;
+	currency?: string;
+	createdAt?: Date;
+	rawData?: unknown;
 }

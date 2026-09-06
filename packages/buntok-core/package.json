@@ -1,6 +1,6 @@
 {
 	"name": "@buntok/core",
-	"version": "2.1.6",
+	"version": "2.1.7-alpha.1",
 	"description": "Core HTTP framework for Bun, bring your own structure",
 	"module": "dist/core-exports.js",
 	"type": "module",
@@ -19,6 +19,66 @@
 				"types": "./dist/core-exports.d.cts",
 				"default": "./dist/core-exports.cjs"
 			}
+		},
+		"./client": {
+			"import": {
+				"types": "./dist/client.d.ts",
+				"default": "./dist/client.js"
+			},
+			"require": {
+				"types": "./dist/client.d.cts",
+				"default": "./dist/client.cjs"
+			}
+		},
+		"./dev": {
+			"import": {
+				"types": "./dist/dev.d.ts",
+				"default": "./dist/dev.js"
+			},
+			"require": {
+				"types": "./dist/dev.d.cts",
+				"default": "./dist/dev.cjs"
+			}
+		},
+		"./plugins/graphql": {
+			"import": {
+				"types": "./dist/plugins/graphql/index.d.ts",
+				"default": "./dist/plugins/graphql/index.js"
+			},
+			"require": {
+				"types": "./dist/plugins/graphql/index.d.cts",
+				"default": "./dist/plugins/graphql/index.cjs"
+			}
+		},
+		"./plugins/graphql/apollo": {
+			"import": {
+				"types": "./dist/plugins/graphql/apollo.d.ts",
+				"default": "./dist/plugins/graphql/apollo.js"
+			},
+			"require": {
+				"types": "./dist/plugins/graphql/apollo.d.cts",
+				"default": "./dist/plugins/graphql/apollo.cjs"
+			}
+		},
+		"./plugins/graphql/yoga": {
+			"import": {
+				"types": "./dist/plugins/graphql/yoga.d.ts",
+				"default": "./dist/plugins/graphql/yoga.js"
+			},
+			"require": {
+				"types": "./dist/plugins/graphql/yoga.d.cts",
+				"default": "./dist/plugins/graphql/yoga.cjs"
+			}
+		},
+		"./plugins/opentelemetry": {
+			"import": {
+				"types": "./dist/plugins/opentelemetry.d.ts",
+				"default": "./dist/plugins/opentelemetry.js"
+			},
+			"require": {
+				"types": "./dist/plugins/opentelemetry.d.cts",
+				"default": "./dist/plugins/opentelemetry.cjs"
+			}
 		}
 	},
 	"files": [
@@ -31,11 +91,14 @@
 		"test": "bun --watch test/src/index.ts",
 		"build": "tsup && bun run build:types && mkdir -p dist/cli/templates && cp src/cli/templates/* dist/cli/templates/",
 		"build:types": "bunx tsc --project tsconfig.build.json",
+		"postbuild": "bun run sync-deps",
+		"sync-deps": "bun scripts/sync-local-deps.ts",
 		"dev": "tsup --watch",
 		"typecheck": "tsc --noEmit",
 		"clean": "rm -rf dist"
 	},
 	"devDependencies": {
+		"@types/amqplib": "^0.10.8",
 		"@types/bun": "latest",
 		"tsup": "^8.5.1",
 		"typescript": "^5.0.0"
@@ -57,6 +120,36 @@
 		"zod": "^4.4.3"
 	},
 	"peerDependencies": {
-		"bun": ">=1.2.0"
+		"bun": ">=1.2.0",
+		"@apollo/server": ">=4.0.0",
+		"graphql": ">=16.0.0",
+		"graphql-yoga": ">=5.0.0",
+		"@opentelemetry/api": ">=1.0.0",
+		"ioredis": "",
+		"bullmq": "",
+		"amqplib": ""
+	},
+	"peerDependenciesMeta": {
+		"@apollo/server": {
+			"optional": true
+		},
+		"graphql": {
+			"optional": true
+		},
+		"graphql-yoga": {
+			"optional": true
+		},
+		"@opentelemetry/api": {
+			"optional": true
+		},
+		"ioredis": {
+			"optional": true
+		},
+		"bullmq": {
+			"optional": true
+		},
+		"amqplib": {
+			"optional": true
+		}
 	}
 }

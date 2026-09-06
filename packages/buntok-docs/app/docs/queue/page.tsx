@@ -4,7 +4,7 @@ import { Callout } from "@/components/ui/Callout";
 
 export const metadata = {
   title: "Queue",
-  description: "Process background jobs with priority, delays, retries, and backoff strategies.",
+  description: "Background job processing with built-in drivers: Memory, Redis, Bun Redis, BullMQ, and RabbitMQ.",
 };
 
 
@@ -18,10 +18,53 @@ export default function QueuePage() {
         Queue
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Job queue for background processing with priority, delay, retries, and
-        backoff strategies. In-memory by default - plug in your own driver for
-        persistence.
+        Background job processing with priority, delays, retries, and backoff
+        strategies. Built-in drivers for Memory, Redis (ioredis), Bun native
+        Redis, BullMQ, and RabbitMQ.
       </p>
+
+      {/* ──────────────── DRIVERS ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Built-in Drivers
+      </Heading>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Driver
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Package
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Use Case
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["Memory", "built-in", "Default, development"],
+              ["Redis", "ioredis", "Most common, production"],
+              ["Bun Redis", "bun (native)", "Zero-dep on Bun"],
+              ["BullMQ", "bullmq", "Enterprise, rate limiting"],
+              ["RabbitMQ", "amqplib", "Fan-out, multi-language"],
+            ].map(([driver, pkg, use]) => (
+              <tr
+                key={driver}
+                className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors"
+              >
+                <td className="px-4 py-2 font-mono text-accent">{driver}</td>
+                <td className="px-4 py-2 font-mono">{pkg}</td>
+                <td className="px-4 py-2">{use}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* ──────────────── BASIC USAGE ──────────────── */}
       <Heading
@@ -33,6 +76,7 @@ export default function QueuePage() {
       <CodeBlock
         code={`import { Queue } from "@buntok/core";
 
+// Memory driver (default — development)
 const emailQueue = new Queue<{ to: string; subject: string }>("emails");
 
 // Add a job
@@ -49,8 +93,122 @@ emailQueue.process(async (job) => {
         The <strong>name</strong> (<code>&quot;emails&quot;</code>) is the first
         argument and is <strong>required</strong>. Each queue must have a unique
         name. This name is used for logging, debugging, and driver isolation.
-        Passing no name or an empty string will throw.
       </Callout>
+
+      {/* ──────────────── REDIS DRIVER ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Redis Driver (ioredis)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Production-ready Redis driver using <code>ioredis</code>. Install{" "}
+        <code>ioredis</code> first: <code>bun add ioredis</code>
+      </p>
+      <CodeBlock
+        code={`import { Queue } from "@buntok/core";
+import Redis from "ioredis";
+
+const redis = new Redis();
+
+const emailQueue = new Queue<{ to: string }>("emails", {
+  driver: "redis",
+  client: redis,
+  maxRetries: 3,
+  retryDelay: 1000,
+  backoff: "exponential",
+});
+
+// Or use URL directly
+const queue = new Queue<Job>("tasks", {
+  driver: "redis",
+  url: "redis://localhost:6379",
+});`}
+      />
+
+      {/* ──────────────── BUN REDIS DRIVER ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Bun Native Redis Driver
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Uses Bun&apos;s built-in Redis client (zero dependencies, requires Bun &gt;= 1.3).
+      </p>
+      <CodeBlock
+        code={`import { Queue } from "@buntok/core";
+
+const emailQueue = new Queue<{ to: string }>("emails", {
+  driver: "bun-redis",
+  url: "redis://localhost:6379",
+});`}
+      />
+
+      {/* ──────────────── BULLMQ DRIVER ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        BullMQ Driver
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Enterprise Redis-backed queue with rate limiting, job scheduling, and
+        monitoring. Install <code>bullmq</code> first:{" "}
+        <code>bun add bullmq</code>
+      </p>
+      <CodeBlock
+        code={`import { Queue } from "@buntok/core";
+
+const emailQueue = new Queue<{ to: string }>("emails", {
+  driver: "bullmq",
+  connection: { host: "localhost", port: 6379 },
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 1000 },
+    removeOnComplete: { age: 86400 },   // keep completed for 24h
+    removeOnFail: { age: 604800 },      // keep failed for 7 days
+  },
+});`}
+      />
+
+      <Callout type="info">
+        BullMQ provides built-in support for concurrency, rate limiting,
+        repeatable jobs, and a monitoring dashboard. See{" "}
+        <a
+          href="https://docs.bullmq.io"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent hover:underline"
+        >
+          BullMQ docs
+        </a>{" "}
+        for details.
+      </Callout>
+
+      {/* ──────────────── RABBITMQ DRIVER ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        RabbitMQ Driver
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        AMQP-based driver for fan-out patterns and multi-language workers.
+        Install <code>amqplib</code> first: <code>bun add amqplib</code>
+      </p>
+      <CodeBlock
+        code={`import { Queue } from "@buntok/core";
+
+const emailQueue = new Queue<{ to: string }>("emails", {
+  driver: "rabbitmq",
+  url: "amqp://guest:guest@localhost:5672",
+  prefetch: 1,
+  maxRetries: 3,
+  retryDelay: 1000,
+});`}
+      />
 
       {/* ──────────────── QUEUE API ──────────────── */}
       <Heading
@@ -191,24 +349,6 @@ const queue = new Queue("tasks", {
         logged to console. The queue continues processing remaining jobs.
       </Callout>
 
-      {/* ──────────────── MULTIPLE HANDLERS ──────────────── */}
-      <Heading
-        level={2}
-        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
-      >
-        Multiple Handlers
-      </Heading>
-      <CodeBlock
-        code={`// Register multiple handlers (all run for each job)
-queue.process(async (job) => {
-  await logJob(job);
-});
-
-queue.process(async (job) => {
-  await processPayment(job.data);
-});`}
-      />
-
       {/* ──────────────── FULL EXAMPLE ──────────────── */}
       <Heading
         level={2}
@@ -250,83 +390,27 @@ app.listen(1212);`}
         level={2}
         className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
       >
-        Custom Drivers (BullMQ)
+        Custom Driver
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        For production workloads with persistence, use a Redis-backed driver
-        like BullMQ. Install <code>bullmq</code> and implement the{" "}
-        <code>QueueDriver</code> interface:
+        Implement the <code>QueueDriver</code> interface for custom backends:
       </p>
       <CodeBlock
-        code={`import { Queue as BullMQQueue, Worker as BullMQWorker } from "bullmq";
-import { type QueueDriver, type JobHandler } from "@buntok/core";
+        code={`import type { QueueDriver, Job, JobHandler } from "@buntok/core";
 
-class BullMQDriver<T> implements QueueDriver<T> {
-  private queue: BullMQQueue;
-  private worker: BullMQWorker | null = null;
-
-  constructor(name: string, redisUrl = "redis://localhost:6379") {
-    this.queue = new BullMQQueue(name, {
-      connection: { url: redisUrl },
-    });
+class MyCustomDriver implements QueueDriver<{ to: string }> {
+  async add(data: { to: string }, opts?: { priority?: number; delay?: number }): Promise<void> {
+    // Your implementation
   }
-
-  async add(data: T, opts?: { priority?: number; delay?: number }): Promise<void> {
-    await this.queue.add("job", data, {
-      priority: opts?.priority,
-      delay: opts?.delay,
-    });
+  process(handler: JobHandler<{ to: string }>): void {
+    // Your implementation
   }
-
-  process(handler: JobHandler<T>): void {
-    this.worker = new BullMQWorker(
-      this.queue.name,
-      async (job) => {
-        await handler({
-          id: job.id!,
-          data: job.data as T,
-          priority: job.priority ?? 0,
-          delay: job.delay ?? 0,
-          attempt: job.attemptsMade,
-          createdAt: job.timestamp,
-        });
-      },
-      { connection: { url: "redis://localhost:6379" } },
-    );
-  }
-
-  // BullMQ requires async for count — return -1 as placeholder
-  size(): number { return -1; }
-
-  clear(): void { this.queue.drain(); }
+  size(): number { return 0; }
+  clear(): void {}
 }
 
-// Usage — drop-in replacement for the default memory driver
-import { Queue } from "@buntok/core";
-
-const emailQueue = new Queue<EmailData>("emails", new BullMQDriver("emails"));`}
+const queue = new Queue("email", new MyCustomDriver());`}
       />
-
-      <Callout type="warning">
-        BullMQ&apos;s <code>getWaitingCount()</code> is async, but{" "}
-        <code>QueueDriver.size()</code> is sync. The example returns{" "}
-        <code>-1</code> as a placeholder. For accurate counts, use
-        BullMQ&apos;s API directly.
-      </Callout>
-
-      <Callout type="info">
-        BullMQ provides built-in support for concurrency, rate limiting,
-        repeatable jobs, and a monitoring dashboard. See{" "}
-        <a
-          href="https://docs.bullmq.io"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-accent hover:underline"
-        >
-          BullMQ docs
-        </a>{" "}
-        for details.
-      </Callout>
     </div>
   );
 }

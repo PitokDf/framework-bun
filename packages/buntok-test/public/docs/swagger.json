@@ -199,14 +199,117 @@
     },
     "/tests/hello/{name}": {
       "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/payments": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/payments/webhook": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mailer/send": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mailer/welcome": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mailer/password-reset": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mailer/verify-email": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mailer/invoice": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/user/upload-avatar": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Binary file"
+                  }
+                },
+                "required": [
+                  "userId",
+                  "avatar"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/user/avatar/{userId}": {
+      "get": {
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "minLength": 3
+              "type": "string"
             },
             "required": true,
-            "name": "name",
+            "name": "userId",
             "in": "path"
           }
         ],

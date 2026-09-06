@@ -9,6 +9,7 @@ import { toResponse } from "./helpers/response";
 import { logger } from "./logger";
 import { Router } from "./router";
 import { VERSION } from "./core-exports";
+import type { Plugin } from "./plugin";
 
 export interface WSData<DI = Record<string, unknown>> {
 	ctx: Context<DI>;
@@ -232,6 +233,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	// biome-ignore lint/suspicious/noExplicitAny: Required for internal OpenAPI registry
 	public openApiDocs: any[] = [];
 	private container: Container | null = null;
+	private installedPlugins = new Set<string>();
 
 	/**
 	 * The underlying Bun Server instance. Only available after app.listen() is called.
@@ -296,6 +298,17 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 	public use(middleware: Middleware<DI>): this {
 		this.middlewares.push(middleware);
+		return this;
+	}
+
+	/**
+	 * Install a plugin. Plugins are deduplicated by name —
+	 * installing the same plugin twice is a no-op.
+	 */
+	public async plugin(plugin: Plugin<DI>): Promise<this> {
+		if (this.installedPlugins.has(plugin.name)) return this;
+		this.installedPlugins.add(plugin.name);
+		await plugin.install(this);
 		return this;
 	}
 
@@ -1588,6 +1601,20 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 						init,
 					);
 		return this.handleRequest(request);
+	}
+
+	/**
+	 * Standard fetch handler for serverless platforms (Vercel, Cloudflare Workers, etc.).
+	 * Delegates to {@link request} which handles lazy AOT compilation.
+	 *
+	 * Usage:
+	 * ```ts
+	 * const app = new App();
+	 * export default app;
+	 * ```
+	 */
+	public fetch(request: Request): Promise<Response> {
+		return this.request(request);
 	}
 
 	private _aotReady = false;

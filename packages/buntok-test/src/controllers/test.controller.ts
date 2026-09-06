@@ -8,7 +8,6 @@ import {
 	setCookie,
 	Post,
 	requireAuth,
-	requirePermission,
 	requireRole,
 	Use,
 	z,
@@ -16,15 +15,11 @@ import {
 	zValidator,
 	type ZodCtx,
 	UseGuard,
-	SetMetadata,
-	getMetadata,
 } from "@buntok/core";
 
 const scrt = "pitok-123";
 @Controller("/tests")
 export class TestController {
-	private testService = new TestService();
-
 	@Post("/get-token")
 	@Use(
 		zValidator(

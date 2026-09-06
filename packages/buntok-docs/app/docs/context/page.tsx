@@ -418,6 +418,10 @@ app.get("/profile", ({ store, request }) => store.user);`}
                 "Redirect (301, 302, 303, 307, 308)",
               ],
               ["ctx.status(code)", "Empty response with status code"],
+              [
+                "ctx.htmlStream(generator, options?)",
+                "Streaming HTML via async generator — yields chunks progressively",
+              ],
               ["ctx.sse(handler, options?)", "Server-Sent Events stream"],
             ].map(([method, desc]) => (
               <tr

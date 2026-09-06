@@ -297,6 +297,48 @@ export class Context<
 		});
 	}
 
+	/**
+	 * Streaming HTML response using an async generator.
+	 * Yields HTML chunks progressively to the client.
+	 *
+	 * @example
+	 * ```ts
+	 * app.get('/stream', (ctx) => {
+	 *   return ctx.htmlStream(async function* () {
+	 *     yield '<!DOCTYPE html><html><body>';
+	 *     const data = await fetchData();
+	 *     yield `<p>${data}</p>`;
+	 *     yield '</body></html>';
+	 *   });
+	 * });
+	 * ```
+	 */
+	public htmlStream(
+		generator: AsyncIterable<string>,
+		options?: { status?: number; headers?: Record<string, string> },
+	): Response {
+		const iterator = generator[Symbol.asyncIterator]();
+		const stream = new ReadableStream({
+			async pull(controller) {
+				const { value, done } = await iterator.next();
+				if (done) {
+					controller.close();
+				} else {
+					controller.enqueue(new TextEncoder().encode(value));
+				}
+			},
+		});
+
+		return new Response(stream, {
+			status: options?.status ?? 200,
+			headers: {
+				"Content-Type": "text/html; charset=utf-8",
+				"Transfer-Encoding": "chunked",
+				...options?.headers,
+			},
+		});
+	}
+
 	public onAfterResponse(hook: (res: Response) => Response | undefined): void {
 		if (!this._afterHooks) this._afterHooks = [];
 		this._afterHooks.push(hook);

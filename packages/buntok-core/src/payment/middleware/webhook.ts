@@ -50,14 +50,7 @@ export function paymentWebhook(options: WebhookMiddlewareOptions): Middleware {
 
 	return async (ctx: Context, next: () => Promise<Response> | Response) => {
 		const rawBody = await ctx.request.text();
-		const signature = ctx.request.headers.get(signatureHeader);
-
-		if (!signature) {
-			throw new PaymentVerificationError(
-				driver.id,
-				`Missing signature header: ${signatureHeader}`,
-			);
-		}
+		const signature = ctx.request.headers.get(signatureHeader) ?? "";
 
 		const isValid = await driver.verifyWebhookSignature(rawBody, signature, secret);
 		if (!isValid) {

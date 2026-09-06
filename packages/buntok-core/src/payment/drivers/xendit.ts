@@ -134,7 +134,17 @@ export class XenditDriver implements PaymentDriver {
 			body: body ? JSON.stringify(body) : undefined,
 		});
 
-		const data = (await res.json()) as Record<string, unknown>;
+		const raw = await res.text();
+		let data: Record<string, unknown>;
+		try {
+			data = JSON.parse(raw) as Record<string, unknown>;
+		} catch {
+			throw new PaymentProviderError(
+				this.id,
+				"api_error",
+				`Xendit returned non-JSON response (status ${res.status}): ${raw.slice(0, 200)}`,
+			);
+		}
 
 		if (!res.ok) {
 			const errData = data as unknown as XenditErrorResponse;
@@ -156,7 +166,7 @@ export class XenditDriver implements PaymentDriver {
 		input: CreateCheckoutInput,
 		opts?: PaymentOptions,
 	): Promise<CheckoutResult> {
-		const referenceId = opts?.idempotencyKey ?? `REF-${crypto.randomUUID().slice(0, 8)}`;
+		const referenceId = opts?.orderId ?? `REF-${crypto.randomUUID().slice(0, 8)}`;
 
 		const params: XenditPaymentRequest = {
 			reference_id: referenceId,

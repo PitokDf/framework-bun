@@ -22,7 +22,10 @@ export const DOC_ROUTES: DocRoute[] = [
   { href: "/docs/rbac", title: "RBAC", section: "Authentication", description: "Role-based access control, permission system, admin routes, middleware guards." },
 
   { href: "/docs/app-config", title: "App Configuration", section: "Advanced", description: "App configuration, environment variables, validateEnv, CORS, helmet, rate limiting." },
+  { href: "/docs/app-api", title: "App API", section: "Advanced", description: "App method reference: get, post, request, fetch, static, listen, ws, plugin, registerController." },
   { href: "/docs/ioc", title: "IoC Container", section: "Advanced", description: "Inversion of Control container, dependency injection, service registration." },
+  { href: "/docs/plugins", title: "Plugins", section: "Advanced", description: "Plugin system, createPlugin, app.plugin(), install hooks." },
+  { href: "/docs/dev-server", title: "Dev Server", section: "Advanced", description: "Development server with HMR, Bun.serve() wrapper." },
   { href: "/docs/logger", title: "Logger", section: "Advanced", description: "Logger, LogLevel, text/json formats, LOG_DIR file output, flushSync." },
   { href: "/docs/sse", title: "SSE", section: "Advanced", description: "Server-Sent Events, real-time streaming, event emitter integration." },
   { href: "/docs/websocket", title: "WebSocket", section: "Advanced", description: "WebSocket support, real-time bidirectional communication, connection handling." },
@@ -31,13 +34,17 @@ export const DOC_ROUTES: DocRoute[] = [
   { href: "/docs/testing", title: "Testing", section: "Advanced", description: "Unit testing, integration testing, test utilities, mocking." },
 
   { href: "/docs/cache", title: "Cache", section: "Integrations", description: "Caching layer, MemoryCacheDriver, Redis driver, cache strategies, TTL." },
+  { href: "/docs/graphql", title: "GraphQL", section: "Integrations", description: "GraphQL integration with Apollo Server and Yoga, schema, resolvers." },
+  { href: "/docs/opentelemetry", title: "OpenTelemetry", section: "Integrations", description: "Distributed tracing with OpenTelemetry, per-request spans, OTLP exporter." },
   { href: "/docs/mailer", title: "Mailer", section: "Integrations", description: "Email sending, SMTP configuration, templates, attachments." },
   { href: "/docs/payment", title: "Payment", section: "Integrations", description: "Payment gateway integration, Stripe, Midtrans, Xendit, PayPal, checkout, refunds, webhooks." },
   { href: "/docs/template", title: "Template Engine", section: "Integrations", description: "Template engine integration, HTML rendering, dynamic content." },
-  { href: "/docs/queue", title: "Queue", section: "Integrations", description: "Background job processing, MemoryQueueDriver, BullMQ driver, job scheduling." },
+  { href: "/docs/queue", title: "Queue", section: "Integrations", description: "Background job processing with built-in drivers: Memory, Redis, Bun Redis, BullMQ, and RabbitMQ." },
   { href: "/docs/scheduler", title: "Scheduler", section: "Integrations", description: "Task scheduling, cron jobs, interval tasks, MemorySchedulerDriver, Bun cron." },
 
   { href: "/docs/helpers", title: "Helpers", section: "Utilities", description: "Utility functions: hash, compare, slug, random, formatDate, paginate." },
+  { href: "/docs/download", title: "Download / Export", section: "Utilities", description: "File downloads, data export (CSV/JSON), and archive creation with Bun.Archive." },
+  { href: "/docs/client", title: "Client SDK", section: "Utilities", description: "Type-safe RPC client with retry, timeout, interceptors, contracts." },
   { href: "/docs/timezone", title: "Timezone", section: "Utilities", description: "Timezone utilities, date conversion, Temporal API integration." },
   { href: "/docs/ai", title: "AI Module", section: "Utilities", description: "AI module integration, streaming responses, LLM providers, embeddings." },
   { href: "/docs/vector-search", title: "Vector Search", section: "Utilities", description: "Semantic search with pgvector, AI embeddings, cosine similarity, hybrid search." },
@@ -45,6 +52,8 @@ export const DOC_ROUTES: DocRoute[] = [
   { href: "/docs/repository", title: "Repository", section: "Utilities", description: "BaseRepository pattern, CRUD operations, $hidden/$visible field sanitization." },
   { href: "/docs/audit-log", title: "Audit Log", section: "Utilities", description: "Audit logging, tracking changes, who-did-what-when." },
   { href: "/docs/health-check", title: "Health Check", section: "Utilities", description: "Health check endpoints, readiness probes, liveness checks." },
+  { href: "/docs/ffi", title: "FFI / Native", section: "Utilities", description: "Foreign Function Interface, Bun native FFI, calling C/Zig libraries." },
+  { href: "/docs/vercel", title: "Vercel Deploy", section: "Utilities", description: "Deploy to Vercel with Bun runtime, clean entry point, app.fetch()." },
   { href: "/docs/cli", title: "CLI", section: "Utilities", description: "CLI commands, project scaffolding, init command, generators." },
 ];
 
