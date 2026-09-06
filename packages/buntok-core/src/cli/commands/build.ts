@@ -12,6 +12,35 @@ export async function buildCommand() {
 		return;
 	}
 
+	// Read user's package.json to know their dependencies
+	let userDeps: string[] = [];
+	const pkgPath = join(projectRoot, "package.json");
+	if (existsSync(pkgPath)) {
+		const pkg = await Bun.file(pkgPath).json();
+		userDeps = [
+			...Object.keys(pkg.dependencies || {}),
+			...Object.keys(pkg.devDependencies || {}),
+		];
+	}
+
+	// BunTok peer deps (optional, user installs these)
+	const peerDeps = [
+		"@apollo/server",
+		"graphql",
+		"graphql-yoga",
+		"@opentelemetry/api",
+		"@opentelemetry/sdk-node",
+		"@opentelemetry/resources",
+		"@opentelemetry/semantic-conventions",
+		"@opentelemetry/sdk-trace-node",
+		"@opentelemetry/exporter-trace-otlp-http",
+		"ioredis",
+		"bullmq",
+		"amqplib",
+	];
+
+	const external = [...new Set([...peerDeps, ...userDeps])];
+
 	console.log("\x1b[36m🔨 Building project...\x1b[0m");
 
 	const result = await Bun.build({
@@ -19,7 +48,7 @@ export async function buildCommand() {
 		outdir: outDir,
 		target: "bun",
 		tsconfig: join(projectRoot, "tsconfig.json"),
-		packages: "external",
+		external,
 	});
 
 	if (!result.success) {

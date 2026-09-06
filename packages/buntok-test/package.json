@@ -11,10 +11,13 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@buntok/core": "/home/pitok/Projects/framework-bun/packages/buntok-core"
+    "@buntok/core": "file:../buntok-core",
+    "@types/ioredis": "^5.0.0",
+    "ioredis": "^6.0.0",
+    "nodemailer": "^10.0.0"
   },
   "scripts": {
-    "dev": "bun --watch src/index.ts",
+    "dev": "bun --watch server.ts",
     "start": "bun .buntok/index.js",
     "check": "bunx @biomejs/biome check --write .",
     "format": "bunx @biomejs/biome format --write .",

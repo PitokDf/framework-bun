@@ -9,8 +9,13 @@ import {
 	zResponse,
 	zValidator,
 	responseTime,
+	rateLimiter,
 } from "@buntok/core";
+import "./env";
 import { TestController } from "./controllers/test.controller";
+import { PaymentController } from "./controllers/payment.controller";
+import { MailerController } from "./controllers/mailer.controller";
+import { UserController } from "./controllers/user.controller";
 
 export const app = new App();
 app.use(responseTime());
@@ -22,6 +27,8 @@ app.apiDocs({
 	version: "1.0.1",
 	description: "api docs for buntok test",
 });
+
+// app.use(rateLimiter({ max: 10, windowMs: 60_000 }));
 
 healthCheck(app, {
 	version: "1.0.0",
@@ -68,5 +75,8 @@ app.get(
 );
 
 app.registerController(TestController);
+app.registerController(PaymentController);
+app.registerController(MailerController);
+app.registerController(UserController);
 
-app.listen();
+export default app;
