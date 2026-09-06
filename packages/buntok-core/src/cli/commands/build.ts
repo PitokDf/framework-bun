@@ -3,11 +3,11 @@ import { existsSync } from "node:fs";
 
 export async function buildCommand() {
 	const projectRoot = process.cwd();
-	const entryPoint = join(projectRoot, "src/index.ts");
+	const entryPoint = join(projectRoot, "server.ts");
 	const outDir = join(projectRoot, ".buntok");
 
 	if (!existsSync(entryPoint)) {
-		console.error("\x1b[31m❌ src/index.ts not found\x1b[0m");
+		console.error("\x1b[31m❌ server.ts not found\x1b[0m");
 		process.exitCode = 1;
 		return;
 	}
@@ -60,6 +60,6 @@ export async function buildCommand() {
 		return;
 	}
 
-	console.log("\x1b[32m✅ Build successful → .buntok/index.js\x1b[0m");
+	console.log("\x1b[32m✅ Build successful → .buntok/server.js\x1b[0m");
 	console.log("\x1b[90m  Deploy: copy .buntok/ + node_modules/ + package.json to server\x1b[0m");
 }

@@ -7,7 +7,7 @@ import { createInterface } from "node:readline";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-function askQuestion(question: string): Promise<boolean> {
+function askQuestion(question: string, defaultValue = true): Promise<boolean> {
 	return new Promise((resolve) => {
 		const rl = createInterface({
 			input: process.stdin,
@@ -17,15 +17,16 @@ function askQuestion(question: string): Promise<boolean> {
 		rl.question(question, (answer) => {
 			rl.close();
 			const normalized = answer.trim().toLowerCase();
-			resolve(normalized === "y" || normalized === "yes" || normalized === "");
+			if (normalized === "") return resolve(defaultValue);
+			resolve(normalized === "y" || normalized === "yes");
 		});
 	});
 }
 
 const REQUIRED_SCRIPTS: Record<string, string> = {
-	dev: "bun --watch src/index.ts",
+	dev: "bun --watch server.ts",
 	build: "bunx buntok build",
-	start: "bun .buntok/index.js",
+	start: "bun .buntok/server.js",
 	check: "bunx @biomejs/biome check --write .",
 	format: "bunx @biomejs/biome format --write .",
 	lint: "bunx @biomejs/biome lint .",
@@ -111,7 +112,6 @@ const VSCODE_SETTINGS = {
 };
 
 const INDEX_TEMPLATE = `import { App } from "@buntok/core";
-import { env } from "./env";
 
 export const app = new App();
 
@@ -362,8 +362,8 @@ AUTH_COOKIE=session
 
 const VERCEL_JSON_TEMPLATE = {
 	$schema: "https://openapi.vercel.sh/vercel.json",
+	framework: "bun",
 	bunVersion: "1.4.x",
-	buildCommand: null,
 };
 
 const SERVER_TS_TEMPLATE = `import { app } from "./src/index";
@@ -413,6 +413,7 @@ COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile --production
 
 COPY src/ src/
+COPY server.ts ./
 COPY tsconfig.json ./
 COPY package.json ./
 
@@ -432,7 +433,7 @@ EXPOSE 1212
 ENV NODE_ENV=production
 ENV PORT=1212
 
-CMD ["bun", ".buntok/index.js"]
+CMD ["bun", ".buntok/server.js"]
 `;
 
 const DOCKERIGNORE_CONTENT = `node_modules
@@ -491,6 +492,14 @@ function createVercelJson(projectRoot: string): boolean {
 
 	writeFileSync(vercelPath, JSON.stringify(VERCEL_JSON_TEMPLATE, null, 2) + "\n", "utf-8");
 	console.log("\x1b[32m✓ Created\x1b[0m vercel.json");
+
+	// Create empty public/ directory (Vercel requires it for static files)
+	const publicDir = join(projectRoot, "public");
+	if (!existsSync(publicDir)) {
+		mkdirSync(publicDir, { recursive: true });
+		writeFileSync(join(publicDir, ".gitkeep"), "");
+	}
+
 	return true;
 }
 
@@ -561,27 +570,30 @@ export async function initCommand() {
 	createIndexFile(projectRoot);
 	createEnvFiles(projectRoot);
 	createGitignore(projectRoot);
+	updateDevScript(projectRoot);
 
 	const vercelPath = join(projectRoot, "vercel.json");
 	if (!existsSync(vercelPath)) {
 		console.log("");
 		const useVercel = await askQuestion(
 			"\x1b[36mDo you want to deploy to Vercel? (y/N): \x1b[0m",
+			false,
 		);
 		if (useVercel) {
 			createVercelJson(projectRoot);
-			createServerTsFile(projectRoot);
-			updateDevScript(projectRoot);
 		}
 	} else {
 		console.log("\x1b[90m• vercel.json: already exists, skipping\x1b[0m");
 	}
+
+	createServerTsFile(projectRoot);
 
 	const dockerfilePath = join(projectRoot, "Dockerfile");
 	if (!existsSync(dockerfilePath)) {
 		console.log("");
 		const useDocker = await askQuestion(
 			"\x1b[36mDo you want to add Docker support? (Y/n): \x1b[0m",
+			true,
 		);
 		if (useDocker) {
 			createDockerfile(projectRoot);

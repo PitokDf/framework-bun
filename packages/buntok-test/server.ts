@@ -1,6 +1,4 @@
-import app from "./src";
+import { app } from "./src/index";
+import { env } from "./src/env";
 
-Bun.serve({
-	port: Number(process.env.PORT) || 1212,
-	fetch: (request) => app.fetch(request),
-});
+app.listen(env.PORT);

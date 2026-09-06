@@ -17,32 +17,16 @@ export default function VercelPage() {
       </p>
 
       <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
-        Clean Entry Point Pattern
+        How It Works
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        When Vercel is selected, the project uses a clean entry point pattern (matching Elysia/Hono):{" "}
-        <code>src/index.ts</code> exports the app cleanly without calling{" "}
-        <code>app.listen()</code>, and a separate <code>server.ts</code> is created for local
-        development.
+        BunTok uses a single <code>server.ts</code> entry point for all modes — local development
+        and Vercel. The <code>app.listen()</code> method auto-detects the runtime: it calls{" "}
+        <code>Bun.serve()</code> locally, and works seamlessly on Vercel serverless.
       </p>
 
       <Heading level={3} className="text-lg font-semibold mt-6 mb-2 text-text-primary">
-        src/index.ts — clean export only
-      </Heading>
-      <CodeBlock
-        language="typescript"
-        code={`import { App } from "@buntok/core";
-import { env } from "./env";
-
-export const app = new App();
-
-// ... register routes, middleware, controllers ...
-
-export default app;`}
-      />
-
-      <Heading level={3} className="text-lg font-semibold mt-6 mb-2 text-text-primary">
-        server.ts — local development only
+        server.ts — universal entry point
       </Heading>
       <CodeBlock
         language="typescript"
@@ -53,18 +37,18 @@ app.listen(env.PORT);`}
       />
 
       <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
-        Why Two Files?
+        Why `app.listen()` Works Everywhere
       </Heading>
       <ul className="my-3 text-text-secondary leading-relaxed list-disc list-inside space-y-1">
         <li>
-          <strong>Vercel</strong> needs <code>export default app</code> — Vercel&apos;s Bun runtime
-          calls <code>app.fetch()</code> automatically
+          <strong>Local dev</strong> — <code>app.listen()</code> calls <code>Bun.serve()</code>{" "}
+          and binds to a port
         </li>
         <li>
-          <strong>Local dev</strong> needs <code>app.listen()</code> — binds to a port for{" "}
-          <code>bun run dev</code>
+          <strong>Vercel</strong> — <code>app.listen()</code> detects the serverless environment
+          and delegates to <code>app.fetch()</code> automatically
         </li>
-        <li>Separating them keeps src/index.ts clean and Vercel-compatible</li>
+        <li>No separate entry points needed — one <code>server.ts</code> works for both</li>
       </ul>
 
       <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
@@ -109,14 +93,14 @@ app.listen(env.PORT);`}
         language="json"
         code={`{
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "bunVersion": "1.4.x",
-  "buildCommand": null
+  "framework": "bun",
+  "bunVersion": "1.4.x"
 }`}
       />
       <ul className="my-3 text-text-secondary leading-relaxed list-disc list-inside space-y-1">
         <li>
-          <code>buildCommand: null</code> — overrides package.json build script. Vercel skips build
-          and transpiles TS on-the-fly.
+          <code>framework: &quot;bun&quot;</code> — tells Vercel to use Bun runtime (required for
+          GitHub-triggered deploys).
         </li>
         <li>
           <code>bunVersion: &quot;1.4.x&quot;</code> — pins the Bun runtime version.
@@ -153,35 +137,31 @@ vercel --prod`}
       <CodeBlock
         code={`my-app/
 ├── src/
-│   ├── index.ts              # export default app (clean — no listen)
-│   ├── env.ts                # App.validateEnv({ PORT, AUTH_STORE, ... })
+│   ├── index.ts              # export const app = new App()
+│   ├── env.ts                # App.validateEnv({ PORT, ... })
 │   ├── controllers/
 │   ├── services/
 │   └── repositories/
-├── server.ts                 # app.listen(env.PORT) — local dev only
-├── vercel.json               # Vercel config
-├── package.json              # dev script: bun --watch server.ts
+├── server.ts                 # app.listen(env.PORT) — universal entry point
+├── vercel.json               # Vercel config (framework: "bun")
+├── package.json
 └── ...`}
       />
 
       <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
-        Limitations
+        Notes
       </Heading>
       <ul className="my-3 text-text-secondary leading-relaxed list-disc list-inside space-y-1">
-        <li>
-          <code>app.listen()</code> in src/index.ts will NOT work on Vercel (Vercel doesn&apos;t
-          call listen)
-        </li>
-        <li>
-          server.ts is NOT deployed to Vercel — only src/index.ts is used
-        </li>
         <li>WebSocket routes may need additional Vercel configuration</li>
+        <li>
+          For monorepos, set the <strong>Root Directory</strong> in Vercel dashboard to your
+          project subfolder
+        </li>
       </ul>
 
       <Callout type="info">
-        When Vercel is selected, <code>src/index.ts</code> does NOT contain{" "}
-        <code>app.listen()</code>. The <code>server.ts</code> file is only used for local
-        development via <code>bun run dev</code>.
+        <code>app.listen()</code> is the universal entry point — it works for both local
+        development and Vercel serverless. No special configuration needed.
       </Callout>
     </>
   );

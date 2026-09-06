@@ -76,19 +76,17 @@ bunx buntok init`}
       <Callout type="info">
         <code>buntok init</code> will automatically set up your project with an
         optimal configuration. You'll be asked if you want to deploy to Vercel —
-        if yes, a <code>vercel.json</code> and <code>server.ts</code> will be
-        created for you.
+        if yes, a <code>vercel.json</code> will be created for you.
       </Callout>
 
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Generated <code>src/index.ts</code> (Vercel)
+        Generated <code>src/index.ts</code>
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        When Vercel is selected, your entry point is a clean export — no{" "}
-        <code>app.listen()</code>:
+        Clean app setup — same for both Vercel and non-Vercel:
       </p>
       <CodeBlock
         code={`import { App } from "@buntok/core";
@@ -98,45 +96,21 @@ export const app = new App();
 
 app.get("/", (ctx) => {
   return ctx.json({ message: "Hello from Buntok!" });
-});
-
-export default app;`}
+});`}
       />
 
       <Heading
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Generated <code>server.ts</code> (local dev)
+        Generated <code>server.ts</code>
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        A separate file for local development with <code>bun run dev</code>:
+        Universal entry point — works for both local dev and Vercel:
       </p>
       <CodeBlock
         code={`import { app } from "./src/index";
 import { env } from "./src/env";
-
-app.listen(env.PORT);`}
-      />
-
-      <Heading
-        level={3}
-        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
-      >
-        Generated <code>src/index.ts</code> (non-Vercel)
-      </Heading>
-      <p className="my-3 text-text-secondary leading-relaxed">
-        Without Vercel, <code>app.listen()</code> is included directly:
-      </p>
-      <CodeBlock
-        code={`import { App } from "@buntok/core";
-import { env } from "./env";
-
-const app = new App();
-
-app.get("/", (ctx) => {
-  return ctx.json({ message: "Hello from Buntok!" });
-});
 
 app.listen(env.PORT);`}
       />
@@ -189,7 +163,7 @@ export const env = App.validateEnv({
               <td className="px-4 py-2">
                 <code>src/index.ts</code>
               </td>
-              <td className="px-4 py-2">Application entry point (clean export for Vercel, or with app.listen())</td>
+              <td className="px-4 py-2">Application entry point — exports the app instance</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
@@ -243,13 +217,13 @@ export const env = App.validateEnv({
               <td className="px-4 py-2">
                 <code>vercel.json</code> <span className="text-xs text-text-secondary">(optional)</span>
               </td>
-              <td className="px-4 py-2">Vercel deployment config (when prompted)</td>
+              <td className="px-4 py-2">Vercel deployment config — includes <code>framework: "bun"</code></td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
-                <code>server.ts</code> <span className="text-xs text-text-secondary">(optional)</span>
+                <code>server.ts</code>
               </td>
-              <td className="px-4 py-2">Local dev entry point with app.listen() (when Vercel selected)</td>
+              <td className="px-4 py-2">Universal entry point — <code>app.listen(env.PORT)</code> works everywhere</td>
             </tr>
           </tbody>
         </table>
@@ -341,13 +315,13 @@ export const env = App.validateEnv({
       <CodeBlock
         code={`my-app/
 ├── src/
-│   ├── index.ts              # export default app (clean — no listen)
+│   ├── index.ts              # export const app = new App()
 │   ├── env.ts                # Type-safe env schema
 │   ├── controllers/
 │   ├── services/
 │   └── repositories/
-├── server.ts                 # import { app }; app.listen(env.PORT) — local dev only
-├── vercel.json               # Vercel deployment config
+├── server.ts                 # app.listen(env.PORT) — universal entry point
+├── vercel.json               # Vercel config (framework: "bun")
 ├── .agents/
 │   └── skills/
 │       └── buntok-skill/
@@ -363,8 +337,8 @@ export const env = App.validateEnv({
       />
 
       <Callout type="info">
-        Without Vercel, <code>server.ts</code> and <code>vercel.json</code> are not created, and{" "}
-        <code>src/index.ts</code> contains <code>app.listen(env.PORT)</code> directly.
+        Without Vercel, <code>vercel.json</code> is not created.{" "}
+        <code>server.ts</code> is always created — it works for both local dev and Vercel.
       </Callout>
 
       {/* ──────────────── DATABASE SETUP ──────────────── */}
@@ -815,7 +789,7 @@ export class UserController {
       <CodeBlock
         code={`{
   "scripts": {
-    "dev": "bun --watch server.ts",    // or: bun --watch src/index.ts (without Vercel)
+    "dev": "bun --watch server.ts",
     "build": "bunx buntok build",
     "start": "bun .buntok/index.js",
     "check": "bunx @biomejs/biome check --write .",
@@ -843,11 +817,8 @@ export class UserController {
         code={`# Hot reload with file watching
 bun run dev
 
-# Or directly (Vercel)
-bun run server.ts
-
-# Or directly (non-Vercel)
-bun run src/index.ts`}
+# Or directly
+bun run server.ts`}
       />
 
       <Heading

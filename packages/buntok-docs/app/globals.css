@@ -225,3 +225,49 @@ html.dark .callout-tip { background: rgba(16, 185, 129, 0.08); }
   background: rgba(239, 68, 68, 0.06);
 }
 html.dark .callout-error { background: rgba(239, 68, 68, 0.08); }
+
+/* ---- Floating particles ---- */
+@keyframes particle {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(0) translateX(0);
+  }
+  15% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.25;
+    transform: translateY(-40px) translateX(15px);
+  }
+  85% {
+    opacity: 0.4;
+  }
+}
+@keyframes particle-fast {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(0) translateX(0);
+  }
+  20% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.15;
+    transform: translateY(-25px) translateX(-10px);
+  }
+  80% {
+    opacity: 0.3;
+  }
+}
+
+/* ---- Pulsing glow orbs ---- */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.15);
+  }
+}

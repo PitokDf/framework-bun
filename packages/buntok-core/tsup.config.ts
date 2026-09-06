@@ -20,7 +20,7 @@ export default defineConfig({
 	splitting: true,
 	sourcemap: true,
 	clean: true,
-	target: "esnext",
+	target: "es2022",
 	outDir: "dist",
 	external: [
 		/^bun:.*/,

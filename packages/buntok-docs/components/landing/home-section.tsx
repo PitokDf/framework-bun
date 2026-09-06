@@ -85,15 +85,15 @@ export function HomeSection() {
             background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(249, 115, 22, 0.04), transparent 40%)`,
           }}
         />
-        <div className="absolute inset-0 w-full mask-[linear-gradient(to_bottom,white_10%,transparent_90%)]">
+        <div className="absolute inset-0 w-full mask-[linear-gradient(to_bottom,white_5%,transparent_85%)]">
           <div
             className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-size-[4rem_4rem]"
             style={{ backgroundPosition: "center top" }}
           />
-          <svg className="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-[480px] h-[250px] pointer-events-none">
+          <svg className="hidden sm:block absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 1000 1000" preserveAspectRatio="none">
             <defs>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                 <feMerge>
                   <feMergeNode in="coloredBlur" />
                   <feMergeNode in="SourceGraphic" />
@@ -101,72 +101,75 @@ export function HomeSection() {
               </filter>
             </defs>
             <g filter="url(#glow)">
-              <path
-                d="M 384 -64 V 256 H 704 V 800"
-                stroke="#f97316"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray="150 3000"
-              >
-                <animate
-                  attributeName="stroke-dashoffset"
-                  from="3000"
-                  to="-150"
-                  dur="6s"
-                  repeatCount="indefinite"
-                />
+              {/* === Vertical lines === */}
+              <path d="M 120 0 V 1000" stroke="#f97316" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeDasharray="80 4000" opacity="0.4">
+                <animate attributeName="stroke-dashoffset" from="4080" to="-80" dur="12s" repeatCount="indefinite" />
               </path>
-              <path
-                d="M 1984 128 H 1280 V 384 H 896 V 900"
-                stroke="#f97316"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray="150 3000"
-              >
-                <animate
-                  attributeName="stroke-dashoffset"
-                  from="3000"
-                  to="-150"
-                  dur="8s"
-                  begin="1s"
-                  repeatCount="indefinite"
-                />
+              <path d="M 300 0 V 1000" stroke="#f97316" strokeWidth="0.8" fill="none" strokeLinecap="round" strokeDasharray="60 4000" opacity="0.25">
+                <animate attributeName="stroke-dashoffset" from="4060" to="-60" dur="15s" begin="2s" repeatCount="indefinite" />
               </path>
-              <path
-                d="M 192 1000 V 448 H 512 V -64"
-                stroke="#f97316"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray="150 3000"
-              >
-                <animate
-                  attributeName="stroke-dashoffset"
-                  from="3000"
-                  to="-150"
-                  dur="7s"
-                  begin="2s"
-                  repeatCount="indefinite"
-                />
+              <path d="M 500 0 V 1000" stroke="#f97316" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="100 4000" opacity="0.5">
+                <animate attributeName="stroke-dashoffset" from="4100" to="-100" dur="10s" begin="1s" repeatCount="indefinite" />
               </path>
-              <path
-                d="M 1600 -64 V 192 H 1408 V 800"
-                stroke="#f97316"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray="150 3000"
-              >
-                <animate
-                  attributeName="stroke-dashoffset"
-                  from="3000"
-                  to="-150"
-                  dur="5s"
-                  begin="0.5s"
-                  repeatCount="indefinite"
-                />
+              <path d="M 700 0 V 1000" stroke="#f97316" strokeWidth="0.8" fill="none" strokeLinecap="round" strokeDasharray="60 4000" opacity="0.25">
+                <animate attributeName="stroke-dashoffset" from="4060" to="-60" dur="14s" begin="3s" repeatCount="indefinite" />
+              </path>
+              <path d="M 880 0 V 1000" stroke="#f97316" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeDasharray="80 4000" opacity="0.35">
+                <animate attributeName="stroke-dashoffset" from="4080" to="-80" dur="11s" begin="4s" repeatCount="indefinite" />
+              </path>
+
+              {/* === Horizontal lines === */}
+              <path d="M 0 150 H 1000" stroke="#f97316" strokeWidth="1" fill="none" strokeLinecap="round" strokeDasharray="70 4000" opacity="0.3">
+                <animate attributeName="stroke-dashoffset" from="4070" to="-70" dur="13s" begin="1.5s" repeatCount="indefinite" />
+              </path>
+              <path d="M 0 350 H 1000" stroke="#f97316" strokeWidth="1.3" fill="none" strokeLinecap="round" strokeDasharray="90 4000" opacity="0.45">
+                <animate attributeName="stroke-dashoffset" from="4090" to="-90" dur="9s" begin="0.5s" repeatCount="indefinite" />
+              </path>
+              <path d="M 0 550 H 1000" stroke="#f97316" strokeWidth="0.8" fill="none" strokeLinecap="round" strokeDasharray="50 4000" opacity="0.2">
+                <animate attributeName="stroke-dashoffset" from="4050" to="-50" dur="16s" begin="5s" repeatCount="indefinite" />
+              </path>
+              <path d="M 0 750 H 1000" stroke="#f97316" strokeWidth="1.1" fill="none" strokeLinecap="round" strokeDasharray="75 4000" opacity="0.35">
+                <animate attributeName="stroke-dashoffset" from="4075" to="-75" dur="11s" begin="2.5s" repeatCount="indefinite" />
+              </path>
+
+              {/* === Diagonal lines === */}
+              <path d="M 0 0 L 1000 1000" stroke="#f97316" strokeWidth="0.8" fill="none" strokeLinecap="round" strokeDasharray="50 5000" opacity="0.2">
+                <animate attributeName="stroke-dashoffset" from="5050" to="-50" dur="18s" begin="3s" repeatCount="indefinite" />
+              </path>
+              <path d="M 1000 0 L 0 1000" stroke="#f97316" strokeWidth="0.8" fill="none" strokeLinecap="round" strokeDasharray="50 5000" opacity="0.2">
+                <animate attributeName="stroke-dashoffset" from="5050" to="-50" dur="20s" begin="6s" repeatCount="indefinite" />
+              </path>
+              <path d="M 200 0 L 1000 800" stroke="#f97316" strokeWidth="0.6" fill="none" strokeLinecap="round" strokeDasharray="40 4500" opacity="0.15">
+                <animate attributeName="stroke-dashoffset" from="4540" to="-40" dur="22s" begin="4s" repeatCount="indefinite" />
+              </path>
+              <path d="M 800 0 L 0 800" stroke="#f97316" strokeWidth="0.6" fill="none" strokeLinecap="round" strokeDasharray="40 4500" opacity="0.15">
+                <animate attributeName="stroke-dashoffset" from="4540" to="-40" dur="19s" begin="7s" repeatCount="indefinite" />
+              </path>
+
+              {/* === Random short lines === */}
+              <path d="M 100 200 L 250 180" stroke="#f97316" strokeWidth="1" fill="none" strokeLinecap="round" strokeDasharray="30 2000" opacity="0.3">
+                <animate attributeName="stroke-dashoffset" from="2030" to="-30" dur="8s" begin="1s" repeatCount="indefinite" />
+              </path>
+              <path d="M 600 100 L 750 130" stroke="#f97316" strokeWidth="0.8" fill="none" strokeLinecap="round" strokeDasharray="25 2000" opacity="0.25">
+                <animate attributeName="stroke-dashoffset" from="2025" to="-25" dur="10s" begin="3s" repeatCount="indefinite" />
+              </path>
+              <path d="M 300 400 L 420 380" stroke="#f97316" strokeWidth="0.7" fill="none" strokeLinecap="round" strokeDasharray="20 2000" opacity="0.2">
+                <animate attributeName="stroke-dashoffset" from="2020" to="-20" dur="9s" begin="5s" repeatCount="indefinite" />
+              </path>
+              <path d="M 700 500 L 850 520" stroke="#f97316" strokeWidth="0.9" fill="none" strokeLinecap="round" strokeDasharray="35 2000" opacity="0.28">
+                <animate attributeName="stroke-dashoffset" from="2035" to="-35" dur="11s" begin="2s" repeatCount="indefinite" />
+              </path>
+              <path d="M 150 650 L 300 630" stroke="#f97316" strokeWidth="0.7" fill="none" strokeLinecap="round" strokeDasharray="22 2000" opacity="0.22">
+                <animate attributeName="stroke-dashoffset" from="2022" to="-22" dur="7s" begin="4s" repeatCount="indefinite" />
+              </path>
+              <path d="M 500 700 L 650 720" stroke="#f97316" strokeWidth="0.8" fill="none" strokeLinecap="round" strokeDasharray="28 2000" opacity="0.24">
+                <animate attributeName="stroke-dashoffset" from="2028" to="-28" dur="12s" begin="6s" repeatCount="indefinite" />
+              </path>
+              <path d="M 800 300 L 920 280" stroke="#f97316" strokeWidth="0.6" fill="none" strokeLinecap="round" strokeDasharray="18 2000" opacity="0.18">
+                <animate attributeName="stroke-dashoffset" from="2018" to="-18" dur="10s" begin="8s" repeatCount="indefinite" />
+              </path>
+              <path d="M 400 850 L 550 870" stroke="#f97316" strokeWidth="0.7" fill="none" strokeLinecap="round" strokeDasharray="24 2000" opacity="0.2">
+                <animate attributeName="stroke-dashoffset" from="2024" to="-24" dur="9s" begin="7s" repeatCount="indefinite" />
               </path>
             </g>
           </svg>
@@ -183,12 +186,10 @@ export function HomeSection() {
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#f97316]/20 bg-[#f97316]/5 backdrop-blur-sm text-xs text-text-secondary mb-8 hover:border-[#f97316]/40 hover:bg-[#f97316]/10 transition-all group"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse group-hover:scale-125 transition-transform" />
-          <span className="font-mono font-medium tracking-tight">
-            @buntok/core
-          </span>
+          <span className="font-bold tracking-tight">@buntok/core</span>
           <span className="w-px h-3 bg-[#f97316]/20" />
           {npmVersion ? (
-            <span className="font-mono text-[#f97316]">v{npmVersion}</span>
+            <span className="font-bold text-[#f97316]">v{npmVersion}</span>
           ) : (
             <span
               className="inline-block h-3 w-10 rounded bg-[#f97316]/20 animate-pulse"

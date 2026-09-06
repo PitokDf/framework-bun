@@ -11,14 +11,14 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@buntok/core": "2.1.7-alpha.1",
+    "@buntok/core": "2.1.8-alpha.0",
     "@types/ioredis": "^5.0.0",
     "ioredis": "^6.0.0",
     "nodemailer": "^10.0.0"
   },
   "scripts": {
     "dev": "bun --watch server.ts",
-    "start": "bun .buntok/index.js",
+    "start": "bun .buntok/server.js",
     "check": "bunx @biomejs/biome check --write .",
     "format": "bunx @biomejs/biome format --write .",
     "lint": "bunx @biomejs/biome lint .",
