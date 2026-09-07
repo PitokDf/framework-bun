@@ -1,6 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
 	extendZodWithOpenApi,
 	OpenAPIRegistry,
@@ -67,7 +66,7 @@ export async function makeDocsCommand() {
 	try {
 		console.log(`\x1b[90mLoading app from ${entryPath}...\x1b[0m`);
 
-		const userApp = await import(pathToFileURL(entryPath).href);
+		const userApp = await import(entryPath);
 		const appInstance = userApp.app || userApp.default;
 
 		if (!appInstance?.openApiDocs) {

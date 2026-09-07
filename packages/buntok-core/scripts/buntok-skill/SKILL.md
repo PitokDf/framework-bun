@@ -2071,7 +2071,7 @@ app.listen(1212);
 
 **Dockerfile** — multi-stage build:
 - **Builder** (`oven/bun:1-alpine`): installs prod deps via `--production`, runs `bunx buntok build`
-- **Runtime** (`oven/bun:1-distroless`): copies `.buntok/`, `node_modules/`, `package.json`
+- **Runtime** (`oven/bun:1-alpine`): copies `.buntok/`, `node_modules/`, `package.json`
 
 **.dockerignore** — excludes `node_modules`, `dist`, `.buntok`, `.env`, logs
 

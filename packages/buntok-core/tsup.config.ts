@@ -15,7 +15,7 @@ export default defineConfig({
 		"src/plugins/graphql/yoga.ts",
 		"src/queue-drivers/index.ts",
 	],
-	format: ["cjs", "esm"],
+	format: ["esm", "cjs"],
 	dts: false,
 	splitting: true,
 	sourcemap: true,
@@ -24,6 +24,9 @@ export default defineConfig({
 	outDir: "dist",
 	external: [
 		/^bun:.*/,
+		// Node.js builtins — Bun resolves these natively at runtime
+		// (tsup with es2022 target would otherwise treat them as browser polyfills)
+		/^(node:)?(fs|fs\/promises|path|crypto|os|child_process|readline|stream|http|https|net|tls|buffer|util|events|dns|zlib|assert|worker_threads|perf_hooks|tty|url)$/,
 		// Peer deps — users install these
 		"@apollo/server",
 		"graphql",
@@ -44,5 +47,4 @@ export default defineConfig({
 	// Force bundle these deps into @buntok/core output
 	// (they're in dependencies but tsup externalizes deps by default with splitting)
 	noExternal: ["zod", "croner", "@asteasolutions/zod-to-openapi"],
-	shims: true,
 });

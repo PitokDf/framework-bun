@@ -1,11 +1,9 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 import { createInterface } from "node:readline";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = import.meta.dir;
 
 function askQuestion(question: string, defaultValue = true): Promise<boolean> {
 	return new Promise((resolve) => {
@@ -420,14 +418,13 @@ COPY package.json ./
 RUN bunx buntok build
 
 # Production
-FROM oven/bun:1-distroless
+FROM oven/bun:1-alpine
 WORKDIR /app
 
 COPY --from=builder /app/.buntok .buntok
 COPY --from=builder /app/node_modules node_modules
 COPY --from=builder /app/package.json ./
 
-USER bun
 EXPOSE 1212
 
 ENV NODE_ENV=production

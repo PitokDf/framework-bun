@@ -1,9 +1,8 @@
 // Core
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dir;
 let _version = "0.0.0-dev";
 try {
 	// 1. Check framework's own package.json (dev/monorepo context)

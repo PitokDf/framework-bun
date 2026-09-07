@@ -1257,7 +1257,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		const basePath = (config.path ?? "/docs").replace(/\/+$/, "");
 
 		// Resolve template paths relative to this package's dist directory
-		const templatesDir = new URL("./cli/templates", import.meta.url).pathname;
+		const templatesDir = join(import.meta.dir, "cli", "templates");
 
 		// Handler for serving the HTML docs UI — safe injection via app.apiDocs()
 		const uiHandler: Handler<DI> = async () => {
