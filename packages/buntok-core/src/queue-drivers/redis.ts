@@ -63,7 +63,8 @@ export class RedisQueueDriver<T> implements QueueDriver<T> {
 	private async connectRedis(url: string): Promise<void> {
 		try {
 			// @ts-ignore - optional peer dependency
-			const Redis = (await import("ioredis")).default;
+			const mod = "ioredis";
+			const Redis = (await import(mod)).default;
 			this.redis = new Redis(url);
 		} catch {
 			throw new Error("ioredis is required for RedisQueueDriver. Run 'bun add ioredis'");

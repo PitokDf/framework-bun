@@ -55,7 +55,8 @@ export class RabbitmqQueueDriver<T> implements QueueDriver<T> {
 		if (this.channel) return;
 
 		try {
-			const amqp = await import("amqplib");
+			const mod = "amqplib";
+			const amqp = await import(mod);
 			this.connection = await amqp.connect(this.options.url ?? "amqp://localhost");
 			this.channel = await this.connection.createChannel();
 

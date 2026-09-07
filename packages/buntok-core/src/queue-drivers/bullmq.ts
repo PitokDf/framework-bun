@@ -55,7 +55,8 @@ export class BullmqQueueDriver<T> implements QueueDriver<T> {
 
 		try {
 			// @ts-ignore - optional peer dependency
-			const { Queue: BullmqQueue, Worker: BullmqWorker } = await import("bullmq");
+			const mod = "bullmq";
+			const { Queue: BullmqQueue } = await import(mod);
 
 			const conn = this.options.connection ?? { host: "localhost", port: 6379 };
 			const connection = conn.url
@@ -87,7 +88,8 @@ export class BullmqQueueDriver<T> implements QueueDriver<T> {
 		if (this.worker) return;
 
 		// @ts-ignore - optional peer dependency
-		const { Worker: BullmqWorker } = await import("bullmq");
+		const mod = "bullmq";
+		const { Worker: BullmqWorker } = await import(mod);
 		const connection = this.options.connection.url
 			? { connection: { url: this.options.connection.url } }
 			: { connection: this.options.connection };

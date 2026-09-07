@@ -38,6 +38,8 @@ export default defineConfig({
 		"ioredis",
 		"bullmq",
 		"amqplib",
+		// Mailer peer deps
+		"nodemailer",
 	],
 	// Force bundle these deps into @buntok/core output
 	// (they're in dependencies but tsup externalizes deps by default with splitting)
