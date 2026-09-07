@@ -986,6 +986,35 @@ PORT=3000 bun run dev`}
         </li>
       </ul>
 
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Vercel Build Error: `readFile` undefined
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        If you see <code>cannot read properties of undefined (reading 'readFile')</code> on Vercel:
+      </p>
+      <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
+        <li>
+          Remove <code>typescript</code> from <code>peerDependencies</code> in{" "}
+          <code>package.json</code>
+        </li>
+        <li>
+          Keep it only as <code>devDependency</code> if needed
+        </li>
+        <li>
+          TypeScript is already included via <code>tsup</code> and other build tools
+        </li>
+      </ul>
+      <Callout type="info">
+        See{" "}
+        <a href="/docs/vercel" className="text-accent hover:underline">
+          Vercel Deployment
+        </a>{" "}
+        for more details.
+      </Callout>
+
       {/* ──────────────── NEXT STEPS ──────────────── */}
       <Heading
         level={2}

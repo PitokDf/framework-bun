@@ -148,7 +148,48 @@ vercel --prod`}
 └── ...`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        Common Issues
+      </Heading>
+
+      <Heading level={3} className="text-lg font-semibold mt-6 mb-2 text-text-primary">
+        `cannot read properties of undefined (reading 'readFile')`
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        This error occurs when <code>typescript</code> is listed as a <strong>peerDependency</strong> in your
+        project. Vercel tries to resolve peer dependencies during build, and if the version doesn&apos;t exist
+        (e.g., <code>typescript@^7</code>), the TypeScript compiler fails to load.
+      </p>
+      <Callout type="warning">
+        <strong>Fix:</strong> Remove <code>typescript</code> from <code>peerDependencies</code> in your{" "}
+        <code>package.json</code>. Keep it only as a <code>devDependency</code> if needed. TypeScript is
+        already included transitively through <code>tsup</code>, <code>@prisma/client</code>, and other
+        build tools.
+      </Callout>
+      <CodeBlock
+        language="json"
+        code={`{
+  "peerDependencies": {
+    "bun": ">=1.2.0"
+    // ❌ Don't add "typescript" here
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"  // ✅ Only as devDependency
+  }
+}`}
+      />
+
+      <Heading level={3} className="text-lg font-semibold mt-6 mb-2 text-text-primary">
+        Build fails with `Module not found`
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Make sure all dependencies are installed before building. Run{" "}
+        <code>bun install</code> locally and verify <code>node_modules</code> exists.
+        For Vercel, ensure your <code>installCommand</code> or <code>buildCommand</code>{" "}
+        includes dependency installation.
+      </Heading>
+
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Notes
       </Heading>
       <ul className="my-3 text-text-secondary leading-relaxed list-disc list-inside space-y-1">
