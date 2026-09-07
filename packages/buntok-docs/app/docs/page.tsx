@@ -391,15 +391,32 @@ export const env = App.validateEnv({
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        Example with Prisma
+        Prisma v7 (Recommended)
       </Heading>
-      <CodeBlock
-        code={`# Install Prisma driver
-bun add @buntok/prisma prisma @prisma/client
+      <p className="my-3 text-text-secondary leading-relaxed">
+        We recommend using Prisma v7 for better stability and performance with Bun. Prisma v7 includes native Bun support and improved query performance.
+      </p>
 
-# Initialize Prisma
-bunx prisma init`}
+      <CodeBlock
+        code={`# Install Prisma v7 with Buntok integration
+bun add @buntok/prisma prisma@7 @prisma/client@7
+
+# Initialize Prisma schema
+bunx prisma init
+
+# Generate Prisma client
+bunx prisma generate`}
       />
+
+      <Callout type="info">
+        <strong>Why Prisma v7?</strong>
+        <ul className="mt-2 ml-4 list-disc space-y-1">
+          <li>Native Bun runtime support (no Node.js polyfills needed)</li>
+          <li>Faster query performance with optimized SQL generation</li>
+          <li>Smaller bundle size compared to v6</li>
+          <li>Better TypeScript inference and type safety</li>
+        </ul>
+      </Callout>
 
       <CodeBlock
         code={`// src/lib/prisma.ts

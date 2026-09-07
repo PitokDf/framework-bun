@@ -2012,9 +2012,27 @@ console.assert(res.status === 200);
 
 | Package | ORM |
 |---------|-----|
-| `@buntok/prisma` | Prisma |
+| `@buntok/prisma` | Prisma v7 (recommended) |
 | `@buntok/drizzle` | Drizzle |
 | `@buntok/typeorm` | TypeORM |
+
+### Install Prisma v7 (Recommended)
+
+```bash
+# Install Prisma v7 with Buntok integration
+bun add @buntok/prisma prisma@7 @prisma/client@7
+
+# Initialize Prisma schema
+bunx prisma init
+
+# Generate Prisma client
+bunx prisma generate
+
+# Run migrations
+bunx prisma migrate dev
+```
+
+> **Why Prisma v7?** Native Bun runtime support, faster query performance, smaller bundle size, and better TypeScript inference.
 
 ### Example (Prisma)
 
