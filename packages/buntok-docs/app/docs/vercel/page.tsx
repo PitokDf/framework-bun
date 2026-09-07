@@ -187,7 +187,7 @@ vercel --prod`}
         <code>bun install</code> locally and verify <code>node_modules</code> exists.
         For Vercel, ensure your <code>installCommand</code> or <code>buildCommand</code>{" "}
         includes dependency installation.
-      </Heading>
+      </p>
 
       <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Notes
