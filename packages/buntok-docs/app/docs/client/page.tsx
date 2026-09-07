@@ -86,67 +86,67 @@ const created = await api.createUser({
 // created: { id: string; name: string }`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Options
       </Heading>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="py-2 pr-4">Option</th>
-              <th className="py-2 pr-4">Type</th>
-              <th className="py-2 pr-4">Default</th>
-              <th className="py-2">Description</th>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Option</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Type</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Default</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Description</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">headers</td>
-              <td className="py-2 pr-4 font-mono text-xs">Record&lt;string, string&gt;</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">Headers sent on every request</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">headers</td>
+              <td className="px-4 py-2 font-mono text-xs">Record&lt;string, string&gt;</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">Headers sent on every request</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">timeout</td>
-              <td className="py-2 pr-4 font-mono text-xs">number</td>
-              <td className="py-2 pr-4">30000</td>
-              <td className="py-2">Request timeout in ms</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">timeout</td>
+              <td className="px-4 py-2 font-mono text-xs">number</td>
+              <td className="px-4 py-2">30000</td>
+              <td className="px-4 py-2">Request timeout in ms</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">retries</td>
-              <td className="py-2 pr-4 font-mono text-xs">number</td>
-              <td className="py-2 pr-4">0</td>
-              <td className="py-2">Number of retry attempts</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">retries</td>
+              <td className="px-4 py-2 font-mono text-xs">number</td>
+              <td className="px-4 py-2">0</td>
+              <td className="px-4 py-2">Number of retry attempts</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">retryDelay</td>
-              <td className="py-2 pr-4 font-mono text-xs">number</td>
-              <td className="py-2 pr-4">1000</td>
-              <td className="py-2">Delay between retries in ms</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">retryDelay</td>
+              <td className="px-4 py-2 font-mono text-xs">number</td>
+              <td className="px-4 py-2">1000</td>
+              <td className="px-4 py-2">Delay between retries in ms</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">retryOn</td>
-              <td className="py-2 pr-4 font-mono text-xs">number[]</td>
-              <td className="py-2 pr-4">[408, 429, 500, 502, 503, 504]</td>
-              <td className="py-2">Status codes to retry on</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">retryOn</td>
+              <td className="px-4 py-2 font-mono text-xs">number[]</td>
+              <td className="px-4 py-2">[408, 429, 500, 502, 503, 504]</td>
+              <td className="px-4 py-2">Status codes to retry on</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">onRequest</td>
-              <td className="py-2 pr-4 font-mono text-xs">(req) =&gt; Request</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">Request interceptor</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">onRequest</td>
+              <td className="px-4 py-2 font-mono text-xs">(req) =&gt; Request</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">Request interceptor</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">onResponse</td>
-              <td className="py-2 pr-4 font-mono text-xs">(res) =&gt; Response</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">Response interceptor</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">onResponse</td>
+              <td className="px-4 py-2 font-mono text-xs">(res) =&gt; Response</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">Response interceptor</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">fetch</td>
-              <td className="py-2 pr-4 font-mono text-xs">typeof fetch</td>
-              <td className="py-2 pr-4">globalThis.fetch</td>
-              <td className="py-2">Override fetch (useful for testing)</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">fetch</td>
+              <td className="px-4 py-2 font-mono text-xs">typeof fetch</td>
+              <td className="px-4 py-2">globalThis.fetch</td>
+              <td className="px-4 py-2">Override fetch (useful for testing)</td>
             </tr>
           </tbody>
         </table>

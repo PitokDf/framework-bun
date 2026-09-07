@@ -51,33 +51,33 @@ app.listen(env.PORT);`}
         <li>No separate entry points needed — one <code>server.ts</code> works for both</li>
       </ul>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         app.fetch() vs app.listen()
       </Heading>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="py-2 pr-4">Method</th>
-              <th className="py-2 pr-4">Use Case</th>
-              <th className="py-2">Binds Port</th>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Method</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Use Case</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Binds Port</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">app.listen(port)</td>
-              <td className="py-2">Local development</td>
-              <td className="py-2">Yes</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">app.listen(port)</td>
+              <td className="px-4 py-2">Local development</td>
+              <td className="px-4 py-2">Yes</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">app.fetch(request)</td>
-              <td className="py-2">Vercel/serverless</td>
-              <td className="py-2">No</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">app.fetch(request)</td>
+              <td className="px-4 py-2">Vercel/serverless</td>
+              <td className="px-4 py-2">No</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">app.request(input, init?)</td>
-              <td className="py-2">Testing</td>
-              <td className="py-2">No</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">app.request(input, init?)</td>
+              <td className="px-4 py-2">Testing</td>
+              <td className="px-4 py-2">No</td>
             </tr>
           </tbody>
         </table>

@@ -54,51 +54,51 @@ app.plugin(yogaPlugin({
 }));`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Options
       </Heading>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="py-2 pr-4">Option</th>
-              <th className="py-2 pr-4">Apollo</th>
-              <th className="py-2 pr-4">Yoga</th>
-              <th className="py-2">Description</th>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Option</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Apollo</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Yoga</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Description</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">typeDefs</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2">GraphQL schema (SDL string or DocumentNode)</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">typeDefs</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2">GraphQL schema (SDL string or DocumentNode)</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">resolvers</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2">Resolvers object</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">resolvers</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2">Resolvers object</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">path</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2">Route path (default: <code>/graphql</code>)</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">path</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2">Route path (default: <code>/graphql</code>)</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
                 enablePlayground / graphiql
               </td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2">IDE in non-production (default: true)</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2">IDE in non-production (default: true)</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">context</td>
-              <td className="py-2 pr-4 text-accent">&#10003;</td>
-              <td className="py-2 pr-4 text-text-secondary">&#8212;</td>
-              <td className="py-2">Build GraphQL context from request</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">context</td>
+              <td className="px-4 py-2 text-accent">&#10003;</td>
+              <td className="px-4 py-2 text-text-secondary">&#8212;</td>
+              <td className="px-4 py-2">Build GraphQL context from request</td>
             </tr>
           </tbody>
         </table>
@@ -172,38 +172,38 @@ app.listen(1212);`}
         (Yoga).
       </p>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Which to Choose?
       </Heading>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="py-2 pr-4"></th>
-              <th className="py-2 pr-4">Apollo Server</th>
-              <th className="py-2">Yoga</th>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary"></th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Apollo Server</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Yoga</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-medium">Ecosystem</td>
-              <td className="py-2 pr-4">Larger, more plugins</td>
-              <td className="py-2">Smaller, focused</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-medium">Ecosystem</td>
+              <td className="px-4 py-2">Larger, more plugins</td>
+              <td className="px-4 py-2">Smaller, focused</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-medium">Context</td>
-              <td className="py-2 pr-4">Built-in context builder</td>
-              <td className="py-2">Manual</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-medium">Context</td>
+              <td className="px-4 py-2">Built-in context builder</td>
+              <td className="px-4 py-2">Manual</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-medium">Performance</td>
-              <td className="py-2 pr-4">Good</td>
-              <td className="py-2">Better (native fetch)</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-medium">Performance</td>
+              <td className="px-4 py-2">Good</td>
+              <td className="px-4 py-2">Better (native fetch)</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-medium">Bundle size</td>
-              <td className="py-2 pr-4">Larger</td>
-              <td className="py-2">Smaller</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-medium">Bundle size</td>
+              <td className="px-4 py-2">Larger</td>
+              <td className="px-4 py-2">Smaller</td>
             </tr>
           </tbody>
         </table>

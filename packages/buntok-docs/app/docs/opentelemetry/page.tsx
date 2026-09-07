@@ -34,63 +34,63 @@ app.plugin(otelPlugin({
 }));`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Options
       </Heading>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="py-2 pr-4">Option</th>
-              <th className="py-2 pr-4">Type</th>
-              <th className="py-2 pr-4">Default</th>
-              <th className="py-2">Description</th>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Option</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Type</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Default</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Description</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">serviceName</td>
-              <td className="py-2 pr-4 font-mono text-xs">string</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">serviceName</td>
+              <td className="px-4 py-2 font-mono text-xs">string</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">
                 <strong>Required.</strong> Service name for trace identification.
               </td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">serviceVersion</td>
-              <td className="py-2 pr-4 font-mono text-xs">string</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">Service version.</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">serviceVersion</td>
+              <td className="px-4 py-2 font-mono text-xs">string</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">Service version.</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">exporter</td>
-              <td className="py-2 pr-4 font-mono text-xs">
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">exporter</td>
+              <td className="px-4 py-2 font-mono text-xs">
                 &quot;console&quot; | &quot;otlp&quot;
               </td>
-              <td className="py-2 pr-4">&quot;console&quot;</td>
-              <td className="py-2">Trace exporter.</td>
+              <td className="px-4 py-2">&quot;console&quot;</td>
+              <td className="px-4 py-2">Trace exporter.</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">otlpEndpoint</td>
-              <td className="py-2 pr-4 font-mono text-xs">string</td>
-              <td className="py-2 pr-4">
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">otlpEndpoint</td>
+              <td className="px-4 py-2 font-mono text-xs">string</td>
+              <td className="px-4 py-2">
                 &quot;http://localhost:4318&quot;
               </td>
-              <td className="py-2">OTLP endpoint URL (only for &quot;otlp&quot;).</td>
+              <td className="px-4 py-2">OTLP endpoint URL (only for &quot;otlp&quot;).</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">sampler</td>
-              <td className="py-2 pr-4 font-mono text-xs">
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">sampler</td>
+              <td className="px-4 py-2 font-mono text-xs">
                 &quot;alwaysOn&quot; | &quot;alwaysOff&quot; | &quot;traceIdRatioBased&quot;
               </td>
-              <td className="py-2 pr-4">&quot;alwaysOn&quot;</td>
-              <td className="py-2">Sampling strategy.</td>
+              <td className="px-4 py-2">&quot;alwaysOn&quot;</td>
+              <td className="px-4 py-2">Sampling strategy.</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">sampleRate</td>
-              <td className="py-2 pr-4 font-mono text-xs">number</td>
-              <td className="py-2 pr-4">1</td>
-              <td className="py-2">Sample ratio (0&#8211;1), only for &quot;traceIdRatioBased&quot;.</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">sampleRate</td>
+              <td className="px-4 py-2 font-mono text-xs">number</td>
+              <td className="px-4 py-2">1</td>
+              <td className="px-4 py-2">Sample ratio (0&#8211;1), only for &quot;traceIdRatioBased&quot;.</td>
             </tr>
           </tbody>
         </table>
@@ -164,35 +164,35 @@ app.plugin(otelPlugin({
 }));`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Sampling Strategies
       </Heading>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="py-2 pr-4">Strategy</th>
-              <th className="py-2 pr-4">Description</th>
-              <th className="py-2">Use Case</th>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Strategy</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Description</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Use Case</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">&quot;alwaysOn&quot;</td>
-              <td className="py-2 pr-4">Record all requests</td>
-              <td className="py-2">Development, low traffic</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">&quot;alwaysOn&quot;</td>
+              <td className="px-4 py-2">Record all requests</td>
+              <td className="px-4 py-2">Development, low traffic</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">&quot;alwaysOff&quot;</td>
-              <td className="py-2 pr-4">Record no requests</td>
-              <td className="py-2">Disable tracing</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">&quot;alwaysOff&quot;</td>
+              <td className="px-4 py-2">Record no requests</td>
+              <td className="px-4 py-2">Disable tracing</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">
                 &quot;traceIdRatioBased&quot;
               </td>
-              <td className="py-2 pr-4">Sample sampleRate % of requests</td>
-              <td className="py-2">Production (reduce overhead)</td>
+              <td className="px-4 py-2">Sample sampleRate % of requests</td>
+              <td className="px-4 py-2">Production (reduce overhead)</td>
             </tr>
           </tbody>
         </table>

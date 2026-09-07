@@ -67,69 +67,69 @@ devServer({
 });`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Options
       </Heading>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="py-2 pr-4">Option</th>
-              <th className="py-2 pr-4">Type</th>
-              <th className="py-2 pr-4">Default</th>
-              <th className="py-2">Description</th>
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Option</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Type</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Default</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">Description</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">port</td>
-              <td className="py-2 pr-4 font-mono text-xs">number</td>
-              <td className="py-2 pr-4">3000</td>
-              <td className="py-2">
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">port</td>
+              <td className="px-4 py-2 font-mono text-xs">number</td>
+              <td className="px-4 py-2">3000</td>
+              <td className="px-4 py-2">
                 Port to listen on. <code>0</code> = random available port
               </td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">hostname</td>
-              <td className="py-2 pr-4 font-mono text-xs">string</td>
-              <td className="py-2 pr-4">"localhost"</td>
-              <td className="py-2">Hostname to bind to</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">hostname</td>
+              <td className="px-4 py-2 font-mono text-xs">string</td>
+              <td className="px-4 py-2">"localhost"</td>
+              <td className="px-4 py-2">Hostname to bind to</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">routes</td>
-              <td className="py-2 pr-4 font-mono text-xs">Record&lt;string, unknown&gt;</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">Bun routes object — maps paths to HTML files or handlers</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">routes</td>
+              <td className="px-4 py-2 font-mono text-xs">Record&lt;string, unknown&gt;</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">Bun routes object — maps paths to HTML files or handlers</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">fetch</td>
-              <td className="py-2 pr-4 font-mono text-xs">(req: Request) =&gt; Response</td>
-              <td className="py-2 pr-4">404 handler</td>
-              <td className="py-2">Custom fetch handler — used when no routes provided</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">fetch</td>
+              <td className="px-4 py-2 font-mono text-xs">(req: Request) =&gt; Response</td>
+              <td className="px-4 py-2">404 handler</td>
+              <td className="px-4 py-2">Custom fetch handler — used when no routes provided</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">hmr</td>
-              <td className="py-2 pr-4 font-mono text-xs">boolean</td>
-              <td className="py-2 pr-4">true</td>
-              <td className="py-2">Enable Hot Module Replacement</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">hmr</td>
+              <td className="px-4 py-2 font-mono text-xs">boolean</td>
+              <td className="px-4 py-2">true</td>
+              <td className="px-4 py-2">Enable Hot Module Replacement</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">console</td>
-              <td className="py-2 pr-4 font-mono text-xs">boolean</td>
-              <td className="py-2 pr-4">true</td>
-              <td className="py-2">Echo browser console to terminal</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">console</td>
+              <td className="px-4 py-2 font-mono text-xs">boolean</td>
+              <td className="px-4 py-2">true</td>
+              <td className="px-4 py-2">Echo browser console to terminal</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">onReady</td>
-              <td className="py-2 pr-4 font-mono text-xs">(info) =&gt; void</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">Called when server starts</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">onReady</td>
+              <td className="px-4 py-2 font-mono text-xs">(info) =&gt; void</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">Called when server starts</td>
             </tr>
-            <tr className="border-b border-border">
-              <td className="py-2 pr-4 font-mono text-xs text-accent">...rest</td>
-              <td className="py-2 pr-4 font-mono text-xs">BunServeOptions</td>
-              <td className="py-2 pr-4">—</td>
-              <td className="py-2">Any additional Bun.serve() options</td>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2 font-mono text-accent">...rest</td>
+              <td className="px-4 py-2 font-mono text-xs">BunServeOptions</td>
+              <td className="px-4 py-2">—</td>
+              <td className="px-4 py-2">Any additional Bun.serve() options</td>
             </tr>
           </tbody>
         </table>
