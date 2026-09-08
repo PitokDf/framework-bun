@@ -43,6 +43,9 @@ const DEFAULT_OPTIONS: Required<CompressOptions> = {
 export function compress(options: CompressOptions = {}): Middleware {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 
+	// Hoist brotli import to creation scope - avoid per-request microtask
+	let brotliModule: typeof import("node:zlib") | undefined;
+
 	return async (ctx, next) => {
 		const result = await next();
 		if (!(result instanceof Response) || !result.body) return result;
@@ -80,10 +83,12 @@ export function compress(options: CompressOptions = {}): Middleware {
 		let encoding: string;
 
 		if (supportsBrotli) {
-			const zlib = await import("node:zlib");
-			compressed = zlib.brotliCompressSync(buffer, {
+			if (!brotliModule) {
+				brotliModule = await import("node:zlib");
+			}
+			compressed = brotliModule.brotliCompressSync(buffer, {
 				params: {
-					[zlib.constants.BROTLI_PARAM_QUALITY]: opts.brotliLevel,
+					[brotliModule.constants.BROTLI_PARAM_QUALITY]: opts.brotliLevel,
 				},
 			});
 			encoding = "br";

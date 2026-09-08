@@ -269,9 +269,12 @@ bunx buntok db status`}
         make:docs
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Generate OpenAPI documentation from your routes and controllers.
+        Manually regenerate OpenAPI documentation. <strong>Optional</strong> — <code>swagger.json</code> is auto-generated on <code>app.listen()</code>.
       </p>
       <CodeBlock code={`bunx buntok make:docs`} />
+      <Callout type="info">
+        Use this for CI/CD pipelines or when you need to regenerate <code>swagger.json</code> without starting the server.
+      </Callout>
 
       {/* ──────────────── PROJECT STRUCTURE ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">

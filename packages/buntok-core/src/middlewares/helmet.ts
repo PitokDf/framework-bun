@@ -62,10 +62,13 @@ export function helmet(options?: HelmetOptions): Middleware {
 	if (options?.additionalHeaders)
 		Object.assign(headers, options.additionalHeaders);
 
+	// Pre-compute entries to avoid Object.entries() per request
+	const headerEntries = Object.entries(headers);
+
 	return async (_ctx, next) => {
 		const response = await next();
 		// Set headers directly on the response - avoids copying Headers + creating new Response
-		for (const [key, value] of Object.entries(headers)) {
+		for (const [key, value] of headerEntries) {
 			if (!response.headers.has(key)) {
 				response.headers.set(key, value);
 			}

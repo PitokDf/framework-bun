@@ -7,20 +7,40 @@ export interface CorsOptions {
 	credentials?: boolean;
 }
 
+export function resolveOrigin(
+	requestOrigin: string,
+	options: CorsOptions,
+): string {
+	let allowedOrigin = "*";
+
+	if (typeof options.origin === "function") {
+		allowedOrigin = options.origin(requestOrigin) ? requestOrigin : "";
+	} else if (Array.isArray(options.origin)) {
+		allowedOrigin = options.origin.includes(requestOrigin)
+			? requestOrigin
+			: "";
+	} else if (options.origin) {
+		allowedOrigin = options.origin;
+	}
+
+	return allowedOrigin;
+}
+
+export function applyCorsHeaders(
+	response: Response,
+	requestOrigin: string,
+	options: CorsOptions,
+): void {
+	const allowedOrigin = resolveOrigin(requestOrigin, options);
+	response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+	if (options.credentials)
+		response.headers.set("Access-Control-Allow-Credentials", "true");
+}
+
 export const cors = (options: CorsOptions = {}): Middleware => {
 	return async (ctx, next) => {
 		const requestOrigin = ctx.request.headers.get("Origin") || "*";
-		let allowedOrigin = "*";
-
-		if (typeof options.origin === "function") {
-			allowedOrigin = options.origin(requestOrigin) ? requestOrigin : "";
-		} else if (Array.isArray(options.origin)) {
-			allowedOrigin = options.origin.includes(requestOrigin)
-				? requestOrigin
-				: "";
-		} else if (options.origin) {
-			allowedOrigin = options.origin;
-		}
+		const allowedOrigin = resolveOrigin(requestOrigin, options);
 
 		if (ctx.request.method === "OPTIONS") {
 			const res = new Response(null, { status: 204 });
@@ -46,16 +66,12 @@ export const cors = (options: CorsOptions = {}): Middleware => {
 			);
 			if (options.credentials)
 				res.headers.set("Access-Control-Allow-Credentials", "true");
-			res.headers.set("X-Powered-By", "Buntok");
 			return res;
 		}
 
 		const response = await next();
 
-		response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
-		response.headers.set("X-Powered-By", "Buntok");
-		if (options.credentials)
-			response.headers.set("Access-Control-Allow-Credentials", "true");
+		applyCorsHeaders(response, requestOrigin, options);
 
 		return response;
 	};

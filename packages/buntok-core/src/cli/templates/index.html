@@ -920,6 +920,7 @@
   <!-- ================= SWAGGER SPEC & ENGINE ================= -->
   <script>
     // Dynamic Swagger Specification (Loaded dynamically from API or JSON file)
+    const swaggerJsonPath = '/docs/swagger.json';
     let specData = {
       "openapi": "3.0.0",
       "info": {
@@ -955,6 +956,17 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    function parseMimeTypes(description) {
+      const match = description?.match(/\(accept:\s*(.+?)\)/);
+      return match ? match[1].split(', ').map(s => s.trim()) : null;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
     function showToast(message, type = 'info') {
@@ -1151,7 +1163,10 @@
           value: r.type === 'file' ? '' : r.value,
           type: r.type,
           enabled: r.enabled,
-          fileInfo: r.fileInfo || null
+          fileInfo: r.fileInfo || null,
+          enum: r.enum || null,
+          accept: r.accept || null,
+          multiple: r.multiple || false,
         })),
         urlEncoded: urlEncodedRows.map(r => ({
           key: r.key,
@@ -1172,7 +1187,7 @@
         // Restore file objects from IndexedDB
         if (state.formData) {
           for (let i = 0; i < state.formData.length; i++) {
-            if (state.formData[i].type === 'file' && state.formData[i].fileInfo) {
+            if ((state.formData[i].type === 'file' || state.formData[i].type === 'file-array') && state.formData[i].fileInfo) {
               const file = await FileStorage.getFile(epId, i);
               if (file) {
                 state.formData[i].fileObject = file;
@@ -1423,9 +1438,7 @@
     async function loadSwaggerSpec() {
       hideError();
       try {
-        let res = await fetch('/docs/swagger.json?t=' + Date.now());
-        if (!res.ok) res = await fetch('/data/swagger.json?t=' + Date.now());
-        if (!res.ok) res = await fetch('/api/swagger?t=' + Date.now());
+        let res = await fetch(swaggerJsonPath + '?t=' + Date.now());
         if (res.ok) {
           specData = await res.json();
           return;
@@ -1602,9 +1615,7 @@
       hideError();
 
       try {
-        let res = await fetch('/docs/swagger.json?t=' + Date.now());
-        if (!res.ok) res = await fetch('/data/swagger.json?t=' + Date.now());
-        if (!res.ok) res = await fetch('/api/swagger?t=' + Date.now());
+        let res = await fetch(swaggerJsonPath + '?t=' + Date.now());
         if (res.ok) {
           specData = await res.json();
           showToast('API spec reloaded successfully', 'success');
@@ -1899,14 +1910,25 @@
         bodyInput.value = samplePayload && Object.keys(samplePayload).length > 0 ? JSON.stringify(samplePayload, null, 2) : (jsonSchema ? '{}' : '');
         
         if (multipartSchema?.properties) {
-          formDataRows = Object.entries(multipartSchema.properties).map(([k, v]) => ({
-            key: k,
-            value: v.example || (v.format === 'binary' ? '' : (v.default ?? '')),
-            type: v.format === 'binary' ? 'file' : 'text',
-            enabled: true
-          }));
+          formDataRows = Object.entries(multipartSchema.properties).map(([k, v]) => {
+            const isFile = v.format === 'binary';
+            const isFileArray = v.type === 'array' && v.items?.format === 'binary';
+            const mimeTypes = parseMimeTypes(v.description || v.items?.description);
+            const enumVals = v.enum || v.items?.enum;
+            return {
+              key: k,
+              value: v.example || (isFile ? '' : (v.default ?? (enumVals?.length ? enumVals[0] : ''))),
+              type: isFileArray ? 'file-array' : (isFile ? 'file' : 'text'),
+              enabled: true,
+              accept: mimeTypes?.join(',') || null,
+              multiple: isFileArray,
+              fileObjects: [],
+              fileInfo: null,
+              enum: enumVals || null,
+            };
+          });
         } else if (content['multipart/form-data']) {
-          formDataRows = [{ key: 'file', value: '', type: 'file', enabled: true }];
+          formDataRows = [{ key: 'file', value: '', type: 'file', enabled: true, accept: null, multiple: false, fileObjects: [], fileInfo: null }];
         } else {
           formDataRows = [];
         }
@@ -1969,9 +1991,15 @@
         if (savedState.bodyType) {
           setBodyType(savedState.bodyType);
         }
-        // Restore form data
+        // Restore form data (merge values into schema-derived rows, preserve enum/accept/multiple metadata)
         if (savedState.formData && savedState.formData.length > 0) {
-          formDataRows = savedState.formData;
+          for (const saved of savedState.formData) {
+            const existing = formDataRows.find(r => r.key === saved.key);
+            if (existing) {
+              existing.value = saved.value ?? existing.value;
+              existing.enabled = saved.enabled ?? existing.enabled;
+            }
+          }
           renderFormDataTable();
         }
         // Restore url encoded
@@ -2128,34 +2156,72 @@
       if (!tbody) return;
       tbody.innerHTML = '';
       formDataRows.forEach((row, idx) => {
+        const isFileField = row.type === 'file' || row.type === 'file-array';
+        const acceptAttr = row.accept ? ` accept="${escapeHtml(row.accept)}"` : '';
+        const multipleAttr = row.multiple ? ' multiple' : '';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="p-1.5 text-center"><input type="checkbox" ${row.enabled ? 'checked' : ''} onchange="toggleFormDataRow(${idx}, this.checked)" class="accent-[#f97316]"></td>
-          <td class="p-1.5"><input type="text" value="${row.key}" oninput="updateFormDataKey(${idx}, this.value)" placeholder="Field name" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
+          <td class="p-1.5"><input type="text" value="${escapeHtml(row.key)}" oninput="updateFormDataKey(${idx}, this.value)" placeholder="Field name" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]"></td>
           <td class="p-1.5">
             <select onchange="updateFormDataType(${idx}, this.value)" class="w-full text-xs bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded p-1 text-[var(--text-secondary)]">
               <option value="text" ${row.type === 'text' ? 'selected' : ''}>Text</option>
               <option value="file" ${row.type === 'file' ? 'selected' : ''}>File</option>
+              <option value="file-array" ${row.type === 'file-array' ? 'selected' : ''}>File[]</option>
             </select>
           </td>
           <td class="p-1.5">
-            ${row.type === 'file' ? `
-              <div class="flex items-center gap-1.5">
-                <input type="file" onchange="handleFormDataFileUpload(${idx}, event)" class="text-xs text-[var(--text-secondary)] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border file:border-[var(--border-primary)] file:text-xs file:bg-[var(--bg-tertiary)] file:text-[var(--text-primary)]">
-                ${row.fileInfo ? `<span class="text-[10px] text-emerald-400 font-mono">(${row.fileInfo.name})</span>` : ''}
+            ${isFileField ? `
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-1.5">
+                  <label class="file-input-label flex-1 cursor-pointer">
+                    <input type="file"${acceptAttr}${multipleAttr} onchange="handleFormDataFileUpload(${idx}, event)" class="hidden">
+                    <div class="flex items-center gap-1.5 px-2 py-1 rounded border border-dashed border-[var(--border-primary)] hover:border-[#f97316] bg-[var(--bg-primary)] transition text-xs text-[var(--text-secondary)]">
+                      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      <span>${row.multiple ? 'Drop files or click' : 'Drop file or click'}${row.accept ? ' (' + escapeHtml(row.accept.split(',').slice(0, 2).join(', ')) + (row.accept.split(',').length > 2 ? '...' : '') + ')' : ''}</span>
+                    </div>
+                  </label>
+                </div>
+                ${renderFileList(row, idx)}
               </div>
+            ` : row.enum && row.enum.length > 0 ? `
+              <select onchange="updateFormDataValue(${idx}, this.value)" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
+                ${row.enum.map(e => `<option value="${escapeHtml(String(e))}" ${row.value === String(e) ? 'selected' : ''}>${escapeHtml(String(e))}</option>`).join('')}
+              </select>
             ` : `
-              <input type="text" value="${row.value}" oninput="updateFormDataValue(${idx}, this.value)" placeholder="Field value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)]">
+              <input type="text" value="${escapeHtml(row.value)}" oninput="updateFormDataValue(${idx}, this.value)" placeholder="Field value" class="w-full text-xs font-mono p-1 rounded bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[#f97316]">
             `}
           </td>
           <td class="p-1.5 text-center"><button onclick="deleteFormDataRow(${idx})" class="p-1 rounded hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition" aria-label="Delete"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
         `;
         tbody.appendChild(tr);
       });
+      setupFileDropZones();
+    }
+
+    function renderFileList(row, idx) {
+      const files = row.fileObjects || [];
+      if (files.length === 0) return '';
+      return `<div class="file-list space-y-1" data-form-idx="${idx}">
+        ${files.map((f, fi) => `
+          <div class="file-item flex items-center gap-1.5 text-[10px] font-mono text-[var(--text-secondary)] bg-[var(--bg-primary)] rounded px-1.5 py-0.5">
+            <svg class="w-3 h-3 shrink-0 text-[#f97316]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="truncate flex-1">${escapeHtml(f.name)}</span>
+            <span class="text-[var(--text-tertiary)] shrink-0">${formatFileSize(f.size)}</span>
+            <button onclick="removeFile(${idx}, ${fi})" class="shrink-0 p-0.5 rounded hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition" aria-label="Remove file">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+        `).join('')}
+        <div class="flex items-center justify-between pt-0.5">
+          <span class="text-[10px] text-[var(--text-tertiary)]">${files.length} file${files.length > 1 ? 's' : ''}</span>
+          <button onclick="clearFiles(${idx})" class="text-[10px] text-zinc-500 hover:text-red-500 transition">Clear all</button>
+        </div>
+      </div>`;
     }
 
     function addFormDataRow() {
-      formDataRows.push({ key: '', value: '', type: 'text', enabled: true });
+      formDataRows.push({ key: '', value: '', type: 'text', enabled: true, accept: null, multiple: false, fileObjects: [], fileInfo: null, enum: null });
       renderFormDataTable();
       setBodyType('form-data');
     }
@@ -2174,6 +2240,12 @@
     }
     function updateFormDataType(idx, val) {
       formDataRows[idx].type = val;
+      if (val === 'file-array') {
+        formDataRows[idx].multiple = true;
+      } else if (val === 'file') {
+        formDataRows[idx].multiple = false;
+        formDataRows[idx].fileObjects = formDataRows[idx].fileObjects?.length ? [formDataRows[idx].fileObjects[0]] : [];
+      }
       renderFormDataTable();
       setBodyType('form-data');
     }
@@ -2182,17 +2254,70 @@
       setBodyType('form-data');
     }
     function handleFormDataFileUpload(idx, event) {
-      const file = event.target.files[0];
-      if (file) {
-        formDataRows[idx].fileInfo = { name: file.name, size: file.size, type: file.type };
-        formDataRows[idx].fileObject = file;
-        renderFormDataTable();
-        setBodyType('form-data');
-        // Store file in IndexedDB for persistence
-        if (selectedEndpoint) {
-          FileStorage.storeFile(selectedEndpoint.id, idx, file).catch(() => {});
-        }
+      const files = Array.from(event.target.files || []);
+      if (files.length === 0) return;
+      const row = formDataRows[idx];
+      if (row.multiple) {
+        row.fileObjects = [...(row.fileObjects || []), ...files];
+      } else {
+        row.fileObjects = [files[0]];
+        row.fileInfo = { name: files[0].name, size: files[0].size, type: files[0].type };
       }
+      renderFormDataTable();
+      setBodyType('form-data');
+      if (selectedEndpoint) {
+        files.forEach(f => FileStorage.storeFile(selectedEndpoint.id, idx, f).catch(() => {}));
+      }
+    }
+    function removeFile(rowIdx, fileIdx) {
+      formDataRows[rowIdx].fileObjects.splice(fileIdx, 1);
+      if (!formDataRows[rowIdx].multiple && formDataRows[rowIdx].fileObjects.length === 0) {
+        formDataRows[rowIdx].fileInfo = null;
+      }
+      renderFormDataTable();
+      setBodyType('form-data');
+    }
+    function clearFiles(rowIdx) {
+      formDataRows[rowIdx].fileObjects = [];
+      formDataRows[rowIdx].fileInfo = null;
+      renderFormDataTable();
+      setBodyType('form-data');
+    }
+    function setupFileDropZones() {
+      document.querySelectorAll('.file-input-label').forEach(label => {
+        label.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          label.querySelector('div').classList.add('border-[#f97316]', 'bg-[#f97316]/5');
+        });
+        label.addEventListener('dragleave', (e) => {
+          e.preventDefault();
+          label.querySelector('div').classList.remove('border-[#f97316]', 'bg-[#f97316]/5');
+        });
+        label.addEventListener('drop', (e) => {
+          e.preventDefault();
+          label.querySelector('div').classList.remove('border-[#f97316]', 'bg-[#f97316]/5');
+          const rowIdx = parseInt(label.closest('tr')?.querySelector('input[type="checkbox"]')?.getAttribute('onchange')?.match(/toggleFormDataRow\((\d+)/)?.[1] ?? '-1');
+          if (rowIdx < 0) return;
+          const row = formDataRows[rowIdx];
+          const files = Array.from(e.dataTransfer.files);
+          const filtered = row.accept ? files.filter(f => {
+            const acceptList = row.accept.split(',').map(s => s.trim());
+            return acceptList.some(a => f.type === a || f.name.endsWith('.' + a.replace(/\*/g, '')));
+          }) : files;
+          if (filtered.length === 0) {
+            showToast('No matching files for: ' + (row.accept || 'any'), 'error');
+            return;
+          }
+          if (row.multiple) {
+            row.fileObjects = [...(row.fileObjects || []), ...filtered];
+          } else {
+            row.fileObjects = [filtered[0]];
+            row.fileInfo = { name: filtered[0].name, size: filtered[0].size, type: filtered[0].type };
+          }
+          renderFormDataTable();
+          setBodyType('form-data');
+        });
+      });
     }
 
     function renderUrlEncodedTable() {
@@ -2451,8 +2576,8 @@
           } else if (activeBodyType === 'form-data') {
             const formData = new FormData();
             formDataRows.filter(r => r.enabled && r.key).forEach(r => {
-              if (r.type === 'file' && r.fileObject) {
-                formData.append(r.key, r.fileObject);
+              if ((r.type === 'file' || r.type === 'file-array') && r.fileObjects?.length) {
+                r.fileObjects.forEach(f => formData.append(r.key, f));
               } else {
                 formData.append(r.key, r.value || 'test');
               }

@@ -23,6 +23,12 @@ try {
 export const VERSION: string = _version;
 
 export { z } from "zod";
+// AOT / Sucrose
+export {
+	analyzeHandler,
+	analyzeHandlerChain,
+} from "./aot/sucrose";
+export type { HandlerAnalysis } from "./aot/sucrose";
 // AI
 export {
 	AICache,
@@ -84,6 +90,7 @@ export { Cache, type CacheDriver, MemoryCacheDriver } from "./cache";
 export {
 	type ClassProvider,
 	Container,
+	Dependencies,
 	type FactoryProvider,
 	type Provider,
 	type Scope,
@@ -158,6 +165,7 @@ export {
 export {
 	decrypt,
 	encrypt,
+	fastHash,
 	hash,
 	hashVerify,
 	hmac,

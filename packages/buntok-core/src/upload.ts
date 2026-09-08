@@ -244,6 +244,8 @@ export type MimeType = keyof typeof MAGIC_BYTES;
 export interface UploadFieldConfig {
 	/** Whether this file field is required. Defaults to false. */
 	required?: boolean;
+	/** Whether this field accepts multiple files. Defaults to false. */
+	multiple?: boolean;
 	/** Max file size in bytes for this field */
 	maxFileSize?: number;
 	/** Allowed MIME types for this field */
@@ -315,21 +317,33 @@ export interface ParseUploadResult<
 	 * When `outputFormat` is set, the field narrows to `ImageUploadedFile`
 	 * with `width`, `height`, `format`, and optional `originalType`/`originalExt`.
 	 *
+	 * When `multiple: true`, the field returns an array `T[]`.
+	 * When `required: true`, the field is non-nullable.
+	 *
 	 * @example
 	 * result.fields.name      // string (text field)
 	 * result.fields.avatar    // ImageUploadedFile (outputFormat: "webp")
 	 * result.fields.document  // UploadedFile (no outputFormat)
+	 * result.fields.photos    // UploadedFile[] (multiple: true)
 	 */
 	fields: {
 		[K in keyof F]: F[K] extends { outputFormat: any }
-			? F[K] extends { required: true }
-				? ImageUploadedFile
-				: ImageUploadedFile | undefined
-			: F[K] extends { required: true }
-				? UploadedFile
-				: F[K] extends { maxFileSize: any } | { allowedMimeTypes: any }
-					? UploadedFile | undefined
-					: UploadedFile | UploadedFile[] | undefined;
+			? F[K] extends { multiple: true }
+				? F[K] extends { required: true }
+					? ImageUploadedFile[]
+					: ImageUploadedFile[] | undefined
+				: F[K] extends { required: true }
+					? ImageUploadedFile
+					: ImageUploadedFile | undefined
+			: F[K] extends { multiple: true }
+				? F[K] extends { required: true }
+					? UploadedFile[]
+					: UploadedFile[] | undefined
+				: F[K] extends { required: true }
+					? UploadedFile
+					: F[K] extends { maxFileSize: any } | { allowedMimeTypes: any }
+						? UploadedFile | undefined
+						: UploadedFile | UploadedFile[] | undefined;
 	} & Record<string, string>;
 	/** Array of files that were successfully uploaded/processed (all files, flattened) */
 	files: (UploadedFile | ImageUploadedFile)[];
@@ -601,6 +615,18 @@ export async function handleUploads<
 			}
 		} else {
 			textFields[key] = value.toString();
+		}
+	}
+
+	// Post-process: fields with multiple:true must always be arrays
+	if (fieldWhitelist) {
+		for (const [fieldName, config] of Object.entries(fieldWhitelist)) {
+			if (config.multiple && fieldName in fileMap) {
+				const val = fileMap[fieldName];
+				if (!Array.isArray(val)) {
+					fileMap[fieldName] = [val as UploadedFile | ImageUploadedFile];
+				}
+			}
 		}
 	}
 

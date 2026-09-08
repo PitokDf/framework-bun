@@ -1,5 +1,4 @@
 import { Trie as NativeTrie } from "../ffi";
-import { NodeType, RouterNode } from "./node";
 
 export interface LookupResult {
 	// biome-ignore lint/suspicious/noExplicitAny: generic router handler
@@ -9,14 +8,19 @@ export interface LookupResult {
 
 const EMPTY_PARAMS: Record<string, string> = Object.freeze({});
 
-// Simple fixed-size LRU cache for trie lookup results on dynamic routes.
+// Ring buffer LRU cache for trie lookup results on dynamic routes.
 // Avoids re-walking the trie for the same (method, pathname) pair -
 // common in real apps where the same resource is hit repeatedly.
+// Uses O(1) circular buffer instead of O(n) Array.shift().
 const CACHE_MAX = 2048;
 
 class LookupCache {
 	private map = new Map<string, Map<string, LookupResult>>();
-	private queue: Array<{ method: string; path: string }> = [];
+	private buffer: Array<{ method: string; path: string } | undefined> =
+		new Array(CACHE_MAX);
+	private head = 0;
+	private tail = 0;
+	private count = 0;
 
 	get(method: string, path: string): LookupResult | undefined {
 		const methodMap = this.map.get(method);
@@ -36,22 +40,26 @@ class LookupCache {
 			return;
 		}
 
-		if (this.queue.length >= CACHE_MAX) {
-			// Evict the oldest entry
-			const oldest = this.queue.shift();
+		if (this.count >= CACHE_MAX) {
+			// Evict the oldest entry (O(1) - no array re-indexing)
+			const oldest = this.buffer[this.head];
 			if (oldest) {
 				const oldMethodMap = this.map.get(oldest.method);
 				if (oldMethodMap) oldMethodMap.delete(oldest.path);
 			}
+			this.buffer[this.head] = undefined;
+			this.head = (this.head + 1) % CACHE_MAX;
+		} else {
+			this.count++;
 		}
 
 		methodMap.set(path, val);
-		this.queue.push({ method, path });
+		this.buffer[this.tail] = { method, path };
+		this.tail = (this.tail + 1) % CACHE_MAX;
 	}
 }
 
 export class Router {
-	private root: RouterNode = new RouterNode("/", NodeType.STATIC);
 	// biome-ignore lint/suspicious/noExplicitAny: generic router handler
 	public staticRoutes: Map<string, Map<string, (...args: any[]) => any>> =
 		new Map();
@@ -69,24 +77,6 @@ export class Router {
 		this.nativeTrie = new NativeTrie();
 	}
 
-	private static splitPath(path: string): string[] {
-		const segments: string[] = [];
-		let start = 0;
-		if (path[0] === "/") start = 1;
-		for (let i = start; i < path.length; i++) {
-			if (path[i] === "/") {
-				if (i > start) {
-					segments.push(path.substring(start, i));
-				}
-				start = i + 1;
-			}
-		}
-		if (start < path.length) {
-			segments.push(path.substring(start));
-		}
-		return segments;
-	}
-
 	public insert(
 		method: string,
 		path: string,
@@ -96,8 +86,8 @@ export class Router {
 		if (path === "") return;
 
 		const upperMethod = method.toUpperCase();
-		const segments = Router.splitPath(path);
-		const hasParams = segments.some((s) => s[0] === ":" || s[0] === "*");
+		const hasParams =
+			path.includes(":") || path.includes("*");
 
 		// Fast path: store static routes in flat map
 		if (!hasParams) {
@@ -107,73 +97,14 @@ export class Router {
 				this.staticRoutes.set(path, methodMap);
 			}
 			methodMap.set(upperMethod, handler);
-		}
-
-		// Register in trie for dynamic routes
-		if (hasParams) {
-			const handlerId = this.nextHandlerId++;
-			this.handlerRegistry.set(handlerId, handler);
-			// Use composite key: "METHOD:/path/:param"
-			const compositeKey = `${upperMethod}:${path}`;
-			this.nativeTrie.insert(compositeKey, handlerId);
-		}
-
-		// Also insert into JS trie for fallback / non-native
-		let currentNode = this.root;
-
-		if (segments.length === 0) {
-			this.root.handlers.set(upperMethod, handler);
 			return;
 		}
 
-		for (const segment of segments) {
-			let nodeType = NodeType.STATIC;
-			let paramName: string | null = null;
-			let cleanSegment = segment;
-
-			if (segment.startsWith(":")) {
-				nodeType = NodeType.PARAM;
-				paramName = segment.slice(1);
-				cleanSegment = ":";
-			} else if (segment.startsWith("*")) {
-				nodeType = NodeType.CATCHALL;
-				paramName = segment.slice(1);
-				cleanSegment = "*";
-			} else {
-				nodeType = NodeType.STATIC;
-				cleanSegment = segment;
-			}
-
-			let childNode: RouterNode | undefined;
-
-			if (nodeType === NodeType.STATIC) {
-				childNode = currentNode.staticChildren.get(cleanSegment);
-			} else if (nodeType === NodeType.PARAM) {
-				childNode = currentNode.paramChild ?? undefined;
-			} else {
-				childNode = currentNode.catchAllChild ?? undefined;
-			}
-
-			if (!childNode) {
-				childNode = new RouterNode(cleanSegment, nodeType);
-
-				if (nodeType === NodeType.PARAM) {
-					childNode.paramName = paramName;
-					currentNode.paramChild = childNode;
-				} else if (nodeType === NodeType.CATCHALL) {
-					childNode.paramName = paramName;
-					currentNode.catchAllChild = childNode;
-				} else {
-					currentNode.staticChildren.set(cleanSegment, childNode);
-				}
-			}
-
-			currentNode = childNode;
-
-			if (nodeType === NodeType.CATCHALL) break;
-		}
-
-		currentNode.handlers.set(upperMethod, handler);
+		// Register in trie for dynamic routes
+		const handlerId = this.nextHandlerId++;
+		this.handlerRegistry.set(handlerId, handler);
+		const compositeKey = `${upperMethod}:${path}`;
+		this.nativeTrie.insert(compositeKey, handlerId);
 	}
 
 	public find(method: string, path: string): LookupResult {
@@ -192,75 +123,21 @@ export class Router {
 		if (cached) return cached;
 
 		// Trie lookup for dynamic routes
-		{
-			const compositeKey = `${method}:${path}`;
-			const nativeResult = this.nativeTrie.find(compositeKey);
+		const compositeKey = `${method}:${path}`;
+		const nativeResult = this.nativeTrie.find(compositeKey);
 
-			if (nativeResult.handlerId !== -1) {
-				const handler = this.handlerRegistry.get(nativeResult.handlerId);
-				if (handler) {
-					const result: LookupResult = {
-						handler,
-						params: nativeResult.params,
-					};
-					this.lookupCache.set(method, path, result);
-					return result;
-				}
+		if (nativeResult.handlerId !== -1) {
+			const handler = this.handlerRegistry.get(nativeResult.handlerId);
+			if (handler) {
+				const result: LookupResult = {
+					handler,
+					params: nativeResult.params,
+				};
+				this.lookupCache.set(method, path, result);
+				return result;
 			}
 		}
 
-		// Slow path: JS trie traversal for param/catchall routes
-		const result: LookupResult = {
-			handler: null,
-			params: null as unknown as Record<string, string>,
-		};
-		let currentNode = this.root;
-
-		let start = path[0] === "/" ? 1 : 0;
-		if (start >= path.length) {
-			result.handler = this.root.handlers.get(method) || null;
-			if (result.handler) result.params = EMPTY_PARAMS;
-			else result.params = EMPTY_PARAMS;
-			return result;
-		}
-
-		while (start < path.length) {
-			let end = path.indexOf("/", start);
-			if (end === -1) end = path.length;
-
-			if (end > start) {
-				const segment = path.substring(start, end);
-				let nextNode = currentNode.staticChildren.get(segment);
-
-				if (!nextNode) {
-					if (currentNode.paramChild) {
-						nextNode = currentNode.paramChild;
-						if (!result.params) result.params = {};
-						// biome-ignore lint/style/noNonNullAssertion: Known to exist due to node structure
-						result.params[nextNode.paramName!] = segment;
-					} else if (currentNode.catchAllChild) {
-						nextNode = currentNode.catchAllChild;
-						if (!result.params) result.params = {};
-						result.params["*"] = path.substring(start);
-						currentNode = nextNode;
-						break;
-					} else {
-						return { handler: null, params: EMPTY_PARAMS };
-					}
-				}
-				currentNode = nextNode;
-			}
-			start = end + 1;
-		}
-
-		result.handler = currentNode.handlers.get(method) || null;
-		if (!result.params) result.params = EMPTY_PARAMS;
-
-		// Cache the result for future identical lookups
-		if (result.handler) {
-			this.lookupCache.set(method, path, result);
-		}
-
-		return result;
+		return { handler: null, params: EMPTY_PARAMS };
 	}
 }

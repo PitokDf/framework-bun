@@ -30,32 +30,41 @@ export default function IoCPage() {
         Quick Start
       </Heading>
       <CodeBlock
-        code={`import { Container } from "@buntok/core";
+        code={`import { App, Container, Dependencies, Controller, Get } from "@buntok/core";
 
-// 1. Define services (plain classes — no decorator needed)
+// 1. Define services with @Dependencies
 class UserRepository {
   findAll() { return [{ id: 1, name: "John" }]; }
 }
 
+@Dependencies(UserRepository)
 class UserService {
   constructor(private repo: UserRepository) {}
   getUsers() { return this.repo.findAll(); }
 }
 
-// 2. Register and resolve
-const container = new Container();
-container.register(UserRepository, { useClass: UserRepository });
-container.register(UserService, {
-  useFactory: (c) => new UserService(c.resolve(UserRepository)),
-});
+// 2. Controller with @Dependencies
+@Dependencies(UserService)
+@Controller("/users")
+class UserController {
+  constructor(private service: UserService) {}
+  @Get("/")
+  list() { return this.service.getUsers(); }
+}
 
-const userService = container.resolve(UserService);
-const users = userService.getUsers();`}
+// 3. One line resolves the entire tree
+const app = new App();
+const container = new Container();
+container.scan([UserController]);  // auto-registers all 3
+app.setContainer(container);
+app.registerController(UserController);
+app.listen(1212);`}
       />
 
       <Callout type="info">
-        <code>container.register()</code> returns <code>this</code>, so you can
-        chain multiple registrations:
+        <code>container.scan()</code> reads tokens from <code>@Dependencies()</code> and registers
+        factory providers bottom-up. Controllers without <code>@Dependencies</code> don't need
+        to be in <code>scan()</code> — <code>registerController()</code> creates them directly.
       </Callout>
 
       {/* ──────────────── PROVIDERS ──────────────── */}
@@ -143,6 +152,68 @@ const url = container.resolve<string>("DATABASE_URL");`}
 });`}
       />
 
+      {/* ──────────────── @Dependencies DECORATOR ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        @Dependencies Decorator
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Declare constructor dependencies explicitly for <code>container.scan()</code>.
+        Works with TC39 decorators — no <code>emitDecoratorMetadata</code> or <code>reflect-metadata</code> needed.
+      </p>
+      <CodeBlock
+        code={`import { Dependencies } from "@buntok/core";
+
+@Dependencies(UserRepository)
+class UserService {
+  constructor(private repo: UserRepository) {}
+}
+
+@Dependencies(UserService, Logger)
+class UserController {
+  constructor(private service: UserService, private logger: Logger) {}
+}
+
+// Empty @Dependencies = no constructor params
+@Dependencies()
+class HealthController {
+  health() { return { ok: true }; }
+}`}
+      />
+
+      {/* ──────────────── AUTO-SCAN ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Auto-scan (Recommended)
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>container.scan()</code> to auto-resolve the full dependency tree.
+        Only classes with <code>@Dependencies</code> need to be passed to <code>scan()</code>.
+      </p>
+      <CodeBlock
+        code={`const container = new Container();
+
+// scan() auto-registers all dependencies transitively
+container.scan([OrderController]);
+// Resolves: OrderController → OrderService → OrderRepo + PaymentGateway
+
+app.setContainer(container);
+
+// Controllers WITHOUT @Dependencies don't need scan()
+// registerController() creates them directly
+app.registerController(OrderController);
+app.registerController(HealthController);  // no DI, works fine`}
+      />
+
+      <Callout type="info">
+        <code>container.scan()</code> is synchronous. Only controllers with <code>@Dependencies()</code> need
+        to be in the scan list. Controllers without constructor dependencies are created directly by <code>registerController()</code>.
+      </Callout>
+
       {/* ──────────────── SCOPES ──────────────── */}
       <Heading
         level={2}
@@ -223,6 +294,10 @@ container.register(RequestLogger, { useClass: RequestLogger, scope: "transient" 
                 "Auto-register class by constructor",
               ],
               [
+                "container.scan(classes[], scope?)",
+                "Auto-scan classes via @Dependencies() and register with dependency resolution",
+              ],
+              [
                 "container.resolve<T>(token)",
                 "Resolve and return instance (throws if not found)",
               ],
@@ -271,7 +346,7 @@ container.register(RequestLogger, { useClass: RequestLogger, scope: "transient" 
         Full Example: Controller with DI
       </Heading>
       <CodeBlock
-        code={`import { App, Container } from "@buntok/core";
+        code={`import { App, Container, Dependencies, Controller, Get } from "@buntok/core";
 
 class UserRepository {
   async findAll() {
@@ -282,34 +357,29 @@ class UserRepository {
   }
 }
 
+@Dependencies(UserRepository)
 class UserService {
   constructor(private repo: UserRepository) {}
   getUsers() { return this.repo.findAll(); }
   getUser(id: string) { return this.repo.findById(id); }
 }
 
-// Register in app — useFactory untuk constructor injection
-const app = new App();
-const container = new Container();
-container.register(UserRepository, { useClass: UserRepository });
-container.register(UserService, {
-  useFactory: (c) => new UserService(c.resolve(UserRepository)),
-});
-app.setContainer(container);
-
-// Controller — inject via factory, bukan field decorator
+@Dependencies(UserService)
+@Controller("/users")
 class UserController {
-  constructor(private userService: UserService) {}
+  constructor(private service: UserService) {}
   async list(ctx: Context) {
-    const users = await this.userService.getUsers();
+    const users = await this.service.getUsers();
     return ctx.json(users);
   }
 }
-// Daftarkan controller dengan factory agar dapat service
-container.register(UserController, {
-  useFactory: (c) => new UserController(c.resolve(UserService)),
-});
-app.registerController(container.resolve(UserController));
+
+// One line resolves everything
+const app = new App();
+const container = new Container();
+container.scan([UserController]);  // auto-registers UserRepository → UserService → UserController
+app.setContainer(container);
+app.registerController(UserController);
 app.listen(1212);`}
       />
     </div>

@@ -34,15 +34,7 @@ export default function ApiDocsPage() {
         level={3}
         className="text-xl font-semibold mt-6 mb-2 text-text-primary"
       >
-        1. Generate swagger.json
-      </Heading>
-      <CodeBlock code={`buntok make:docs`} />
-
-      <Heading
-        level={3}
-        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
-      >
-        2. Enable docs in your app
+        1. Enable docs in your app
       </Heading>
       <CodeBlock
         code={`import { App } from "@buntok/core";
@@ -58,8 +50,13 @@ app.apiDocs({
 });
 
 app.listen(1212);
-// Visit http://localhost:1212/docs`}
+// Visit http://localhost:1212/docs
+// swagger.json is auto-generated in the background on startup`}
       />
+
+      <Callout type="info">
+        <code>swagger.json</code> is automatically generated in the background when the server starts. No need to run <code>buntok make:docs</code> manually. The generation runs via <code>setImmediate()</code> and does not affect API response time.
+      </Callout>
 
       {/* ──────────────── OPTIONS ──────────────── */}
       <Heading
@@ -285,8 +282,8 @@ app.apiDocs({
 
 app.listen(1212);
 
-// Run: buntok make:docs
-// Visit: http://localhost:1212/docs`}
+// Visit: http://localhost:1212/docs
+// swagger.json is auto-generated in the background on startup`}
       />
 
       {/* ──────────────── PRODUCTION ──────────────── */}
@@ -343,10 +340,10 @@ app.listen(1212);
       </ul>
 
       <Callout type="info">
-        The <code>buntok make:docs</code> command imports your{" "}
-        <code>src/index.ts</code> and reads the exported <code>app</code>{" "}
-        instance. Make sure you export it:{" "}
-        <code>export const app = new App()</code>.
+        <code>swagger.json</code> is auto-generated when you call{" "}
+        <code>app.listen()</code>. For manual regeneration (e.g., CI/CD), run{" "}
+        <code>buntok make:docs</code> — it imports your{" "}
+        <code>src/index.ts</code> and generates the file.
       </Callout>
     </div>
   );

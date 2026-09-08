@@ -33,6 +33,27 @@ export function hash(
 	return hasher.digest("hex");
 }
 
+/**
+ * Fast non-cryptographic hash using Bun's native wyhash.
+ * Intended for cache keys, deduplication, hash maps — NOT for security.
+ * Much faster than SHA/MD5 for non-security use cases.
+ *
+ * @example
+ * ```ts
+ * const cacheKey = fastHash("user:123");
+ * const dedupKey = fastHash({ endpoint: "/api/users", params: { id: 1 } });
+ * ```
+ */
+export function fastHash(
+	data: string | ArrayBuffer | Uint8Array | object,
+): string {
+	const input =
+		typeof data === "object" && !(data instanceof ArrayBuffer) && !(data instanceof Uint8Array)
+			? JSON.stringify(data)
+			: data;
+	return Bun.hash(toBuffer(input as string | ArrayBuffer | Uint8Array)).toString(16);
+}
+
 export function sha256(data: string | ArrayBuffer | Uint8Array): string {
 	return hash(data, "SHA-256");
 }

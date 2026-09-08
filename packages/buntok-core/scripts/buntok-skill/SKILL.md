@@ -52,14 +52,14 @@ bunx buntok init                 # interactive setup — generates all boilerpla
 │   ├── services/             # buntok create <entity> --service
 │   └── repositories/         # buntok create <entity> --repo
 ├── server.ts                 # build entry point — app.listen(env.PORT)
-├── public/docs/swagger.json  # buntok make:docs
+├── public/docs/swagger.json  # auto-generated on app.listen()
 ├── .env / .env.example
 ├── tsconfig.json / biome.json / vercel.json? / Dockerfile? / .dockerignore? / .gitignore
 ├── package.json
 └── .buntok/                  # buntok build output (server.js)
 ```
 
-> `src/index.ts` must `export const app` — required by `buntok make:docs` (loads it with `BUNTOK_DOCS_BUILD=1`). `server.ts` is the build entry point for all modes (Vercel, Docker, local). It calls `app.listen(env.PORT)` which internally uses `Bun.serve()`.
+> `src/index.ts` must `export const app` — used by `buntok make:docs` (optional manual regeneration). `server.ts` is the build entry point for all modes (Vercel, Docker, local). It calls `app.listen(env.PORT)` which internally uses `Bun.serve()`.
 
 ### 3. Generate code
 
@@ -81,7 +81,7 @@ buntok create user --controller         # only controller
 buntok build              # production bundle → .buntok/server.js
 buntok db migrate         # migrate | seed | reset | generate | studio | status
 buntok db seed
-buntok make:docs          # generates public/docs/swagger.json (no args)
+buntok make:docs          # optional: manual swagger.json regeneration
 bun run dev               # after init: bun --watch server.ts
 ```
 
@@ -93,7 +93,7 @@ bun run dev               # after init: bun --watch server.ts
 | `buntok build` | — | Build to `.buntok/` |
 | `buntok create <entity>` | `--repo --service --controller` | Generate layered files |
 | `buntok db <cmd>` | `migrate, seed, reset, generate, studio, status` | ORM delegation |
-| `buntok make:docs` | — | Generate OpenAPI `swagger.json` |
+| `buntok make:docs` | — | Manual swagger.json regeneration (auto-generated on `app.listen()` by default) |
 
 ---
 
@@ -142,6 +142,7 @@ const app = new App();
 | `app.all` | `(path, ...handlers)` | Register all methods (GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS) |
 | `app.query` | `(path, ...handlers)` | Register QUERY (RFC 10008) |
 | `app.use` | `(middleware)` | Add global middleware |
+| `app.cors` | `(options?)` | Configure CORS — ensures CORS headers on ALL responses including errors (4xx, 5xx) |
 | `app.group` | `(prefix)` | Create route group — returns `RouterGroup` with `use()`, `group()`, same HTTP verbs (inherits group middlewares) |
 | `app.static` | `(routePath, directory, options?)` | Serve static files — `StaticOptions {maxAge?, cacheControl?, etag?}`; traversal-safe, `index.html` fallback, ETag `304` |
 | `app.ws` | `(path, handler)` | Register WebSocket endpoint — exact path only (no params), `WSHandler {open?, message?, close?, drain?, authenticate?}` |
@@ -208,7 +209,7 @@ app.enable("x-powered-by");   // Re-enable
 
 ### app.apiDocs()
 
-Register a built-in API docs UI. No extra packages needed.
+Register a built-in API docs UI. **swagger.json is auto-generated in the background on server startup** — no need to run `buntok make:docs` manually.
 
 ```ts
 app.apiDocs({
@@ -234,11 +235,13 @@ Open `http://localhost:1212/docs` to see the auto-generated API docs with live A
 | `description` | `string` | `""` | API description |
 | `safeOnProduction` | `boolean` | `false` | When `true` + `NODE_ENV=production`, docs return 404 |
 
-Generate `swagger.json` separately (no args — must `export const app` from `src/index.ts`):
+**Auto-generation:** When `app.apiDocs()` is called, `swagger.json` is generated in the background during `app.listen()`. The generation runs via `setImmediate()` — it does NOT block server startup or affect API response time. The generated document is cached in memory for instant serving.
+
+**Manual regeneration** (optional — for CI/CD or external tools):
 
 ```sh
 bunx buntok make:docs
-# → public/docs/swagger.json (loads src/index.ts with BUNTOK_DOCS_BUILD=1, via zod-to-openapi)
+# → public/docs/swagger.json
 ```
 
 Docs routes (`/docs`, `/docs/swagger.json`, `/docs/*` assets, `/docs/index.html`) are registered directly on router and **do not** appear in `openApiDocs` / `swagger.json`.
@@ -548,16 +551,17 @@ api.use(rateLimiter({ max: 100, windowMs: 60_000 }));
 ### CORS
 
 ```ts
-import { cors } from "@buntok/core";
-
-app.use(cors({
+// Recommended — ensures CORS headers on ALL responses including errors (4xx, 5xx)
+app.cors({
   origin: ["http://localhost:1212", "https://myapp.com"], // or string | (origin)=>boolean
   methods: ["GET", "POST", "PUT", "DELETE"],
   headers: ["Content-Type", "Authorization"],
   credentials: true,
-}));
+});
 // Defaults: methods GET,POST,PUT,DELETE,PATCH,OPTIONS; headers Content-Type,Authorization,x-api-key
 ```
+
+> **⚠️ Use `app.cors()` instead of `app.use(cors(...))`.** The `app.cors()` method ensures CORS headers are applied to **all** responses, including error responses (400, 422, 500, 404, etc.) generated by the framework. Using `app.use(cors(...))` only applies CORS headers to successful responses — thrown errors bypass the middleware chain and return without CORS headers.
 
 ### Compress
 
@@ -696,17 +700,43 @@ app.get("/users/:id", zValidator("params", idSchema), (ctx) => {
 | Content-Type | Schema receives |
 |--------------|-----------------|
 | `application/json` (default) | parsed JSON object (`ctx.body()`) |
-| `multipart/form-data` | `Record<string, string \| File>` from `ctx.formData()` — use `z.file()` (Zod v4+) for files |
+| `multipart/form-data` | `Record<string, string \| File>` from `ctx.formData()` — use `z.file()` (Zod v4+) for files, `z.array(z.file())` for multiple files per key |
 | `application/x-www-form-urlencoded` | `Record<string, string>` via `URLSearchParams` |
 | `text/plain` | `string` (raw body) |
 | `application/xml` / `text/xml` | `string` (raw XML) |
 | `application/octet-stream` | `ArrayBuffer` |
 
 ```ts
-// multipart/form-data text fields (pair with uploader() for files)
+// multipart/form-data with text fields (pair with uploader() for file storage)
 app.post("/profile",
   zValidator("body", z.object({ name: z.string() }), { contentType: "multipart/form-data" }),
   (ctx) => ctx.json(ctx.valid("body"))
+);
+
+// multipart/form-data with file validation via z.file()
+app.post("/upload-avatar",
+  zValidator("body", z.object({
+    name: z.string().min(1),
+    avatar: z.file().mime(["image/png", "image/jpeg"]),
+  }), { contentType: "multipart/form-data" }),
+  async (ctx) => {
+    const { name, avatar } = ctx.valid("body");
+    // avatar is a File object — validate size, process, then store
+    return ctx.json({ name, avatarType: avatar.type });
+  }
+);
+
+// multiple files with same key → z.array(z.file())
+app.post("/gallery",
+  zValidator("body", z.object({
+    title: z.string(),
+    images: z.array(z.file()).min(1).max(10),
+  }), { contentType: "multipart/form-data" }),
+  async (ctx) => {
+    const { title, images } = ctx.valid("body");
+    // images is File[]
+    return ctx.json({ title, count: images.length });
+  }
 );
 
 // url-encoded
@@ -1133,12 +1163,72 @@ app.setContainer(container);
 // app.registerController(new UserController(new UserService(new UserRepository())));
 ```
 
+### Auto-scan (recommended)
+
+Use `@Dependencies()` + `container.scan()` to auto-resolve dependencies. No `reflect-metadata` needed.
+
+```ts
+import { App, Container, Dependencies, Controller, Get } from "@buntok/core";
+
+// Layer: Repository (no deps)
+class UserRepository {
+  findAll() { return [{ id: 1 }]; }
+}
+
+// Layer: Service (depends on UserRepository)
+@Dependencies(UserRepository)                      // ← declare deps
+class UserService {
+  constructor(private repo: UserRepository) {}
+  getUsers() { return this.repo.findAll(); }
+}
+
+// Layer: Controller (depends on UserService)
+@Dependencies(UserService)                         // ← declare deps
+@Controller("/users")
+class UserController {
+  constructor(private service: UserService) {}
+  @Get("/")
+  list() { return this.service.getUsers(); }
+}
+
+// One line resolves the entire tree
+const app = new App();
+const container = new Container();
+container.scan([UserController]);                  // ← auto-registers all 3
+app.setContainer(container);
+app.registerController(UserController);
+```
+
+`scan()` reads the tokens from `@Dependencies()` and registers factory providers bottom-up. Works with any depth:
+
+```ts
+@Dependencies(OrderService, PaymentService)
+class OrderController { ... }
+
+@Dependencies(OrderRepo, ExternalAPI)
+class OrderService { ... }
+
+// Controller → Service → Repo + ExternalAPI
+container.scan([OrderController]);
+```
+
+Options:
+
+```ts
+container.scan([UserController]);                    // singletons (default)
+container.scan([UserController], "transient");       // all transient
+container.registerClass(PaymentGateway, "transient"); // override after scan
+```
+
+Circular dependencies are detected and throw with a resolution chain hint.
+
 ### Container API
 
 | Method | Description |
 |--------|-------------|
 | `container.register(token, provider)` | Register provider manually — `Provider = ClassProvider{useClass,scope}\|ValueProvider{useValue}\|FactoryProvider{useFactory,scope}` |
 | `container.registerClass(cls, scope?)` | Auto-register class provider — `Scope = "singleton" (default) \| "transient"` |
+| `container.scan(classes[], scope?)` | Auto-scan classes and register with dependency resolution via `@Dependencies()` |
 | `container.resolve(token)` | Resolve instance (ctor via FactoryProvider) |
 | `container.get(token)` | Resolve or `undefined` |
 | `container.has(token)` | Check if registered |
@@ -1146,6 +1236,30 @@ app.setContainer(container);
 | `container.clear()` | Reset all providers |
 
 `transient` — new instance per `resolve()` (not cached). `singleton` — cached after first `resolve()`.
+
+### registerController behavior
+
+`app.registerController()` auto-detects whether the class needs DI:
+
+```ts
+// Controller with @Dependencies → resolved from container
+@Dependencies(UserService)
+class UserController {
+  constructor(private service: UserService) {}
+}
+
+// Controller without @Dependencies → created directly (new UserController())
+class HealthController {
+  health() { return { ok: true }; }
+}
+
+const container = new Container();
+container.scan([UserController]);  // only controllers with @Dependencies need scan()
+app.setContainer(container);
+
+app.registerController(UserController);     // DI: from container
+app.registerController(HealthController);   // no DI: new HealthController()
+```
 
 ---
 
@@ -1178,6 +1292,7 @@ import {
 | `allowedMimeTypes` | `MimeType[]` | Allowed MIME types (overrides global) — `MimeType = keyof MAGIC_BYTES` |
 | `filename` | `(original, file) => { name, ext }` | Custom filename for this field |
 | `outputFormat` | `"webp"\|"png"\|"jpeg"\|"avif"` | Convert image via `Bun.Image` — return type narrows to `ImageUploadedFile {kind,width,height,format,originalType?,originalExt?}` |
+| `multiple` | `boolean` | Accept multiple files for this field. When `true`, result type narrows to `T[]`. Default: `false` |
 
 ### Magic Bytes Verification
 
@@ -1692,30 +1807,25 @@ const plain = await decrypt(ciphertext, "my-key", iv);
 
 ## Password Helpers
 
-Memory-hard password hashing using **scrypt** (built-in, zero dependencies). Also supports legacy PBKDF2 hashes for backward compatibility.
+Password hashing using **Bun.password** with argon2id — 2-10x faster than `node:crypto` scrypt.
 
 ```ts
 import { hashPassword, verifyPassword } from "@buntok/core";
 
-// Hash a password (returns scrypt format)
+// Hash a password (returns argon2id format via Bun.password)
 const hashed = await hashPassword("mypassword");
-// "scrypt:a1b2c3d4...:e5f6g7h8..."
 
 // Verify a password
 const valid = await verifyPassword("mypassword", hashed);  // true
 const wrong = await verifyPassword("wrong", hashed);        // false
 
-// Also works with legacy PBKDF2 hashes (backward compatible)
-const legacyHash = "100000:salt:hash"; // old format
+// Backward compatible with legacy scrypt and PBKDF2 hashes
+const legacyHash = "scrypt:a1b2c3d4..."; // old format
 await verifyPassword("password", legacyHash); // still works
 ```
 
-**Config:**
-- Algorithm: scrypt (memory-hard)
-- Memory: 16 MB (N=16384)
-- Block size: r=8
-- Key length: 64 bytes
-- Salt: 16 bytes (random)
+**Algorithm:** argon2id via `Bun.password.hash()` (Zig-based, native).
+**Legacy support:** `verifyPassword` auto-detects `scrypt:`, `pbkdf2:`, and `bcrypt:` prefixed hashes.
 
 ---
 
@@ -3623,3 +3733,61 @@ Strips existing `system` roles (prevents injection) and prepends the system prom
 const messages = injectSystemPrompt(userMessages, "You are a helpful assistant.");
 // → [{role:"system", content:"..."}, ...userMessages.filter(m=>m.role!=="system")]
 ```
+
+---
+
+## Performance
+
+Buntok uses several built-in optimizations. No configuration needed — they're automatic.
+
+### What's optimized
+
+| Area | How |
+|------|-----|
+| Router | Removed legacy `RouterNode` trie — uses `JSTrie` (FFI) + static flat map only (-66% memory, -66% insert time) |
+| LRU eviction | Ring buffer instead of `Array.shift()` — O(1) instead of O(n) |
+| Zod validation | `z.compile()` pre-compiles schemas — 2-5x faster than raw `safeParse` |
+| Password hashing | `Bun.password.hash()` with argon2id — 2-10x faster than scrypt |
+| Cache keys | `fastHash()` uses `Bun.hash()` — non-crypto but faster for cache keys |
+| Helmet headers | Pre-computed `Object.entries(headers)` — no per-request allocation |
+| Compress middleware | Brotli module hoisted to creation scope — removed per-request microtask |
+| Audit-log query | `ctx.query ?? Object.fromEntries(new URL(...).searchParams)` — avoids unnecessary URL parsing |
+| X-Powered-By | Single set in `logResponse` only — no double header |
+
+### fastHash — for cache keys
+
+```ts
+import { fastHash } from "@buntok/core";
+
+const key = fastHash({ userId: 123, action: "view" });
+// Uses Bun.hash() — fast but NOT cryptographic
+```
+
+For cryptographic hashes (e.g. API keys, tokens), use `sha256Hex()` or `sha512Hex()` instead.
+
+### Password hashing
+
+```ts
+import { hashPassword, verifyPassword } from "@buntok/core";
+
+const hash = await hashPassword("mySecret");          // Bun.password.hash → argon2id
+const valid = await verifyPassword("mySecret", hash); // auto-detects format
+```
+
+`verifyPassword` is backward-compatible with legacy `scrypt:`, `pbkdf2:`, and `bcrypt:` prefixed hashes. No migration needed.
+
+### Handler analysis (Sucrose)
+
+For advanced use cases (e.g., generating OpenAPI specs from handlers):
+
+```ts
+import { analyzeHandler, analyzeHandlerChain } from "@buntok/core";
+
+const analysis = analyzeHandler(myHandler);
+// { name: "listUsers", paramCount: 2, hasCtx: true, hasBody: false }
+
+const chain = analyzeHandlerChain([authMiddleware, myHandler]);
+// { totalParamCount: 3, ctxIndex: 2, bodyIndex: -1 }
+```
+
+These are synchronous, zero-dependency, and can be used at startup for AOT compilation.

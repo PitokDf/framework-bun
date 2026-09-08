@@ -29,6 +29,45 @@ export type Provider<T = any> =
 	| ValueProvider<T>
 	| FactoryProvider<T>;
 
+// ── Dependency declaration registry (used by @Dependencies) ────────
+const dependenciesRegistry = new Map<Function, any[]>();
+
+/**
+ * Declares constructor dependencies for a class. Used with `container.scan()`
+ * to auto-resolve dependencies without needing `emitDecoratorMetadata`.
+ *
+ * @example
+ * ```ts
+ * import { Dependencies, Controller } from "@buntok/core";
+ *
+ * @Dependencies(UserService, Logger)
+ * @Controller("/users")
+ * class UserController {
+ *   constructor(private service: UserService, private logger: Logger) {}
+ * }
+ * ```
+ */
+export function Dependencies(
+	...tokens: any[]
+	// biome-ignore lint/complexity/noBannedTypes: TC39 decorator signature
+): (target: Function, context: ClassDecoratorContext) => void {
+	return (target: Function, context: ClassDecoratorContext) => {
+		if (context.kind !== "class") {
+			throw new Error("@Dependencies can only decorate classes");
+		}
+		dependenciesRegistry.set(target, tokens);
+	};
+}
+
+/**
+ * Returns the dependency tokens declared via `@Dependencies()`.
+ */
+export function getDependencies(cls: any): any[] {
+	return dependenciesRegistry.get(cls) ?? [];
+}
+
+// ────────────────────────────────────────────────────────────────────
+
 function isClassProvider(p: Provider): p is ClassProvider {
 	return "useClass" in p;
 }
@@ -144,6 +183,72 @@ export class Container {
 	 */
 	hasResolved(token: Token): boolean {
 		return this.singletons.has(token);
+	}
+
+	/**
+	 * Auto-scan classes and register them with dependency resolution.
+	 *
+	 * Reads dependencies declared via `@Dependencies()` decorator
+	 * (from `@buntok/core` decorators).
+	 *
+	 * @example
+	 * ```ts
+	 * import { Dependencies, Controller, Get } from "@buntok/core";
+	 *
+	 * @Dependencies(UserService)
+	 * @Controller("/users")
+	 * class UserController {
+	 *   constructor(private service: UserService) {}
+	 * }
+	 *
+	 * const container = new Container();
+	 * container.scan([UserController]);
+	 * app.setContainer(container);
+	 * ```
+	 */
+	scan(
+		classes: (new (...args: any[]) => any)[],
+		scope: Scope = "singleton",
+	): this {
+		const visited = new Set<Token>();
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic metadata introspection
+		const self = this;
+
+		// biome-ignore lint/suspicious/noExplicitAny: Dynamic metadata introspection
+		function introspect(cls: any): void {
+			if (visited.has(cls)) return;
+			visited.add(cls);
+
+			// Read dependency tokens from @Dependencies() decorator
+			const depTokens: any[] = getDependencies(cls);
+
+			// Register dependencies first (bottom-up)
+			for (const dep of depTokens) {
+				if (dep && typeof dep === "function") {
+					introspect(dep);
+				}
+			}
+
+			// Register this class (skip if already registered manually)
+			if (!self.has(cls)) {
+				self.register(cls, {
+					useFactory: (c) => {
+						const args = depTokens.map(
+							// biome-ignore lint/suspicious/noExplicitAny: Dynamic resolution
+							(dep: any) => (dep ? c.resolve(dep) : undefined),
+						);
+						return new cls(...args);
+					},
+					scope,
+				});
+			}
+		}
+
+		for (const cls of classes) {
+			introspect(cls);
+		}
+
+		return this;
 	}
 
 	/**

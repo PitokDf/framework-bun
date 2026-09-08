@@ -118,9 +118,9 @@ export function auditLog(options: AuditLogOptions = {}) {
 
 			if (logQuery) {
 				try {
-					const url = new URL(ctx.request.url);
-					const query = Object.fromEntries(url.searchParams);
-					if (Object.keys(query).length > 0) {
+					// Reuse ctx.query if available, otherwise parse URL directly
+					const query = ctx.query ?? Object.fromEntries(new URL(ctx.request.url).searchParams);
+					if (query && Object.keys(query).length > 0) {
 						entry.query = query;
 					}
 				} catch {

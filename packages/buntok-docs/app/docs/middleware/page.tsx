@@ -117,7 +117,7 @@ export default function MiddlewarePage() {
         code={`const app = new App();
 
 app.use(logger);
-app.use(cors);
+app.cors({ origin: "*" });  // Use app.cors() for CORS
 app.use(rateLimit);
 
 // All routes inherit these middleware
@@ -374,15 +374,14 @@ app.post("/users",
         CORS with flexible <code>origin</code> handling (string, array, or function). Handles preflight <code>OPTIONS</code> automatically.
       </p>
       <CodeBlock
-        code={`import { cors } from "@buntok/core";
-
-app.use(cors({
+        code={`// Recommended — ensures CORS headers on ALL responses including errors
+app.cors({
   origin: ["http://localhost:3000", "https://myapp.com"],
   // origin: (origin) => origin.endsWith(".myapp.com"),
   methods: ["GET", "POST", "PUT", "DELETE"],
   headers: ["Content-Type", "Authorization"],
   credentials: true,
-}));
+});
 
 // Defaults: methods GET,POST,PUT,DELETE,PATCH,OPTIONS
 // headers Content-Type,Authorization,x-api-key
@@ -390,7 +389,7 @@ app.use(cors({
 `}
       />
       <Callout type="info">
-        <code>origin</code> can be a <code>string</code>, <code>string[]</code>, or <code>(origin: string) =&gt; boolean</code> for dynamic checks.
+        <code>origin</code> can be a <code>string</code>, <code>string[]</code>, or <code>(origin: string) =&gt; boolean</code> for dynamic checks. Use <code>app.cors()</code> instead of <code>app.use(cors(...))</code> to ensure CORS headers are applied to error responses (4xx, 5xx) as well.
       </Callout>
 
       {/* ──────────────── REQUEST ID ──────────────── */}
@@ -690,7 +689,7 @@ const app = new App();
 const secret = process.env.JWT_SECRET!;
 
 // Global middleware
-app.use(cors());
+app.cors();  // Use app.cors() for CORS
 app.use(rateLimiter({ max: 100, windowMs: 60_000 }));
 
 // Public route

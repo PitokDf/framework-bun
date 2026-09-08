@@ -151,6 +151,150 @@ describe("handleUploads", () => {
 		expect(photos[1].ext).toBe(".jpg");
 	});
 
+	it("should wrap single file in array when multiple:true", async () => {
+		const file = createMockFile("photo.png", 1024, "image/png");
+		const ctx = createMockContext("multipart/form-data; boundary=boundary", {
+			photos: file,
+		});
+
+		const result = await handleUploads(ctx, {
+			storage,
+			fields: { photos: { multiple: true } },
+		});
+
+		expect(result.fields.photos).toBeInstanceOf(Array);
+		const photos = result.fields.photos as UploadedFile[];
+		expect(photos).toHaveLength(1);
+		expect(photos[0].ext).toBe(".png");
+	});
+
+	it("should keep array as-is when multiple:true and multiple files", async () => {
+		const file1 = createMockFile("photo1.png", 1024, "image/png");
+		const file2 = createMockFile("photo2.jpg", 2048, "image/jpeg");
+		const ctx = createMockContext("multipart/form-data; boundary=boundary", {
+			photos: file1,
+		});
+		// Add second file
+		const form = new FormData();
+		form.append("photos", file1);
+		form.append("photos", file2);
+		ctx.formData = async () => form;
+
+		const result = await handleUploads(ctx, {
+			storage,
+			fields: { photos: { multiple: true } },
+		});
+
+		expect(result.fields.photos).toBeInstanceOf(Array);
+		const photos = result.fields.photos as UploadedFile[];
+		expect(photos).toHaveLength(2);
+	});
+
+	it("should return single file when multiple:false (default)", async () => {
+		const file = createMockFile("avatar.png", 1024, "image/png");
+		const ctx = createMockContext("multipart/form-data; boundary=boundary", {
+			avatar: file,
+		});
+
+		const result = await handleUploads(ctx, {
+			storage,
+			fields: { avatar: {} },
+		});
+
+		expect(result.fields.avatar).not.toBeInstanceOf(Array);
+		expect((result.fields.avatar as UploadedFile).ext).toBe(".png");
+	});
+
+	it("should wrap outputFormat-converted file in array when multiple:true", async () => {
+		const file = createMockFile("photo.png", 1024, "image/png");
+		const ctx = createMockContext("multipart/form-data; boundary=boundary", {
+			photos: file,
+		});
+
+		const result = await handleUploads(ctx, {
+			storage,
+			fields: {
+				photos: {
+					multiple: true,
+					allowedMimeTypes: ["image/png", "image/jpeg"],
+				},
+			},
+		});
+
+		expect(result.fields.photos).toBeInstanceOf(Array);
+		const photos = result.fields.photos as UploadedFile[];
+		expect(photos).toHaveLength(1);
+		expect(photos[0].type).toBe("image/png");
+	});
+
+	it("should apply custom filename with multiple:true", async () => {
+		const file = createMockFile("photo.png", 1024, "image/png");
+		const ctx = createMockContext("multipart/form-data; boundary=boundary", {
+			photos: file,
+		});
+
+		const result = await handleUploads(ctx, {
+			storage,
+			fields: {
+				photos: {
+					multiple: true,
+					filename: () => ({ name: "custom-gallery", ext: ".png" }),
+				},
+			},
+		});
+
+		expect(result.fields.photos).toBeInstanceOf(Array);
+		const photos = result.fields.photos as UploadedFile[];
+		expect(photos[0].name).toBe("custom-gallery");
+		expect(photos[0].ext).toBe(".png");
+	});
+
+	it("should throw when multiple:true with required:true and no file uploaded", async () => {
+		const ctx = createMockContext("multipart/form-data; boundary=boundary", {
+			name: "Test",
+		});
+
+		try {
+			await handleUploads(ctx, {
+				storage,
+				fields: { photos: { multiple: true, required: true } },
+			});
+			expect(true).toBe(false);
+		} catch (e) {
+			expect(e).toBeInstanceOf(BadRequestError);
+			expect((e as BadRequestError).message).toContain("photos");
+		}
+	});
+
+	it("should enforce allowedMimeTypes on each file when multiple:true", async () => {
+		const pngFile = createMockFile("ok.png", 1024, "image/png");
+		const txtFile = createMockFile("bad.txt", 100, "text/plain");
+		const form = new FormData();
+		form.append("docs", pngFile);
+		form.append("docs", txtFile);
+
+		const ctx = createMockContext("multipart/form-data; boundary=boundary", {
+			docs: pngFile,
+		});
+		ctx.formData = async () => form;
+
+		try {
+			await handleUploads(ctx, {
+				storage,
+				fields: {
+					docs: {
+						multiple: true,
+						allowedMimeTypes: ["image/png", "image/jpeg"],
+					},
+				},
+			});
+			expect(true).toBe(false);
+		} catch (e) {
+			expect(e).toBeInstanceOf(BadRequestError);
+			expect((e as BadRequestError).message).toContain("not allowed");
+		}
+	});
+
 	it("should throw BadRequestError for invalid content-type", async () => {
 		const ctx = createMockContext("application/json", {});
 

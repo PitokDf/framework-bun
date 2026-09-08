@@ -16,19 +16,22 @@ import { TestController } from "./controllers/test.controller";
 import { PaymentController } from "./controllers/payment.controller";
 import { MailerController } from "./controllers/mailer.controller";
 import { UserController } from "./controllers/user.controller";
+import { Container } from "@buntok/core";
 
 export const app = new App();
 app.use(responseTime());
 
 app.use(compress());
 app.apiDocs({
-	path: "/docs",
+	path: "/api-docs",
 	title: "API Documentation",
 	version: "1.0.1",
 	description: "api docs for buntok test",
 });
 
-// app.use(rateLimiter({ max: 10, windowMs: 60_000 }));
+const container = new Container();
+container.scan([TestController]);
+app.setContainer(container);
 
 healthCheck(app, {
 	version: "1.0.0",

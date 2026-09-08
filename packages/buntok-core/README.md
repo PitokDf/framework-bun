@@ -416,15 +416,16 @@ api.get("/users", listUsers);
 ### CORS
 
 ```ts
-import { cors } from "@buntok/core";
-
-app.use(cors({
+// Recommended — ensures CORS headers on ALL responses including errors (4xx, 5xx)
+app.cors({
   origin: ["http://localhost:3000", "https://myapp.com"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   headers: ["Content-Type", "Authorization"],
   credentials: true,
-}));
+});
 ```
+
+> **⚠️ Gunakan `app.cors()` bukan `app.use(cors(...))`.** Method `app.cors()` memastikan CORS headers diterapkan ke **semua** response, termasuk error response (400, 422, 500, 404, dll). Menggunakan `app.use(cors(...))` hanya menerapkan CORS headers ke response sukses — error yang di-throw melewati middleware chain dan return tanpa CORS headers.
 
 | Option | Tipe | Default |
 |--------|------|---------|
@@ -665,16 +666,21 @@ async getProfile(ctx: Context) { ... }
 async secret(ctx: Context) { ... }
 ```
 
-### DI Decorators
+### DI with Container
 
 ```ts
-import { Injectable, Inject } from "@buntok/core";
+import { Container } from "@buntok/core";
 
-@Injectable()                        // singleton (default)
-@Injectable({ scope: "transient" }) // new instance tiap resolve
+const container = new Container();
 
-// Property injection dari container
-@Inject(UserService) private userService: UserService;
+// Auto-scan: resolve all dependencies transitively
+container.scan([UserController]);
+
+// Or manual registration:
+container.registerClass(UserRepository);
+container.register(UserService, {
+  useFactory: (c) => new UserService(c.resolve(UserRepository)),
+});
 ```
 
 ### Contoh Controller Lengkap
@@ -889,38 +895,60 @@ const corsConfig: CorsOptions = {
 
 ## IoC Container
 
-### Setup
+### Auto-scan (recommended)
 
 ```ts
-import { Container, Injectable, Inject } from "@buntok/core";
+import { App, Container, Dependencies, Controller, Get } from "@buntok/core";
 
-@Injectable()
+// Repository — no deps
 class UserRepository {
-  async findAll() { return []; }
+  findAll() { return [{ id: 1 }]; }
 }
 
-@Injectable()
+// Service — declare deps with @Dependencies
+@Dependencies(UserRepository)
 class UserService {
-  @Inject(UserRepository) private repo: UserRepository;
-
-  async getAll() {
-    return this.repo.findAll();
-  }
+  constructor(private repo: UserRepository) {}
+  getAll() { return this.repo.findAll(); }
 }
 
+// Controller — declare deps with @Dependencies
+@Dependencies(UserService)
+@Controller("/users")
+class UserController {
+  constructor(private service: UserService) {}
+  @Get("/")
+  list() { return this.service.getAll(); }
+}
+
+// One line resolves entire dependency tree
+const app = new App();
+const container = new Container();
+container.scan([UserController]);  // auto-registers UserRepository → UserService → UserController
+app.setContainer(container);
+app.registerController(UserController);
+```
+
+No `reflect-metadata` needed. `@Dependencies()` explicitly declares what each class needs.
+
+### Manual registration
+
+```ts
 const container = new Container();
 container.registerClass(UserRepository);
-container.registerClass(UserService);
-
+container.register(UserService, {
+  useFactory: (c) => new UserService(c.resolve(UserRepository)),
+});
 app.setContainer(container);
 ```
 
-### API Container
+### Container API
 
 | Method | Deskripsi |
 |--------|-----------|
 | `container.register(token, provider)` | Register provider manual |
 | `container.registerClass(cls, scope?)` | Auto-register class provider |
+| `container.scan(classes[], scope?)` | Auto-scan classes dan resolve dependencies via `emitDecoratorMetadata` |
 | `container.resolve(token)` | Resolve instance (dengan DI) |
 | `container.get(token)` | Resolve atau `undefined` jika tidak ada |
 | `container.has(token)` | Cek apakah token terdaftar |
@@ -1799,20 +1827,23 @@ const { ciphertext } = await encrypt("data", "key", iv);
 
 ## Password Helpers
 
-Hash & verify password menggunakan PBKDF2-SHA-256.
+Password hashing menggunakan **Bun.password** dengan argon2id — 2-10x lebih cepat dari scrypt.
 
 ```ts
 import { hashPassword, verifyPassword } from "@buntok/core";
 ```
 
 ```ts
-// Hash password
+// Hash password (argon2id via Bun.password)
 const hashed = await hashPassword("mypassword");
-// => "100000:salt:hash" (semua hex)
 
 // Verify password
 const valid = await verifyPassword("mypassword", hashed);  // true
 const invalid = await verifyPassword("wrong", hashed);      // false
+
+// Backward compatible dengan hash lama scrypt/PBKDF2
+const legacyHash = "scrypt:a1b2c3d4...";
+await verifyPassword("password", legacyHash); // masih works
 ```
 
 ---

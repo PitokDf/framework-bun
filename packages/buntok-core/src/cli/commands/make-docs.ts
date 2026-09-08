@@ -1,59 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import {
-	extendZodWithOpenApi,
-	OpenAPIRegistry,
-	OpenApiGeneratorV3,
-} from "@asteasolutions/zod-to-openapi";
-import { z } from "zod";
-
-extendZodWithOpenApi(z);
-
-/**
- * Recursively walk a Zod schema and replace any type that zod-to-openapi
- * cannot handle (e.g. ZodFile from Zod v4) with a safe fallback so that
- * docs generation never crashes on an unsupported schema node.
- */
-// biome-ignore lint/suspicious/noExplicitAny: schema introspection requires any
-function sanitizeSchema(schema: any): any {
-	if (!schema || typeof schema !== "object" || !schema._def) return schema;
-
-	const typeName: string = schema._def?.typeName ?? schema._def?.type ?? "";
-
-	// ZodFile (Zod v4) → OpenAPI string format:binary
-	if (typeName === "ZodFile" || typeName === "file") {
-		return z.string().openapi({ format: "binary", description: "Binary file" });
-	}
-
-	// For all other types, return as-is - zod-to-openapi handles them
-	// Only recurse into containers we know how to handle safely
-	if (typeName === "ZodObject" || typeName === "object") {
-		const shape =
-			typeof schema._def.shape === "function"
-				? schema._def.shape()
-				: (schema._def.shape ?? {});
-		const newShape: Record<string, unknown> = {};
-		for (const [key, value] of Object.entries(shape)) {
-			newShape[key] = sanitizeSchema(value);
-		}
-		return z.object(newShape as Record<string, z.ZodTypeAny>);
-	}
-
-	if (typeName === "ZodArray" || typeName === "array") {
-		const element = schema._def?.element ?? schema._def?.type;
-		return z.array(sanitizeSchema(element));
-	}
-
-	if (typeName === "ZodOptional" || typeName === "optional") {
-		return sanitizeSchema(schema._def.innerType).optional();
-	}
-	if (typeName === "ZodNullable" || typeName === "nullable") {
-		return sanitizeSchema(schema._def.innerType).nullable();
-	}
-
-	// Default: return original schema (don't reconstruct unknown types)
-	return schema;
-}
+import { generateOpenApiDocument } from "../../helpers/openapi";
 
 export async function makeDocsCommand() {
 	console.log("\x1b[36mGenerating OpenAPI documentation...\x1b[0m");
@@ -76,73 +23,20 @@ export async function makeDocsCommand() {
 		}
 
 		const docsConfig = appInstance._apiDocsConfig;
-		const registry = new OpenAPIRegistry();
 
-		let skipped = 0;
-
-		for (const doc of appInstance.openApiDocs) {
-			// Convert express-style params /users/:id → OpenAPI /users/{id}
-			const openapiPath = doc.path.replace(/:([a-zA-Z0-9_]+)/g, "{$1}");
-
-			// biome-ignore lint/suspicious/noExplicitAny: RouteConfig populated dynamically
-			const routeConfig: any = {
-				method: doc.method,
-				path: openapiPath,
-				responses: {},
-			};
-
-			if (doc.request.params || doc.request.query || doc.request.body) {
-				routeConfig.request = {};
-				if (doc.request.params)
-					routeConfig.request.params = sanitizeSchema(doc.request.params);
-				if (doc.request.query)
-					routeConfig.request.query = sanitizeSchema(doc.request.query);
-				if (doc.request.body) {
-					const contentType = doc.request.bodyContentType || "application/json";
-					routeConfig.request.body = {
-						content: {
-							[contentType]: { schema: sanitizeSchema(doc.request.body) },
-						},
-					};
-				}
-			}
-
-			if (doc.responses.length > 0) {
-				for (const res of doc.responses) {
-					routeConfig.responses[res.status.toString()] = {
-						description: res.description,
-						content: {
-							"application/json": { schema: sanitizeSchema(res.schema) },
-						},
-					};
-				}
-			} else {
-				routeConfig.responses["200"] = { description: "Success" };
-			}
-
-			// Per-route error handling: one bad schema should not abort everything
-			try {
-				registry.registerPath(routeConfig);
-			} catch (err) {
-				skipped++;
-				const label = `${doc.method.toUpperCase()} ${doc.path}`;
-				if (err instanceof Error) {
-					console.warn(`\x1b[33m  ⚠ Skipping ${label}: ${err.message}\x1b[0m`);
-				} else {
-					console.warn(`\x1b[33m  ⚠ Skipping ${label}: unknown error\x1b[0m`);
-				}
-			}
-		}
-
-		const generator = new OpenApiGeneratorV3(registry.definitions);
-		const document = generator.generateDocument({
-			openapi: "3.0.0",
-			info: {
-				version: docsConfig?.version ?? "1.0.0",
-				title: docsConfig?.title ?? "Buntok API Documentation",
-				description: docsConfig?.description ?? "Auto-generated OpenAPI docs from Zod schemas",
-			},
+		const document = generateOpenApiDocument({
+			openApiDocs: appInstance.openApiDocs,
+			title: docsConfig?.title,
+			version: docsConfig?.version,
+			description: docsConfig?.description,
 		});
+
+		if (!document) {
+			console.warn(
+				"\x1b[33m  ⚠ No routes with OpenAPI metadata found. Add zValidator() or zResponse() to your routes.\x1b[0m",
+			);
+			process.exit(0);
+		}
 
 		// Output directory: public/docs/
 		const docsDir = resolve(process.cwd(), "public/docs");
@@ -154,14 +48,6 @@ export async function makeDocsCommand() {
 			`\x1b[32m✔ swagger.json generated at public/docs/swagger.json\x1b[0m`,
 		);
 
-		console.log(`\n\x1b[36mNext steps:\x1b[0m`);
-		console.log(
-			`\x1b[90m  Add app.apiDocs() to your src/index.ts:\x1b[0m`,
-		);
-		console.log(
-			`\x1b[90m    app.apiDocs({ path: "/docs", title: "My API" });\x1b[0m`,
-		);
-		console.log();
 		process.exit(0);
 	} catch (error) {
 		console.error("\x1b[31mFailed to generate docs:\x1b[0m");

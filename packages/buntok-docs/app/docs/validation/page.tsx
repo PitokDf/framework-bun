@@ -485,25 +485,44 @@ app.post("/users", zValidator("body", createUserSchema), (ctx) => {
         File Upload Validation
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        For file uploads, <code>zValidator</code> supports <code>multipart/form-data</code> but only validates <strong>text fields</strong>:
+        For file uploads, <code>zValidator</code> supports <code>multipart/form-data</code> with <code>z.file()</code> (Zod v4+) to validate file fields directly:
       </p>
       <CodeBlock
         code={`const schema = z.object({
   name: z.string().min(1),
-  description: z.string().optional(),
+  avatar: z.file().mime(["image/png", "image/jpeg"]),
 });
 
-// Only validates text fields (name, description)
 app.post("/upload", zValidator("body", schema, { 
   contentType: "multipart/form-data" 
-}), (ctx) => {
-  const data = ctx.valid("body"); // { name: "...", description: "..." }
-  return ctx.json(data);
+}), async (ctx) => {
+  const { name, avatar } = ctx.valid("body");
+  // avatar is a File object
+  return ctx.json({ name, type: avatar.type });
 });`}
       />
 
-      <Callout type="warning">
-        For comprehensive file validation (size, magic bytes, MIME types), use <code><a href="/docs/upload" className="text-accent hover:underline">handleUploads()</a></code> instead. <code>zValidator</code> with <code>multipart/form-data</code> only handles text fields.
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Multiple Files</Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>z.array(z.file())</code> to validate multiple files with the same field name:
+      </p>
+      <CodeBlock
+        code={`const schema = z.object({
+  title: z.string(),
+  images: z.array(z.file()).min(1).max(10),
+});
+
+app.post("/gallery", zValidator("body", schema, { 
+  contentType: "multipart/form-data" 
+}), async (ctx) => {
+  const { title, images } = ctx.valid("body");
+  // images is File[]
+  return ctx.json({ title, count: images.length });
+});`}
+      />
+
+      <Callout type="info">
+        <code>zValidator</code> with <code>multipart/form-data</code> validates and parses both text fields and file fields. For comprehensive file validation (size, magic bytes, MIME types) and storage, use <code><a href="/docs/upload" className="text-accent hover:underline">handleUploads()</a></code> or the <code><a href="/docs/upload#uploader-middleware" className="text-accent hover:underline">uploader()</a></code> middleware instead.
       </Callout>
 
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">

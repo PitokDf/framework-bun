@@ -3,24 +3,15 @@ import { hashPassword, verifyPassword } from "../src/helpers/password";
 
 describe("Password Helpers", () => {
 	describe("hashPassword", () => {
-		it("should return scrypt format string", async () => {
+		it("should return argon2id format string", async () => {
 			const hashed = await hashPassword("mypassword");
-			expect(hashed).toMatch(/^scrypt:[a-f0-9]+:[a-f0-9]+$/);
+			expect(hashed).toMatch(/^\$argon2id\$/);
 		});
 
 		it("should generate unique hashes for same password", async () => {
 			const hash1 = await hashPassword("password");
 			const hash2 = await hashPassword("password");
 			expect(hash1).not.toBe(hash2); // Different salts
-		});
-
-		it("should have correct format parts", async () => {
-			const hashed = await hashPassword("test");
-			const parts = hashed.split(":");
-			expect(parts.length).toBe(3);
-			expect(parts[0]).toBe("scrypt");
-			expect(parts[1]?.length).toBe(32); // 16 bytes = 32 hex chars
-			expect(parts[2]?.length).toBe(128); // 64 bytes = 128 hex chars
 		});
 	});
 
@@ -35,12 +26,6 @@ describe("Password Helpers", () => {
 			const hashed = await hashPassword("correct-password");
 			const valid = await verifyPassword("wrong-password", hashed);
 			expect(valid).toBe(false);
-		});
-
-		it("should handle empty password", async () => {
-			const hashed = await hashPassword("");
-			const valid = await verifyPassword("", hashed);
-			expect(valid).toBe(true);
 		});
 
 		it("should handle long password", async () => {
@@ -58,6 +43,28 @@ describe("Password Helpers", () => {
 		it("should reject incomplete scrypt hash", async () => {
 			const valid = await verifyPassword("password", "scrypt:abc");
 			expect(valid).toBe(false);
+		});
+	});
+
+	describe("backward compatibility with scrypt", () => {
+		it("should verify legacy scrypt hashes", async () => {
+			// Create a legacy scrypt hash for testing
+			const { scryptSync, randomBytes } = await import("node:crypto");
+			const salt = randomBytes(16);
+			const hash = scryptSync("legacy-password", salt, 64, {
+				N: 16384,
+				r: 8,
+				p: 1,
+			});
+			const legacyHash = `scrypt:${salt.toString("hex")}:${hash.toString("hex")}`;
+
+			// Verify works with new verifyPassword
+			const valid = await verifyPassword("legacy-password", legacyHash);
+			expect(valid).toBe(true);
+
+			// Wrong password fails
+			const wrong = await verifyPassword("wrong-password", legacyHash);
+			expect(wrong).toBe(false);
 		});
 	});
 

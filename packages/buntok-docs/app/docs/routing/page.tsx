@@ -380,7 +380,7 @@ app.get("/admin/settings", auth, checkRole("admin"), (ctx) => {
       <CodeBlock
         code={`// Runs for every request
 app.use(logger);
-app.use(cors);
+app.cors({ origin: "*" });  // Use app.cors() for CORS
 
 // Execution order:
 // logger → cors → route-level middleware → handler`}

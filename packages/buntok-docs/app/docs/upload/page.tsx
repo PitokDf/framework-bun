@@ -333,6 +333,11 @@ const result = await handleUploads(ctx, {
                 '"webp" | "png" | "jpeg" | "avif"',
                 "Force image conversion on upload",
               ],
+              [
+                "multiple",
+                "boolean",
+                "Accept multiple files for this field (default: false)",
+              ],
             ].map(([field, type, desc]) => (
               <tr
                 key={field}

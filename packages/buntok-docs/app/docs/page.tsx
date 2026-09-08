@@ -729,7 +729,7 @@ app.post("/users", (ctx) => {
               <td className="px-4 py-2">
                 <code>buntok make:docs</code>
               </td>
-              <td className="px-4 py-2">Generate OpenAPI documentation</td>
+              <td className="px-4 py-2">Manual OpenAPI docs regeneration (auto-generated on startup)</td>
             </tr>
           </tbody>
         </table>

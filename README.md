@@ -416,15 +416,16 @@ api.get("/users", listUsers);
 ### CORS
 
 ```ts
-import { cors } from "@buntok/core";
-
-app.use(cors({
+// Recommended — ensures CORS headers on ALL responses including errors
+app.cors({
   origin: ["http://localhost:3000", "https://myapp.com"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   headers: ["Content-Type", "Authorization"],
   credentials: true,
-}));
+});
 ```
+
+> **⚠️ Gunakan `app.cors()` bukan `app.use(cors(...))`.** Method `app.cors()` memastikan CORS headers diterapkan ke **semua** response, termasuk error response (400, 422, 500, 404, dll).
 
 | Option | Tipe | Default |
 |--------|------|---------|

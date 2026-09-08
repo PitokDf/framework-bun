@@ -1,5 +1,6 @@
 import { TestService } from "@/services/test.service";
 import {
+	Dependencies,
 	Context,
 	Get,
 	Controller,
@@ -15,11 +16,17 @@ import {
 	zValidator,
 	type ZodCtx,
 	UseGuard,
+	handleUploads,
 } from "@buntok/core";
+import { LocalDiskStorage } from "buntok";
 
 const scrt = "pitok-123";
+
+@Dependencies(TestService)
 @Controller("/tests")
 export class TestController {
+	constructor(private testService: TestService) { }
+
 	@Post("/get-token")
 	@Use(
 		zValidator(
@@ -56,12 +63,27 @@ export class TestController {
 		});
 	}
 
+	@Get("/get-data")
+	async getData() {
+		return this.testService.upload("Hello World");
+	}
+
 	@Post("/upload")
-	@Use(requireAuth(scrt))
-	@Use(requireRole("admin"))
+	@Use(zValidator("body", { docs: z.array(z.file().mime(["image/png", "image/jpeg", "image/webp"])) }, { contentType: "multipart/form-data" }))
 	async test(ctx: Context) {
-		console.log("ctx.user", ctx.user);
-		return ctx.success({ test: "test" });
+		const result = await handleUploads(ctx, {
+			storage: new LocalDiskStorage("./uploads"),
+			fields: {
+				docs: {
+					multiple: true,
+					maxFileSize: 1024 * 1024 * 5, // 5MB
+					allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
+					outputFormat: "webp",
+				}
+			}
+		})
+
+		return result.fields.docs?.map(file => file.path);
 	}
 
 	@CronJob("*/5 * * * *") // Every 5 minutes

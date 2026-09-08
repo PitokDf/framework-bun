@@ -244,9 +244,8 @@ app.get("/users", (ctx) => {
 ### CORS
 
 ```ts
-import { cors } from "buntok";
-
-app.use(cors({ origin: "*" }));
+// Recommended — ensures CORS headers on ALL responses including errors
+app.cors({ origin: "*" });
 ```
 
 ### Rate Limiter
