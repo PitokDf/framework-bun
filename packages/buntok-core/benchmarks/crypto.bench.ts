@@ -1,9 +1,9 @@
 import { bench, run } from "mitata";
 import {
 	fastHash,
-	sha256Hex,
-	sha512Hex,
-	md5Hex,
+	sha256,
+	sha512,
+	md5,
 } from "../src/helpers/crypto";
 
 // ──── Hashing benchmarks ────
@@ -24,16 +24,16 @@ bench("fastHash - object (Bun.hash)", () => {
 	fastHash(testDataObj);
 });
 
-bench("sha256Hex - string", async () => {
-	await sha256Hex(testData);
+bench("sha256 - string", () => {
+	sha256(testData);
 });
 
-bench("sha512Hex - string", async () => {
-	await sha512Hex(testData);
+bench("sha512 - string", () => {
+	sha512(testData);
 });
 
-bench("md5Hex - string", async () => {
-	await md5Hex(testData);
+bench("md5 - string", async () => {
+	await md5(testData);
 });
 
 // ──── Different data sizes ────
@@ -53,16 +53,16 @@ bench("fastHash - large (100KB)", () => {
 	fastHash(largeData);
 });
 
-bench("sha256Hex - small (4 bytes)", async () => {
-	await sha256Hex(smallData);
+bench("sha256 - small (4 bytes)", () => {
+	sha256(smallData);
 });
 
-bench("sha256Hex - medium (1KB)", async () => {
-	await sha256Hex(mediumData);
+bench("sha256 - medium (1KB)", () => {
+	sha256(mediumData);
 });
 
-bench("sha256Hex - large (100KB)", async () => {
-	await sha256Hex(largeData);
+bench("sha256 - large (100KB)", () => {
+	sha256(largeData);
 });
 
 // ──── Comparison: Bun.hash vs crypto ────

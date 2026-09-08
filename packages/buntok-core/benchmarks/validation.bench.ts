@@ -23,58 +23,6 @@ const postSchema = z.object({
 	}).optional(),
 });
 
-// Test data
-const validUser = {
-	name: "John Doe",
-	email: "john@example.com",
-	age: 30,
-	active: true,
-	tags: ["admin", "user"],
-};
-
-const validPost = {
-	title: "Hello World",
-	content: "This is a test post content.",
-	authorId: 1,
-};
-
-// ──── Compiled vs Raw ────
-bench("zod - raw safeParse (user)", () => {
-	userSchema.safeParse(validUser);
-});
-
-bench("zod - compiled safeParse (user)", () => {
-	const compiled = z.compile(userSchema);
-	compiled.safeParse(validUser);
-});
-
-bench("zod - raw safeParse (post)", () => {
-	postSchema.safeParse(validPost);
-});
-
-bench("zod - compiled safeParse (post)", () => {
-	const compiled = z.compile(postSchema);
-	compiled.safeParse(validPost);
-});
-
-// ──── Validation with invalid data ────
-const invalidUser = {
-	name: "",
-	email: "not-an-email",
-	age: -5,
-	active: "yes", // wrong type
-};
-
-bench("zod - raw safeParse (invalid user)", () => {
-	userSchema.safeParse(invalidUser);
-});
-
-bench("zod - compiled safeParse (invalid user)", () => {
-	const compiled = z.compile(userSchema);
-	compiled.safeParse(invalidUser);
-});
-
-// ──── Complex nested schema ────
 const complexSchema = z.object({
 	user: z.object({
 		id: z.number(),
@@ -91,6 +39,28 @@ const complexSchema = z.object({
 		}),
 	}),
 });
+
+// Test data
+const validUser = {
+	name: "John Doe",
+	email: "john@example.com",
+	age: 30,
+	active: true,
+	tags: ["admin", "user"],
+};
+
+const validPost = {
+	title: "Hello World",
+	content: "This is a test post content.",
+	authorId: 1,
+};
+
+const invalidUser = {
+	name: "",
+	email: "not-an-email",
+	age: -5,
+	active: "yes",
+};
 
 const validComplex = {
 	user: {
@@ -109,13 +79,41 @@ const validComplex = {
 	},
 };
 
+// Pre-compile schemas OUTSIDE benchmark loop
+const compiledUserSchema = z.compile(userSchema);
+const compiledPostSchema = z.compile(postSchema);
+const compiledComplexSchema = z.compile(complexSchema);
+
+bench("zod - raw safeParse (user)", () => {
+	userSchema.safeParse(validUser);
+});
+
+bench("zod - compiled safeParse (user)", () => {
+	compiledUserSchema.safeParse(validUser);
+});
+
+bench("zod - raw safeParse (post)", () => {
+	postSchema.safeParse(validPost);
+});
+
+bench("zod - compiled safeParse (post)", () => {
+	compiledPostSchema.safeParse(validPost);
+});
+
+bench("zod - raw safeParse (invalid user)", () => {
+	userSchema.safeParse(invalidUser);
+});
+
+bench("zod - compiled safeParse (invalid user)", () => {
+	compiledUserSchema.safeParse(invalidUser);
+});
+
 bench("zod - raw safeParse (complex nested)", () => {
 	complexSchema.safeParse(validComplex);
 });
 
 bench("zod - compiled safeParse (complex nested)", () => {
-	const compiled = z.compile(complexSchema);
-	compiled.safeParse(validComplex);
+	compiledComplexSchema.safeParse(validComplex);
 });
 
 run();

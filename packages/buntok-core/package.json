@@ -102,6 +102,7 @@
 	"devDependencies": {
 		"@types/amqplib": "^0.10.8",
 		"@types/bun": "latest",
+		"mitata": "^1.0.34",
 		"reflect-metadata": "^0.2.2",
 		"tsup": "^8.5.1",
 		"typescript": "^5.0.0"

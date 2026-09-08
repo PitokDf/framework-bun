@@ -40,18 +40,18 @@ const testPaths = [
 // JSTrie (JS fallback)
 bench("JSTrie - insert 10 routes", () => {
 	const trie = new JSTrie();
-	for (const route of testRoutes) {
-		trie.insert(route);
+	for (let i = 0; i < testRoutes.length; i++) {
+		trie.insert(testRoutes[i], i);
 	}
 });
 
-bench("JSTrie - match 10 paths", () => {
+bench("JSTrie - find 10 paths", () => {
 	const trie = new JSTrie();
-	for (const route of testRoutes) {
-		trie.insert(route);
+	for (let i = 0; i < testRoutes.length; i++) {
+		trie.insert(testRoutes[i], i);
 	}
 	for (const path of testPaths) {
-		trie.match(path);
+		trie.find(path);
 	}
 });
 
@@ -71,16 +71,16 @@ if (nativeParseQuery) {
 }
 
 bench("JS fallback parseQuery", () => {
-	const { parseQuery } = require("../src/ffi/fallback");
-	parseQuery(testQuery);
+	const { jsParseQuery } = require("../src/ffi/fallback");
+	jsParseQuery(testQuery);
 });
 
 // ──── Cookie parsing ────
 const testCookie = "session=abc123; userId=42; theme=dark; lang=en; token=eyJhbGciOiJIUzI1NiJ9.test";
 
 bench("JS fallback parseCookies", () => {
-	const { parseCookies } = require("../src/ffi/fallback");
-	parseCookies(testCookie);
+	const { jsParseCookies } = require("../src/ffi/fallback");
+	jsParseCookies(testCookie);
 });
 
 run();
