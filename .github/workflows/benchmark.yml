@@ -48,7 +48,7 @@ jobs:
 
   deploy:
     needs: benchmark
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     permissions:
       pages: write
       id-token: write
