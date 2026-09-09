@@ -587,8 +587,8 @@ app.get("/users/:id", async (ctx) => {
           <code>Map</code> for O(1) lookup
         </li>
         <li>
-          <strong>Dynamic routes</strong> - Trie-based with native FFI (with JS
-          fallback)
+          <strong>Dynamic routes</strong> - Trie-based with efficient JS
+          implementation (optimized over native FFI)
         </li>
         <li>
           <strong>LRU cache</strong> - 2048-entry cache avoids re-traversal for

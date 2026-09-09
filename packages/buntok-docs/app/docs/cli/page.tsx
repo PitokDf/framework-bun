@@ -43,7 +43,7 @@ export default function CLIPage() {
         code={`$ bunx buntok init
 
 ✓ Created .agents/skills/buntok-skill/SKILL.md
-✓ Updated package.json (added 5 scripts)
+✓ Updated package.json (added 6 scripts)
 ✓ Created tsconfig.json
 ✓ Installed @biomejs/biome
 ✓ Created biome.json
@@ -143,12 +143,21 @@ bun run build
 bun run start`}
       />
 
+      {/* ──────────────── CHECK ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        check
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Run TypeScript type checking without emitting files.
+      </p>
+      <CodeBlock code={`bunx buntok check`} />
+
       {/* ──────────────── CREATE ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         create
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Generate repository, service, and controller files for an entity.
+        Generate repository, service, controller, and schema files for an entity using a modular structure.
       </p>
       <CodeBlock code={`bunx buntok create <entity>`} />
 
@@ -158,59 +167,105 @@ bun run start`}
       <CodeBlock
         code={`$ bunx buntok create user
 
-✓ Created src/repositories/user.repository.ts
-✓ Created src/services/user.service.ts
-✓ Created src/controllers/user.controller.ts`}
+Creating User entity (orm: prisma)...
+
+✓ Created src/modules/user/user.repository.ts
+✓ Created src/modules/user/user.service.ts
+✓ Created src/modules/user/user.controller.ts
+✓ Created src/modules/user/user.schema.ts
+✓ Created src/modules/user/index.ts`}
       />
 
       <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
         Generated Files
       </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        By default, <code>create</code> generates all files using the modular structure with <code>@Dependencies</code> for auto DI:
+      </p>
+
+      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+        Controller
+      </Heading>
       <CodeBlock
-        code={`// src/controllers/user.controller.ts
-import { Controller, Get, Post, Put, Delete } from "@buntok/core";
-import type { Context } from "@buntok/core";
-import { UserService } from "../services/user.service";
+        code={`// src/modules/user/user.controller.ts
+import { Dependencies, Controller, BaseController } from "@buntok/core";
+import { UserService } from "./user.service";
+import type { User } from "@prisma/client";
 
+@Dependencies(UserService)
 @Controller("/users")
-export class UserController {
-  private service = new UserService();
-
-  @Get("/")
-  async findAll(ctx: Context) {
-    const users = await this.service.findAll();
-    return ctx.json({ data: users });
-  }
-
-  @Get("/:id")
-  async findById(ctx: Context) {
-    const user = await this.service.findById(ctx.params.id);
-    if (!user) {
-      return ctx.json({ message: "User not found" }, 404);
-    }
-    return ctx.json({ data: user });
-  }
-
-  @Post("/")
-  async create(ctx: Context) {
-    const body = await ctx.body();
-    const user = await this.service.create(body);
-    return ctx.json({ data: user }, 201);
-  }
-
-  @Put("/:id")
-  async update(ctx: Context) {
-    const body = await ctx.body();
-    const user = await this.service.update(ctx.params.id, body);
-    return ctx.json({ data: user });
-  }
-
-  @Delete("/:id")
-  async delete(ctx: Context) {
-    await this.service.delete(ctx.params.id);
-    return ctx.json({ message: "User deleted" });
+export class UserController extends BaseController<User> {
+  constructor(private readonly userService: UserService) {
+    super(userService);
   }
 }`}
+      />
+
+      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+        Service
+      </Heading>
+      <CodeBlock
+        code={`// src/modules/user/user.service.ts
+import { Dependencies, BaseService } from "@buntok/core";
+import { UserRepository } from "./user.repository";
+import type { User } from "@prisma/client";
+
+@Dependencies(UserRepository)
+export class UserService extends BaseService<User> {
+  constructor(private readonly userRepository: UserRepository) {
+    super(userRepository);
+  }
+}`}
+      />
+
+      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+        Repository
+      </Heading>
+      <CodeBlock
+        code={`// src/modules/user/user.repository.ts
+import { BaseRepository } from "@buntok/prisma";
+import { prisma } from "@/lib/prisma";
+import type { User, Prisma } from "@prisma/client";
+
+export class UserRepository extends BaseRepository<
+  User,
+  Prisma.UserCreateInput,
+  Prisma.UserUpdateInput
+> {
+  constructor() {
+    super(prisma, "user");
+  }
+}`}
+      />
+
+      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+        Schema (Zod)
+      </Heading>
+      <CodeBlock
+        code={`// src/modules/user/user.schema.ts
+import { z } from "@buntok/core";
+
+export const CreateUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  // TODO: Add more fields
+});
+
+export const UpdateUserSchema = CreateUserSchema.partial();
+
+export type CreateUserInput = z.infer<typeof CreateUserSchema>;
+export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;`}
+      />
+
+      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+        Barrel Export
+      </Heading>
+      <CodeBlock
+        code={`// src/modules/user/index.ts
+export { UserRepository } from "./user.repository";
+export { UserService } from "./user.service";
+export { UserController } from "./user.controller";
+export { CreateUserSchema, UpdateUserSchema } from "./user.schema";
+export type { CreateUserInput, UpdateUserInput } from "./user.schema";`}
       />
 
       <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
@@ -229,9 +284,40 @@ bunx buntok create user --service
 # Generate only the controller
 bunx buntok create user --controller
 
+# Generate only the schema
+bunx buntok create user --schema
+
 # Combined (repo + service)
 bunx buntok create user --repo --service`}
       />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        ORM Selection
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        By default, the CLI auto-detects your ORM from <code>package.json</code> dependencies. You can also specify it explicitly:
+      </p>
+      <CodeBlock
+        code={`# Auto-detect ORM (default)
+bunx buntok create user
+
+# Force Prisma
+bunx buntok create user --prisma
+
+# Force Drizzle
+bunx buntok create user --drizzle
+
+# Force TypeORM
+bunx buntok create user --typeorm`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Dry Run
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Preview what would be generated without writing files:
+      </p>
+      <CodeBlock code={`bunx buntok create user --dry-run`} />
 
       {/* ──────────────── DB ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
@@ -264,6 +350,62 @@ bunx buntok db status`}
         Auto-detects ORM (<code>@buntok/prisma</code>, <code>@buntok/drizzle</code>, <code>@buntok/typeorm</code>) via <code>detectOrm()</code>. <code>migrate [name]</code> accepts optional migration name.
       </Callout>
 
+      {/* ──────────────── MAKE:TEST ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        make:test
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Generate a unit test file for an entity.
+      </p>
+      <CodeBlock code={`bunx buntok make:test <entity>`} />
+      <CodeBlock
+        code={`$ bunx buntok make:test user
+
+✓ Created tests/user.test.ts`}
+      />
+
+      {/* ──────────────── MAKE:TEST:E2E ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        make:test:e2e
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Generate an E2E test file for an entity's API endpoints.
+      </p>
+      <CodeBlock code={`bunx buntok make:test:e2e <entity>`} />
+      <CodeBlock
+        code={`$ bunx buntok make:test:e2e user
+
+✓ Created tests/e2e/user.e2e.test.ts`}
+      />
+
+      {/* ──────────────── MAKE:SEEDER ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        make:seeder
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Generate a database seeder file for an entity. Works with any ORM (Prisma, Drizzle, TypeORM).
+      </p>
+      <CodeBlock code={`bunx buntok make:seeder <entity>`} />
+      <CodeBlock
+        code={`$ bunx buntok make:seeder user
+
+✓ Created src/db/seeders/user.seeder.ts`}
+      />
+
+      {/* ──────────────── MAKE:MIDDLEWARE ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        make:middleware
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Generate a middleware file.
+      </p>
+      <CodeBlock code={`bunx buntok make:middleware <name>`} />
+      <CodeBlock
+        code={`$ bunx buntok make:middleware auth
+
+✓ Created src/middlewares/auth.ts`}
+      />
+
       {/* ──────────────── MAKE:DOCS ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         make:docs
@@ -276,24 +418,40 @@ bunx buntok db status`}
         Use this for CI/CD pipelines or when you need to regenerate <code>swagger.json</code> without starting the server.
       </Callout>
 
+      {/* ──────────────── ALIASES ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        Aliases
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The <code>create</code> command has shorter aliases:
+      </p>
+      <CodeBlock
+        code={`# These are all equivalent:
+bunx buntok create user
+bunx buntok g user
+bunx buntok gen user
+bunx buntok generate user`}
+      />
+
       {/* ──────────────── PROJECT STRUCTURE ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
         Project Structure
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        After using <code>buntok init</code> and <code>buntok create</code>:
+        After using <code>buntok init</code> and <code>buntok create user</code>:
       </p>
       <CodeBlock
         code={`my-app/
 ├── src/
 │   ├── index.ts
 │   ├── env.ts
-│   ├── controllers/
-│   │   └── user.controller.ts
-│   ├── services/
-│   │   └── user.service.ts
-│   └── repositories/
-│       └── user.repository.ts
+│   └── modules/
+│       └── user/
+│           ├── index.ts              # barrel export
+│           ├── user.controller.ts    # @Dependencies + BaseController
+│           ├── user.service.ts       # @Dependencies + BaseService
+│           ├── user.repository.ts    # BaseRepository (Prisma)
+│           └── user.schema.ts        # Zod schemas
 ├── .agents/
 │   └── skills/
 │       └── buntok-skill/
@@ -309,6 +467,35 @@ bunx buntok db status`}
 ├── .dockerignore?       # buntok init (optional)
 └── package.json`}
       />
+
+      <Callout type="info">
+        Each entity lives in its own module directory under <code>src/modules/</code>. The <code>@Dependencies</code> decorator enables automatic dependency injection — just register your controllers with <code>app.registerController()</code> and the container resolves the entire dependency tree.
+      </Callout>
+
+      {/* ──────────────── FLAGS REFERENCE ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        Flags Reference
+      </Heading>
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full border border-border-primary text-sm">
+          <thead>
+            <tr className="bg-bg-secondary">
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Flag</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--repo</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only repository</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--service</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only service</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--controller</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only controller</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--schema</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only Zod schema</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--prisma</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Use Prisma ORM (default: auto-detect)</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--drizzle</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Use Drizzle ORM</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--typeorm</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Use TypeORM</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--dry-run</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Preview files without writing</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

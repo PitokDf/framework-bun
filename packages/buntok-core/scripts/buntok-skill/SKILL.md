@@ -48,11 +48,22 @@ bunx buntok init                 # interactive setup — generates all boilerpla
 ├── src/
 │   ├── index.ts              # export default app (clean — no listen)
 │   ├── env.ts                # App.validateEnv({ PORT, AUTH_STORE, ... })
-│   ├── controllers/          # buntok create <entity> --controller
-│   ├── services/             # buntok create <entity> --service
-│   └── repositories/         # buntok create <entity> --repo
+│   ├── modules/              # feature-based modules
+│   │   └── <entity>/         # buntok create <entity>
+│   │       ├── <entity>.controller.ts
+│   │       ├── <entity>.service.ts
+│   │       ├── <entity>.repository.ts
+│   │       ├── <entity>.schema.ts     # Zod validation schemas
+│   │       └── index.ts               # barrel export
+│   ├── middlewares/          # buntok make:middleware <name>
+│   ├── lib/                  # shared utilities (prisma.ts, db.ts, etc.)
+│   └── config/               # configuration (env.ts)
 ├── server.ts                 # build entry point — app.listen(env.PORT)
 ├── public/docs/swagger.json  # auto-generated on app.listen()
+├── tests/
+│   ├── *.spec.ts             # buntok make:test <entity>
+│   └── e2e/
+│       └── *.e2e.spec.ts     # buntok make:test:e2e <entity>
 ├── .env / .env.example
 ├── tsconfig.json / biome.json / vercel.json? / Dockerfile? / .dockerignore? / .gitignore
 ├── package.json
@@ -64,15 +75,24 @@ bunx buntok init                 # interactive setup — generates all boilerpla
 ### 3. Generate code
 
 ```bash
-buntok create user                      # repo + service + controller for "user"
+buntok create user                      # module: repo + service + controller + schema + barrel
 buntok create user --repo --service     # only repo & service
 buntok create user --controller         # only controller
+buntok create user --schema             # only schema
+buntok create user --drizzle            # use Drizzle ORM (default: auto-detect)
+buntok create user --prisma             # use Prisma ORM
+buntok create user --typeorm            # use TypeORM
 
-# Auto: creates src/repositories/user.repository.ts, src/services/user.service.ts,
-# src/controllers/user.controller.ts and injects:
-#   const repo = new UserRepository(); const service = new UserService(repo);
-#   app.registerController(new UserController(service));
+# Auto: creates src/modules/user/ with:
+#   user.repository.ts, user.service.ts, user.controller.ts, user.schema.ts, index.ts
+# Uses @Dependencies decorator for auto DI resolution via container.scan()
 # then runs `bunx biome format --write`
+
+# Generate tests and middleware
+buntok make:test user                   # unit test at tests/user.spec.ts
+buntok make:test:e2e user               # E2E test at tests/e2e/user.e2e.spec.ts
+buntok make:seeder user                 # seeder at src/db/seeders/user.seeder.ts
+buntok make:middleware auth             # middleware at src/middlewares/auth.middleware.ts
 ```
 
 ### 4. Build / DB / Docs
@@ -91,9 +111,13 @@ bun run dev               # after init: bun --watch server.ts
 |---------|--------------|-------------|
 | `buntok init` | — | Project setup |
 | `buntok build` | — | Build to `.buntok/` |
-| `buntok create <entity>` | `--repo --service --controller` | Generate layered files |
+| `buntok create <entity>` | `--repo --service --controller --schema --prisma --drizzle --typeorm` | Generate module files |
 | `buntok db <cmd>` | `migrate, seed, reset, generate, studio, status` | ORM delegation |
 | `buntok make:docs` | — | Manual swagger.json regeneration (auto-generated on `app.listen()` by default) |
+| `buntok make:test <entity>` | — | Generate unit test |
+| `buntok make:test:e2e <entity>` | — | Generate E2E test |
+| `buntok make:seeder <entity>` | — | Generate database seeder |
+| `buntok make:middleware <name>` | — | Generate middleware |
 
 ---
 
@@ -1239,27 +1263,29 @@ Circular dependencies are detected and throw with a resolution chain hint.
 
 ### registerController behavior
 
-`app.registerController()` auto-detects whether the class needs DI:
+`app.registerController()` auto-detects whether the class needs DI and accepts a single class/instance **or an array**:
 
 ```ts
-// Controller with @Dependencies → resolved from container
-@Dependencies(UserService)
-class UserController {
-  constructor(private service: UserService) {}
-}
+// Single registration
+app.registerController(UserController);
+app.registerController(HealthController);
 
-// Controller without @Dependencies → created directly (new UserController())
-class HealthController {
-  health() { return { ok: true }; }
-}
+// Array registration (Overload approach)
+app.registerController([UserController, PostController, CommentController]);
 
+// With DI container
 const container = new Container();
 container.scan([UserController]);  // only controllers with @Dependencies need scan()
 app.setContainer(container);
 
 app.registerController(UserController);     // DI: from container
 app.registerController(HealthController);   // no DI: new HealthController()
+app.registerController([UserController, PostController]);  // array works too
 ```
+
+**Key behaviors:**
+- `RouterGroup` uses `container.has()` to check registration (not `container.resolve()`), so controllers without `@Dependencies` work correctly in groups
+- Both `App` and `RouterGroup` accept the same overloads: single class, single instance, or array of either
 
 ---
 
@@ -2563,7 +2589,7 @@ app.get("/admin", requireAuth(secret), requireRole({
 // Custom error message
 app.get("/admin", requireAuth(secret), requireRole({
   roles: ["superadmin"],
-  message: "Hanya superadmin yang boleh akses",
+  message: "Only superadmin can access",
 }), adminHandler);
 ```
 
@@ -2571,7 +2597,7 @@ app.get("/admin", requireAuth(secret), requireRole({
 
 ```ts
 // Stage 3: evaluated top→bottom, applied bottom→top (via unshift)
-// @Use(requireAuth) di ATAS agar run pertama (auth sebelum role)
+// @Use(requireAuth) goes FIRST so auth runs before role check
 
 @Get("/admin")
 @Use(requireAuth(secret))    // ← evaluated 2nd, applied 3rd → run 1st
@@ -2617,7 +2643,7 @@ app.delete("/users/:id",
 ### Decorator Usage
 
 ```ts
-// Stage 3: evaluated top→bottom, applied bottom→top — ATAS run duluan
+// Stage 3: evaluated top→bottom, applied bottom→top — FIRST runs first
 
 @Delete("/users/:id")
 @Use(requireAuth(secret))                        // ← evaluated 2nd, applied 3rd → run 1st
@@ -2626,7 +2652,7 @@ async deleteUser(ctx: Context) {
   // ...
 }
 
-// Multiple permissions (harus semua) — auth tetap di ATAS
+// Multiple permissions (all required) — auth still goes FIRST
 @Post("/posts")
 @Use(requireAuth(secret))
 @Use(requirePermission("posts:create", "posts:publish"))
@@ -2638,7 +2664,7 @@ async createPost(ctx: Context) {
 **Difference from requireRole:**
 | | `requireRole` | `requirePermission` |
 |--|---------------|---------------------|
-| Logic | **OR** (salah satu cukup) | **AND** (harus semua) |
+| Logic | **OR** (any one matches) | **AND** (all required) |
 | Default field | `user.role` / `user.roles` | `user.permissions` |
 
 **Error responses:**

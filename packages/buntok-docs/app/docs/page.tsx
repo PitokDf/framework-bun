@@ -90,13 +90,14 @@ bunx buntok init`}
       </p>
       <CodeBlock
         code={`import { App } from "@buntok/core";
-import { env } from "./env";
 
 export const app = new App();
 
 app.get("/", (ctx) => {
   return ctx.json({ message: "Hello from Buntok!" });
-});`}
+});
+
+export default app;`}
       />
 
       <Heading
@@ -317,9 +318,13 @@ export const env = App.validateEnv({
 ├── src/
 │   ├── index.ts              # export const app = new App()
 │   ├── env.ts                # Type-safe env schema
-│   ├── controllers/
-│   ├── services/
-│   └── repositories/
+│   └── modules/              # Feature-based modules
+│       └── user/
+│           ├── index.ts      # barrel export
+│           ├── user.schema.ts
+│           ├── user.repository.ts
+│           ├── user.service.ts
+│           └── user.controller.ts
 ├── server.ts                 # app.listen(env.PORT) — universal entry point
 ├── vercel.json               # Vercel config (framework: "bun")
 ├── .agents/
@@ -710,7 +715,7 @@ app.post("/users", (ctx) => {
                 <code>buntok create &lt;entity&gt;</code>
               </td>
               <td className="px-4 py-2">
-                Generate repository, service, and controller for an entity
+                Generate repository, service, and controller in <code>src/modules/&lt;entity&gt;/</code>
               </td>
             </tr>
             <tr className="border-b border-border-primary">
@@ -724,6 +729,30 @@ app.post("/users", (ctx) => {
                 <code>buntok db seed</code>
               </td>
               <td className="px-4 py-2">Seed database with initial data</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>buntok make:test &lt;name&gt;</code>
+              </td>
+              <td className="px-4 py-2">Generate unit test file</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>buntok make:test:e2e &lt;name&gt;</code>
+              </td>
+              <td className="px-4 py-2">Generate E2E test file</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>buntok make:middleware &lt;name&gt;</code>
+              </td>
+              <td className="px-4 py-2">Generate middleware file</td>
+            </tr>
+            <tr className="border-b border-border-primary">
+              <td className="px-4 py-2">
+                <code>buntok make:seeder &lt;name&gt;</code>
+              </td>
+              <td className="px-4 py-2">Generate database seeder</td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
@@ -748,19 +777,25 @@ app.post("/users", (ctx) => {
       <CodeBlock
         code={`$ bunx buntok create user
 
-✓ Created src/repositories/user.repository.ts
-✓ Created src/services/user.service.ts
-✓ Created src/controllers/user.controller.ts`}
+Creating User entity (orm: prisma)...
+
+✓ Repository: src/modules/user/user.repository.ts
+✓ Service: src/modules/user/user.service.ts
+✓ Controller: src/modules/user/user.controller.ts
+✓ Schema: src/modules/user/user.schema.ts
+✓ Barrel: src/modules/user/index.ts`}
       />
 
       <CodeBlock
-        code={`// src/controllers/user.controller.ts
+        code={`// src/modules/user/user.controller.ts
 import { Controller, Get, Post, Put, Delete } from "@buntok/core";
-import { UserService } from "../services/user.service";
+import { Dependencies } from "@buntok/core";
+import { UserService } from "./user.service";
 
+@Dependencies(UserService)
 @Controller("/users")
 export class UserController {
-  private service = new UserService();
+  constructor(private service: UserService) {}
 
   @Get("/")
   async findAll(ctx) {
@@ -788,7 +823,9 @@ export class UserController {
 
       <Callout type="info">
         Use <code>buntok create user --repo</code>, <code>--service</code>, or{" "}
-        <code>--controller</code> for partial generation.
+        <code>--controller</code> for partial generation. Add{" "}
+        <code>--prisma</code>, <code>--drizzle</code>, or{" "}
+        <code>--typeorm</code> to specify ORM.
       </Callout>
 
       {/* ──────────────── PACKAGE SCRIPTS ──────────────── */}

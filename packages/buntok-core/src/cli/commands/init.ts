@@ -51,6 +51,12 @@ const BIOME_CONFIG = {
 		enabled: true,
 		rules: {
 			preset: "recommended",
+			correctness: {
+				noUnusedImports: {
+					level: "warn",
+					fix: "safe",
+				},
+			},
 			suspicious: {
 				noExplicitAny: "off",
 			},
@@ -106,6 +112,27 @@ const VSCODE_SETTINGS = {
 	"editor.codeActionsOnSave": {
 		"source.fixAll.biome": "explicit",
 		"source.organizeImports.biome": "explicit",
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[html]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[css]": {
+		"editor.defaultFormatter": "biomejs.biome",
 	},
 };
 

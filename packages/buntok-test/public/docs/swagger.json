@@ -19,7 +19,7 @@
         }
       }
     },
-    "/health": {
+    "/rtr": {
       "get": {
         "responses": {
           "200": {
@@ -28,199 +28,15 @@
         }
       }
     },
-    "/test": {
-      "post": {
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "avatar": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "Binary file"
-                  },
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "avatar",
-                  "name"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/wellcome/{name}": {
-      "get": {
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 3
-            },
-            "required": true,
-            "name": "name",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "name"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message",
-                    "data"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tests/get-token": {
-      "post": {
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "admin",
-                      "user"
-                    ],
-                    "default": "user"
-                  }
-                },
-                "required": [
-                  "name"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "name": {
-                            "type": "string"
-                          },
-                          "role": {
-                            "type": "string",
-                            "enum": [
-                              "admin",
-                              "user"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "name",
-                          "role"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message",
-                    "data"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tests/get-data": {
+    "/decorators": {
       "get": {
         "responses": {
           "200": {
             "description": "Success"
           }
         }
-      }
-    },
-    "/tests/upload": {
+      },
       "post": {
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "docs": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "binary",
-                      "description": "Binary file (accept: image/png, image/jpeg, image/webp)"
-                    }
-                  }
-                },
-                "required": [
-                  "docs"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Success"
@@ -228,122 +44,31 @@
         }
       }
     },
-    "/tests/hello/{name}": {
+    "/decorators/old": {
+      "query": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/decorators/{id}": {
       "get": {
         "responses": {
           "200": {
             "description": "Success"
           }
         }
-      }
-    },
-    "/payments": {
-      "post": {
+      },
+      "put": {
         "responses": {
           "200": {
             "description": "Success"
           }
         }
-      }
-    },
-    "/payments/webhook": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/mailer/send": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/mailer/welcome": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/mailer/password-reset": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/mailer/verify-email": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/mailer/invoice": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/user/upload-avatar": {
-      "post": {
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "userId": {
-                    "type": "string"
-                  },
-                  "avatar": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "Binary file"
-                  }
-                },
-                "required": [
-                  "userId",
-                  "avatar"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
-    "/user/avatar/{userId}": {
-      "get": {
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "userId",
-            "in": "path"
-          }
-        ],
+      },
+      "delete": {
         "responses": {
           "200": {
             "description": "Success"

@@ -10,17 +10,17 @@ function toPascalCase(str: string): string {
 }
 
 function generateMiddleware(_name: string, pascalName: string): string {
-	return `import type { Context, Handler } from "buntok";
+	return `import type { Context, Middleware } from "@buntok/core";
 
-export const ${pascalName}Middleware: Handler = async (ctx: Context, next: () => Promise<Response> | Response) => {
+export const ${pascalName}Middleware: Middleware = async (ctx: Context, next: () => Promise<Response> | Response) => {
   const start = performance.now();
-  
+
   const response = await next();
-  
+
   const end = performance.now();
   const url = new URL(ctx.request.url);
   console.log(\`[\${ctx.request.method}] \${url.pathname} - \${Math.round(end - start)}ms\`);
-  
+
   return response;
 }
 `;
@@ -67,7 +67,7 @@ export async function makeMiddlewareCommand(name: string) {
 \x1b[36mUsage:\x1b[0m
   Import and apply it globally in src/index.ts:
      \x1b[32mapp.use(${pascalName}Middleware);\x1b[0m
-     
+
   Or apply it to a specific controller:
      \x1b[32m@Use(${pascalName}Middleware)\x1b[0m
      \x1b[32mexport class MyController { ... }\x1b[0m

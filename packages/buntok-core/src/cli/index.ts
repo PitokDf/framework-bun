@@ -6,6 +6,10 @@ import { createCommand } from "./commands/create.js";
 import { dbCommand } from "./commands/db.js";
 import { initCommand } from "./commands/init.js";
 import { makeDocsCommand } from "./commands/make-docs.js";
+import { makeMiddlewareCommand } from "./commands/make-middleware.js";
+import { makeSeederCommand } from "./commands/make-seeder.js";
+import { makeTestCommand } from "./commands/make-test.js";
+import { makeTestE2ECommand } from "./commands/make-test-e2e.js";
 import { VERSION } from "../core-exports.js";
 
 function printBanner() {
@@ -23,14 +27,22 @@ function printUsage() {
   init                   Setup project: copy SKILL.md + configure package.json + generate env.ts
   build                  Build project for production (output → .buntok/)
   check                  Run TypeScript type check
-  create <entity>        Generate all files for entity (repo, service, controller)
+  create <entity>        Generate all files for entity (repo, service, controller, schema)
   db <command>           Database operations (migrate, seed, reset, generate, studio, status)
   make:docs              Generate OpenAPI documentation automatically
+  make:test <entity>     Generate unit test for entity
+  make:test:e2e <entity> Generate E2E test for entity
+  make:seeder <entity>   Generate database seeder for entity
+  make:middleware <name>  Generate middleware file
 
 \x1b[36mOptions (for create command):\x1b[0m
   --repo                 Generate only repository
   --service              Generate only service
   --controller           Generate only controller
+  --schema               Generate only schema
+  --prisma               Use Prisma ORM (default: auto-detect)
+  --drizzle              Use Drizzle ORM
+  --typeorm              Use TypeORM
   --dry-run              Preview files without writing
 
 \x1b[36mAliases:\x1b[0m
@@ -42,10 +54,15 @@ function printUsage() {
   buntok check                            # Run TypeScript type check
   buntok create user                      # Generate all files for user entity
   buntok g user --repo --service          # Generate repository and service only
+  buntok g user --drizzle                 # Generate with Drizzle ORM
   buntok g user --dry-run                 # Preview what would be generated
   buntok db migrate                       # Run pending migrations
   buntok db seed                          # Seed database
   buntok make:docs                        # Generate OpenAPI documentation
+  buntok make:test user                   # Generate unit test for user
+  buntok make:test:e2e user               # Generate E2E test for user API
+  buntok make:seeder user                 # Generate user seeder
+  buntok make:middleware auth             # Generate auth middleware
 `);
 }
 
@@ -90,6 +107,46 @@ export async function main() {
 		case "make:docs":
 			await makeDocsCommand();
 			break;
+		case "make:test":
+			if (!arg1) {
+				console.error(
+					"\x1b[31mError: entity name is required for make:test command\x1b[0m",
+				);
+				process.exitCode = 1;
+				return;
+			}
+			await makeTestCommand(arg1);
+			break;
+		case "make:test:e2e":
+			if (!arg1) {
+				console.error(
+					"\x1b[31mError: entity name is required for make:test:e2e command\x1b[0m",
+				);
+				process.exitCode = 1;
+				return;
+			}
+			await makeTestE2ECommand(arg1);
+			break;
+		case "make:seeder":
+			if (!arg1) {
+				console.error(
+					"\x1b[31mError: entity name is required for make:seeder command\x1b[0m",
+				);
+				process.exitCode = 1;
+				return;
+			}
+			await makeSeederCommand(arg1);
+			break;
+		case "make:middleware":
+			if (!arg1) {
+				console.error(
+					"\x1b[31mError: middleware name is required for make:middleware command\x1b[0m",
+				);
+				process.exitCode = 1;
+				return;
+			}
+			await makeMiddlewareCommand(arg1);
+			break;
 		default: {
 			const commands = [
 				"init",
@@ -99,6 +156,10 @@ export async function main() {
 				"g",
 				"db",
 				"make:docs",
+				"make:test",
+				"make:test:e2e",
+				"make:seeder",
+				"make:middleware",
 			];
 			// Simple fuzzy match: prefix or contains
 			const closest = commands.find(

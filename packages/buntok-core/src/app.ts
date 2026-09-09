@@ -477,12 +477,23 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 *
 	 * ```ts
 	 * app.registerController(UserController);
+	 * app.registerController([UserController, PostController]);
 	 * ```
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(target: (new (...args: any[]) => T) | T): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(targets: Array<(new (...args: any[]) => T) | T>): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
 	public registerController<T extends object>(
-		// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
-		target: (new (...args: any[]) => T) | T,
+		target: (new (...args: any[]) => T) | T | Array<(new (...args: any[]) => T) | T>,
 	): this {
+		if (Array.isArray(target)) {
+			for (const t of target) {
+				this.registerController(t);
+			}
+			return this;
+		}
 		// Detect if target is a class (constructor) or an instance
 		const isInstance =
 			typeof target === "object" &&
@@ -1317,6 +1328,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 					/const swaggerJsonPath = '.*?'/,
 					`const swaggerJsonPath = ${JSON.stringify(swaggerPath)}`,
 				);
+				// Fix relative asset paths — browser resolves ./ against URL
+				// which breaks when page is at /docs (no trailing slash)
+				html = html.replace(/"\.\//g, `"${basePath}/`);
 				return new Response(html, {
 					headers: { "Content-Type": "text/html; charset=utf-8" },
 				});
@@ -1370,6 +1384,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		this.router.insert("GET", `${basePath}/index.html`, uiHandler);
 		this.router.insert("GET", `${basePath}/*`, assetsHandler);
 		this.router.insert("GET", basePath, uiHandler);
+		this.router.insert("GET", `${basePath}/`, uiHandler);
 	}
 
 	private compileGlobalPipeline(): void {
@@ -2449,12 +2464,23 @@ export class RouterGroup<
 	 * @example
 	 * const api = app.group("/api/v1");
 	 * api.registerController(UserController);
+	 * api.registerController([UserController, PostController]);
 	 * // → routes registered as /api/v1/users, /api/v1/users/:id, etc.
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(target: (new (...args: any[]) => T) | T): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(targets: Array<(new (...args: any[]) => T) | T>): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
 	public registerController<T extends object>(
-		// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
-		target: (new (...args: any[]) => T) | T,
+		target: (new (...args: any[]) => T) | T | Array<(new (...args: any[]) => T) | T>,
 	): this {
+		if (Array.isArray(target)) {
+			for (const t of target) {
+				this.registerController(t);
+			}
+			return this;
+		}
 		const isInstance =
 			typeof target === "object" &&
 			target !== null &&
@@ -2481,7 +2507,7 @@ export class RouterGroup<
 			instance = target as T;
 		} else {
 			const container = this.app.getContainer();
-			if (container) {
+			if (container.has(ControllerClass)) {
 				instance = container.resolve<T>(ControllerClass);
 			} else {
 				instance = new ControllerClass();

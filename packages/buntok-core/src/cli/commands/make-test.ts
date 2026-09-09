@@ -11,8 +11,8 @@ function toPascalCase(str: string): string {
 
 function generateTest(name: string, pascalName: string): string {
 	return `import { describe, it, expect, beforeEach, mock } from "bun:test";
-import { ${pascalName}Service } from "../src/services/${name}.service";
-import { ${pascalName}Repository } from "../src/repositories/${name}.repository";
+import { ${pascalName}Service } from "@/modules/${name}/${name}.service";
+import { ${pascalName}Repository } from "@/modules/${name}/${name}.repository";
 
 describe("${pascalName}Service", () => {
   let service: ${pascalName}Service;

@@ -475,10 +475,10 @@ class AdminController {
 
       {/* ──────────────── @INJECTABLE / @INJECT (REMOVED) ──────────────── */}
       <Callout type="warning">
-        <code>@Injectable</code> & <code>@Inject</code> sudah dihapus di{" "}
-        <code>v2.1+</code>. Gunakan <code>Container.register</code> dengan{" "}
-        <code>useClass</code>/<code>useFactory</code> + <code>scope</code> untuk
-        DI. Lihat halaman <a href="/docs/ioc" className="text-accent hover:underline">IoC Container</a>.
+        <code>@Injectable</code> &amp; <code>@Inject</code> have been removed in{" "}
+        <code>v2.1+</code>. Use <code>Container.register</code> with{" "}
+        <code>useClass</code>/<code>useFactory</code> + <code>scope</code> for
+        DI. See the <a href="/docs/ioc" className="text-accent hover:underline">IoC Container</a> page.
       </Callout>
 
       {/* ──────────────── DECORATOR ORDERING ──────────────── */}
@@ -525,7 +525,7 @@ class UserController {
       </Heading>
       <CodeBlock
         code={`import {
-  App, Controller, Get, Post, Use, UseGuard,
+  App, Controller, Get, Post, Use, UseGuard, Dependencies,
   Container, zValidator, z
 } from "@buntok/core";
 import type { Context, ZodCtx } from "@buntok/core";
@@ -556,7 +556,8 @@ const createUserSchema = z.object({
   email: z.string().email(),
 });
 
-// Controller — constructor injection via Container factory
+// Controller — @Dependencies declares constructor dependencies
+@Dependencies(UserService)
 @Controller("/users")
 class UserController {
   constructor(private service: UserService) {}
@@ -578,16 +579,12 @@ class UserController {
   }
 }
 
-// Setup — Container factory untuk DI
+// Setup — container.scan() resolves the entire dependency tree
 const app = new App();
 const container = new Container();
-container.register(UserService, { useClass: UserService });
-container.register(UserController, {
-  useFactory: (c) => new UserController(c.resolve(UserService)),
-});
-
+container.scan([UserController]);  // auto-resolves UserService → UserController
 app.setContainer(container);
-app.registerController(container.resolve(UserController));
+app.registerController(UserController);
 app.listen(1212);`}
       />
 

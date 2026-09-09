@@ -31,6 +31,7 @@ export default function IoCPage() {
       </Heading>
       <CodeBlock
         code={`import { App, Container, Dependencies, Controller, Get } from "@buntok/core";
+import type { Context } from "@buntok/core";
 
 // 1. Define services with @Dependencies
 class UserRepository {
@@ -49,7 +50,7 @@ class UserService {
 class UserController {
   constructor(private service: UserService) {}
   @Get("/")
-  list() { return this.service.getUsers(); }
+  list(ctx: Context) { return ctx.json(this.service.getUsers()); }
 }
 
 // 3. One line resolves the entire tree
@@ -258,10 +259,9 @@ container.register(RequestLogger, { useClass: RequestLogger, scope: "transient" 
 
       {/* ──────────────── DEPRECATED DECORATORS ──────────────── */}
       <Callout type="warning">
-        <code>@Injectable</code> & <code>@Inject</code> sudah dihapus. Gunakan{" "}
-        <code>Container.register</code> + <code>useFactory</code> /{" "}
-        <code>useClass</code> untuk DI (contoh di Quick Start). Field decorator{" "}
-        tidak lagi didukung.
+        <code>@Injectable</code> &amp; <code>@Inject</code> have been removed.
+        Use <code>@Dependencies</code> + <code>container.scan()</code> instead
+        (see Quick Start above). Field decorators are no longer supported.
       </Callout>
 
       {/* ──────────────── CONTAINER API ──────────────── */}
@@ -347,6 +347,7 @@ container.register(RequestLogger, { useClass: RequestLogger, scope: "transient" 
       </Heading>
       <CodeBlock
         code={`import { App, Container, Dependencies, Controller, Get } from "@buntok/core";
+import type { Context } from "@buntok/core";
 
 class UserRepository {
   async findAll() {
@@ -368,6 +369,7 @@ class UserService {
 @Controller("/users")
 class UserController {
   constructor(private service: UserService) {}
+  @Get("/")
   async list(ctx: Context) {
     const users = await this.service.getUsers();
     return ctx.json(users);

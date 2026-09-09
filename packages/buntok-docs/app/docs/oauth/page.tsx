@@ -14,7 +14,7 @@ export default function OAuthPage() {
     <div>
       <Heading level={1}>OAuth Social Login</Heading>
       <p className="text-text-secondary mb-4">
-        Buntok provides builttau -in OAuth 2.0 support for social login with
+        Buntok provides built-in OAuth 2.0 support for social login with
         Google, GitHub, and Apple. It handles PKCE, state management, and cookie
         cleanup automatically.
       </p>

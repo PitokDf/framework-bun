@@ -1,4 +1,5 @@
 import type { Middleware } from "../app";
+import { toResponse } from "../helpers/response";
 
 export interface CorsOptions {
 	origin?: string | string[] | ((origin: string) => boolean);
@@ -69,7 +70,7 @@ export const cors = (options: CorsOptions = {}): Middleware => {
 			return res;
 		}
 
-		const response = await next();
+		const response = toResponse(await next());
 
 		applyCorsHeaders(response, requestOrigin, options);
 

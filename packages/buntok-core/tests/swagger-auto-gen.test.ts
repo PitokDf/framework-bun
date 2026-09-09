@@ -273,4 +273,53 @@ describe("swagger.json auto-generation", () => {
 
 		app.server?.stop();
 	});
+
+	it("should serve docs UI at basePath with trailing slash", async () => {
+		const app = new App();
+		app.apiDocs({ title: "Trailing Slash Test" });
+		app.get("/test", (ctx) => ctx.json({ ok: true }));
+
+		app.listen(0);
+		const port = getPort(app);
+		await Bun.sleep(100);
+
+		const res = await fetch(`http://localhost:${port}/docs/`);
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Content-Type")).toContain("text/html");
+
+		const html = await res.text();
+		expect(html).toContain('const swaggerJsonPath = "/docs/swagger.json"');
+
+		app.server?.stop();
+	});
+
+	it("should serve tailwind.js via wildcard route", async () => {
+		const app = new App();
+		app.apiDocs({ title: "Asset Test" });
+		app.get("/test", (ctx) => ctx.json({ ok: true }));
+
+		app.listen(0);
+		const port = getPort(app);
+		await Bun.sleep(100);
+
+		const res = await fetch(`http://localhost:${port}/docs/tailwind.js`);
+		expect(res.status).toBe(200);
+
+		app.server?.stop();
+	});
+
+	it("should serve font-googles.css via wildcard route", async () => {
+		const app = new App();
+		app.apiDocs({ title: "Asset Test" });
+		app.get("/test", (ctx) => ctx.json({ ok: true }));
+
+		app.listen(0);
+		const port = getPort(app);
+		await Bun.sleep(100);
+
+		const res = await fetch(`http://localhost:${port}/docs/font-googles.css`);
+		expect(res.status).toBe(200);
+
+		app.server?.stop();
+	});
 });
