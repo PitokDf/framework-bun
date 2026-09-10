@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { App } from "../src/app";
-import { Controller, Get, Post } from "../src/decorators";
+import { Controller, Get, Post, Use } from "../src/decorators";
 
 @Controller("/users")
 class UserController {
@@ -112,5 +112,36 @@ describe("registerController with array", () => {
 
 		const res = await app.request("/comments");
 		expect(res.status).toBe(200);
+	});
+
+	it("should execute group middlewares before route middlewares in RouterGroup", async () => {
+		const order: string[] = [];
+		const groupMw = async (_ctx: any, next: any) => {
+			order.push("group");
+			return next();
+		};
+		const routeMw = async (_ctx: any, next: any) => {
+			order.push("route");
+			return next();
+		};
+
+		@Controller("/ordered")
+		class OrderedController {
+			@Get("/")
+			@Use(routeMw)
+			test() {
+				order.push("handler");
+				return "ok";
+			}
+		}
+
+		const app = new App();
+		const api = app.group("/api");
+		api.use(groupMw);
+		api.registerController(OrderedController);
+
+		const res = await app.request("/api/ordered");
+		expect(res.status).toBe(200);
+		expect(order).toEqual(["group", "route", "handler"]);
 	});
 });

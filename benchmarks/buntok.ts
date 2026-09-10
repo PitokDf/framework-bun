@@ -2,9 +2,10 @@ import { App } from "../packages/buntok-core/src/index.ts";
 
 const app = new App();
 app.disable("x-powered-by");
-app.get("/plaintext", (ctx) => ctx.text("Hello, World!"));
-app.get("/json", (ctx) => ctx.json({ message: "Hello, World!" }));
-app.get("/id/:id", (ctx) => ctx.text(ctx.params.id));
+
+app.get("/plaintext", () => "Hello, World!");
+app.get("/json", () => ({ message: "Hello, World!" }));
+app.get("/id/:id", ({ params: { id } }) => id);
 
 app.listen(3000, () => {
 	console.log("Buntok running on 3000");

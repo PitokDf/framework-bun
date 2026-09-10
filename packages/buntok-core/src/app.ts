@@ -603,9 +603,15 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 						return r;
 					};
 					if (raw instanceof Promise) {
-						return raw.then((v: any) => apply(toResponse(v)));
+						return raw.then((v: any) =>
+							typeof v === "string"
+								? apply(new Response(v))
+								: apply(v instanceof Response ? v : toResponse(v)),
+						);
 					}
-					return apply(toResponse(raw));
+					return typeof raw === "string"
+						? apply(new Response(raw))
+						: apply(raw instanceof Response ? raw : toResponse(raw));
 				}) as Handler<DI>;
 			}
 
@@ -1477,15 +1483,21 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				if (this._skipLogResponse) {
 					code += "        if (raw instanceof Promise) {\n";
 					code +=
-						"          return raw.then((v) => toResponse(v)).catch((e) => handleError(request, pathname, ctx, e));\n";
+						'          return raw.then((v) => typeof v === "string" ? new Response(v) : v instanceof Response ? v : toResponse(v)).catch((e) => handleError(request, pathname, ctx, e));\n';
 					code += "        }\n";
-					code += "        return toResponse(raw);\n";
+					code +=
+						'        if (typeof raw === "string") return new Response(raw);\n';
+					code +=
+						"        return raw instanceof Response ? raw : toResponse(raw);\n";
 				} else {
 					code += "        if (raw instanceof Promise) {\n";
 					code +=
-						"          return raw.then((v) => logResponse(request, pathname, toResponse(v))).catch((e) => handleError(request, pathname, ctx, e));\n";
+						'          return raw.then((v) => typeof v === "string" ? logResponse(request, pathname, new Response(v)) : logResponse(request, pathname, v instanceof Response ? v : toResponse(v))).catch((e) => handleError(request, pathname, ctx, e));\n';
 					code += "        }\n";
-					code += "        return logResponse(request, pathname, toResponse(raw));\n";
+					code +=
+						'        if (typeof raw === "string") return logResponse(request, pathname, new Response(raw));\n';
+					code +=
+						"        return logResponse(request, pathname, raw instanceof Response ? raw : toResponse(raw));\n";
 				}
 				code += "      } catch (err) {\n";
 				code += "        return handleError(request, pathname, ctx, err);\n";
@@ -1571,9 +1583,16 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 */
 	private normalizeReturn(value: unknown): Response | Promise<Response> {
 		if (value instanceof Promise) {
-			return value.then((v) => toResponse(v));
+			return value.then((v) =>
+				typeof v === "string"
+					? new Response(v)
+					: v instanceof Response
+						? v
+						: toResponse(v),
+			);
 		}
-		return toResponse(value);
+		if (typeof value === "string") return new Response(value);
+		return value instanceof Response ? value : toResponse(value);
 	}
 
 	/**

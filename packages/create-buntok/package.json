@@ -1,15 +1,12 @@
 {
 	"name": "create-buntok",
-	"version": "0.2.2",
+	"version": "1.0.0",
 	"description": "CLI tool to create new Buntok projects",
 	"type": "module",
 	"bin": {
 		"create-buntok": "./src/index.ts"
 	},
-	"files": [
-		"src",
-		"templates"
-	],
+	"files": ["src"],
 	"keywords": [
 		"buntok",
 		"bun",

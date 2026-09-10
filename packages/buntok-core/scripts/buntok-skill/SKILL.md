@@ -1793,10 +1793,18 @@ logger.info("Server started", { port: 1212 });
 logger.warn("High memory usage", { mb: 512 });
 logger.error("DB connection failed");
 // LogLevel: DEBUG=0, INFO=1, WARN=2, ERROR=3
-// Logger {level, format:"text"|"json", logRequests} — production defaults to JSON+WARN, else text+INFO
+// Logger {level, logFileLevel, format:"text"|"json", logRequests} — production defaults to JSON+WARN
+// logFileLevel defaults to DEBUG (write all to file) — independent of console level
 // Env: LOG_DIR=./logs → daily app-YYYY-MM-DD.log, LOG_REQUESTS=false disables
 logger.debug("verbose", { meta: 1 });
 logger.flushSync(); // flush file logs
+```
+
+**File logging is independent of console level.** In production, console defaults to `WARN` (no `info()`), but file logging defaults to `DEBUG` (writes everything). Override with `logFileLevel`:
+
+```ts
+// Custom: console WARN only, file INFO+
+const logger = new Logger({ level: LogLevel.WARN, logFileLevel: LogLevel.INFO });
 ```
 
 ---
