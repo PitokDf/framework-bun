@@ -129,9 +129,12 @@ async function main() {
 		}) as ReturnType<typeof autocannon> & NodeJS.EventEmitter;
 
 		instance.on('tick', (stats: any) => {
-			timeSeriesData[fw].push({
-				reqPerSec: stats.counter
-			});
+			// Autocannon emits a final zero-valued tick after the run ends.
+			if (stats.counter > 0) {
+				timeSeriesData[fw].push({
+					reqPerSec: stats.counter
+				});
+			}
 		});
 
 		await new Promise<void>((resolve) => instance.on('done', () => resolve()));
