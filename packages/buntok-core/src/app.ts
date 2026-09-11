@@ -1444,6 +1444,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		request: Request,
 		server?: Server<WSData<DI>>,
 	) => Response | Promise<Response> {
+		const hasGlobalMiddleware = this.middlewares.length > 0;
 		let code =
 			"return function(request, server) {\n" +
 			"  const url = request.url;\n" +
@@ -1499,10 +1500,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				code += `    case "${route.path}": {\n`;
 				code += "      const ctx = new Context(request, EMPTY_PARAMS, di);\n";
 				code += "      try {\n";
-				code +=
-					"        const raw = compiledGlobalPipeline(ctx, " +
+				code += hasGlobalMiddleware
+					? "        const raw = compiledGlobalPipeline(ctx, " +
 					handlerRef +
-					");\n";
+					");\n"
+					: `        const raw = ${handlerRef}(ctx);\n`;
 				if (this._skipLogResponse) {
 					code += "        if (raw instanceof Promise) {\n";
 					code +=

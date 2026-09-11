@@ -9,6 +9,7 @@ export async function devCommand(flags: string[]): Promise<void> {
 
 	// Find the user's entry point
 	const possibleFiles = [
+		"server.ts",
 		"src/index.ts",
 		"src/main.ts",
 		"src/app.ts",
@@ -25,7 +26,7 @@ export async function devCommand(flags: string[]): Promise<void> {
 	}
 
 	if (!entryFile) {
-		console.error("\x1b[31mError: Could not find app entry point (src/index.ts, src/main.ts, src/app.ts, or src/server.ts)\x1b[0m");
+		console.error("\x1b[31mError: Could not find app entry point (server.ts, src/index.ts, src/main.ts, src/app.ts, or src/server.ts)\x1b[0m");
 		process.exitCode = 1;
 		return;
 	}
