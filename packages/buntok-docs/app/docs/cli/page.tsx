@@ -148,9 +148,59 @@ bun run start`}
         check
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Run TypeScript type checking without emitting files.
+        Run TypeScript type checking without emitting files. Displays all errors with file locations and a summary.
       </p>
       <CodeBlock code={`bunx buntok check`} />
+      <CodeBlock
+        code={`$ bunx buntok check
+
+  Running type check...
+
+src/index.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.
+src/index.ts(2,7): error TS2322: Type 'number' is not assignable to type 'string'.
+
+  ✗ 2 errors in 2 files`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Options
+      </Heading>
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full border border-border-primary text-sm">
+          <thead>
+            <tr className="bg-bg-secondary">
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Flag</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--json</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Output results as JSON for CI/CD</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--plain</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Plain text output without colors</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        JSON Output
+      </Heading>
+      <CodeBlock
+        code={`$ bunx buntok check --json
+
+{
+  "success": false,
+  "errors": [
+    {
+      "file": "src/index.ts",
+      "line": 1,
+      "col": 7,
+      "code": "TS2322",
+      "message": "Type 'string' is not assignable to type 'number'."
+    }
+  ],
+  "errorCount": 1,
+  "fileCount": 1
+}`}
+      />
 
       {/* ──────────────── CREATE ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
@@ -391,6 +441,189 @@ bunx buntok db status`}
 
 ✓ Created src/db/seeders/user.seeder.ts`}
       />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Factory Pattern
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use the <code>--factory</code> flag to generate a seeder that uses the Factory pattern for data generation:
+      </p>
+      <CodeBlock code={`bunx buntok make:seeder user --factory`} />
+      <CodeBlock
+        code={`// src/db/seeders/user.seeder.ts
+import { prisma } from "@/lib/prisma";
+import { UserFactory } from "@/factories/user.factory";
+
+export async function seedUser() {
+  console.log("Seeding User...");
+
+  const items = UserFactory.buildMany(100);
+  await prisma.user.createMany({ data: items });
+
+  console.log("✓ User seeded successfully (100 records)");
+}`}
+      />
+      <Callout type="info">
+        Requires a factory file at <code>src/factories/&lt;entity&gt;.factory.ts</code>. Run <code>buntok make:factory &lt;entity&gt;</code> first.
+      </Callout>
+
+      {/* ──────────────── MAKE:FACTORY ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        make:factory
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Generate a type-safe data factory for an entity. Factories are used for generating test and seed data.
+      </p>
+      <CodeBlock code={`bunx buntok make:factory <entity>`} />
+      <CodeBlock
+        code={`$ bunx buntok make:factory user
+
+Created: src/factories/user.factory.ts
+
+Usage:
+  import { UserFactory } from "@/factories/user.factory";
+
+  const user = await UserFactory.create();
+  const users = await UserFactory.createMany(10);
+  const admin = await UserFactory.create({ role: "admin" });`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Generated Factory
+      </Heading>
+      <CodeBlock
+        code={`// src/factories/user.factory.ts
+import { Factory } from "@buntok/core";
+import { faker } from "@faker-js/faker";
+import type { User } from "@prisma/client";
+
+export const UserFactory = Factory.define<User>(() => ({
+  // TODO: Define your factory fields here
+  // Example:
+  // id: faker.number.int({ max: 10000 }),
+  // name: faker.person.fullName(),
+  // email: faker.internet.email(),
+  // role: faker.helpers.arrayElement(["user", "admin"]),
+}));`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Factory API
+      </Heading>
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full border border-border-primary text-sm">
+          <thead>
+            <tr className="bg-bg-secondary">
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Method</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>Factory.define&lt;T&gt;(fn)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create a new factory with type T</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.create(overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create one item (async, runs afterCreate)</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.createMany(count, overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create multiple items</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.build(overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate one item synchronously</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.buildMany(count, overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate multiple items synchronously</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.withDefaults(defaults)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Set default overrides</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.afterCreate(callback)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Register post-creation hook</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>Factory.ref(fn)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Lazy reference for relations</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>Factory.pick(arr, count?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Random item(s) from array</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <Callout type="info">
+        Requires <code>@faker-js/faker</code> as a peer dependency. Install with: <code>bun add -d @faker-js/faker</code>
+      </Callout>
+
+      {/* ──────────────── DEBUG:ROUTES ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        debug:routes
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Show all registered routes with their middleware chains. Useful for debugging route registration and middleware ordering.
+      </p>
+      <CodeBlock code={`bunx buntok debug:routes`} />
+      <CodeBlock
+        code={`$ bunx buntok debug:routes
+
+Method │ Path               │ Middlewares                    │ Handler
+───────┼────────────────────┼────────────────────────────────┼──────────
+GET    │ /                  │ —                              │ (index)
+GET    │ /users             │ cors, compress                 │ getAll
+GET    │ /users/:id         │ cors, compress, auth           │ getById
+POST   │ /users             │ cors, compress, validation     │ create
+
+4 routes registered
+
+By source:
+  UserController: 3 routes
+  direct: 1 routes`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        JSON Output
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>--json</code> flag for programmatic access:
+      </p>
+      <CodeBlock code={`bunx buntok debug:routes --json`} />
+
+      {/* ──────────────── DEV ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+        dev
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Start the development server with hot reload. Optionally expose it publicly for testing webhooks or sharing.
+      </p>
+      <CodeBlock code={`bunx buntok dev`} />
+      <CodeBlock
+        code={`$ bunx buntok dev
+
+Starting development server...
+
+  Server running at http://localhost:1212
+
+  Press Ctrl+C to stop`}
+      />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Public Tunnel
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>--expose</code> to create a public URL via localtunnel. Useful for webhook testing, mobile testing, or sharing with others:
+      </p>
+      <CodeBlock code={`bunx buntok dev --expose`} />
+      <CodeBlock
+        code={`$ bunx buntok dev --expose
+
+Starting development server with tunnel...
+
+  Server running at http://localhost:1212
+  Tunnel: https://buntok-1234.loca.lt → http://localhost:1212
+
+  Press Ctrl+C to stop`}
+      />
+      <Callout type="warning">
+        Requires <code>localtunnel</code> as a dev dependency. Install with: <code>bun add -d localtunnel</code>
+      </Callout>
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Options
+      </Heading>
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full border border-border-primary text-sm">
+          <thead>
+            <tr className="bg-bg-secondary">
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Flag</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--expose</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create public tunnel URL via localtunnel</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--port=PORT</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Port number (default: 1212)</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       {/* ──────────────── MAKE:MIDDLEWARE ──────────────── */}
       <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">

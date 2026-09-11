@@ -137,6 +137,7 @@ const VSCODE_SETTINGS = {
 };
 
 const INDEX_TEMPLATE = `import { App } from "@buntok/core";
+import "./env";
 
 export const app = new App();
 

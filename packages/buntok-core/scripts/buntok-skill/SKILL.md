@@ -92,7 +92,14 @@ buntok create user --typeorm            # use TypeORM
 buntok make:test user                   # unit test at tests/user.spec.ts
 buntok make:test:e2e user               # E2E test at tests/e2e/user.e2e.spec.ts
 buntok make:seeder user                 # seeder at src/db/seeders/user.seeder.ts
+buntok make:seeder user --factory       # seeder using factory pattern
 buntok make:middleware auth             # middleware at src/middlewares/auth.middleware.ts
+
+# Debug and development
+buntok debug:routes                     # show all registered routes
+buntok debug:routes --json              # output as JSON
+buntok dev                              # start dev server with HMR
+buntok dev --expose                     # start with public tunnel URL
 ```
 
 ### 4. Build / DB / Docs
@@ -110,13 +117,17 @@ bun run dev               # after init: bun --watch server.ts
 | Command | Args / Flags | Description |
 |---------|--------------|-------------|
 | `buntok init` | — | Project setup |
+| `buntok dev` | `--expose --port=PORT` | Start dev server (HMR). `--expose` creates public tunnel via localtunnel |
 | `buntok build` | — | Build to `.buntok/` |
+| `buntok check` | `--json --plain` | TypeScript type check with error details and summary |
 | `buntok create <entity>` | `--repo --service --controller --schema --prisma --drizzle --typeorm` | Generate module files |
 | `buntok db <cmd>` | `migrate, seed, reset, generate, studio, status` | ORM delegation |
+| `buntok debug:routes` | `--json` | Show all registered routes with middleware chains |
+| `buntok make:factory <entity>` | `--dry-run` | Generate data factory (`src/factories/<entity>.factory.ts`) |
 | `buntok make:docs` | — | Manual swagger.json regeneration (auto-generated on `app.listen()` by default) |
 | `buntok make:test <entity>` | — | Generate unit test |
 | `buntok make:test:e2e <entity>` | — | Generate E2E test |
-| `buntok make:seeder <entity>` | — | Generate database seeder |
+| `buntok make:seeder <entity>` | `--factory` | Generate database seeder. `--factory` uses factory pattern |
 | `buntok make:middleware <name>` | — | Generate middleware |
 
 ---
@@ -387,6 +398,63 @@ Returns the `Bun.serve()` instance:
 const server = devServer({ port: 0 });
 console.log(server.port); // actual port (useful with port: 0)
 server.stop(); // stop the server
+```
+
+---
+
+## Route Debugger
+
+CLI tool to inspect all registered routes with their middleware chains. Useful for debugging route registration and middleware ordering.
+
+```bash
+buntok debug:routes                     # show all registered routes
+buntok debug:routes --json              # output as JSON (for programmatic use)
+```
+
+### Output
+
+```
+Method │ Path               │ Middlewares                    │ Handler
+───────┼────────────────────┼────────────────────────────────┼──────────
+GET    │ /                  │ —                              │ (index)
+GET    │ /users             │ cors, compress                 │ getAll
+GET    │ /users/:id         │ cors, compress, auth           │ getById
+POST   │ /users             │ cors, compress, validation     │ create
+
+4 routes registered
+
+By source:
+  UserController: 3 routes
+  direct: 1 routes
+```
+
+### How It Works
+
+The route debugger captures metadata during route registration (before AOT compilation). Each route entry includes:
+
+| Field | Description |
+|-------|-------------|
+| `method` | HTTP method (GET, POST, etc.) |
+| `path` | Route path with params |
+| `middlewares` | Array of middleware names |
+| `handler` | Handler function name |
+| `source` | Where the route came from: `route`, `controller`, or `group` |
+| `controller` | Controller class name (if from `registerController`) |
+| `group` | Group prefix (if from `RouterGroup`) |
+
+### Programmatic Access
+
+```ts
+const app = new App();
+app.get("/users", getAll);
+app.post("/users", create);
+
+// Access route debug info
+console.log(app.routeDebugInfo);
+// [
+//   { method: "GET", path: "/users", middlewares: [], handler: "getAll", source: "route" },
+//   { method: "POST", path: "/users", middlewares: [], handler: "create", source: "route" },
+// ]
 ```
 
 ---
@@ -2144,6 +2212,99 @@ app.get("/ping", (ctx) => ctx.json({ pong: true }));
 const res = await app.request("/ping");
 const data = await res.json();
 console.assert(res.status === 200);
+```
+
+---
+
+## Factory (Data Generation)
+
+Type-safe data factories for generating test and seed data. Requires `@faker-js/faker` as optional peer dependency.
+
+```bash
+buntok make:factory user    # generates src/factories/user.factory.ts
+buntok make:factory user --dry-run  # preview without writing
+```
+
+### Factory API
+
+```ts
+import { Factory } from "@buntok/core";
+import { faker } from "@faker-js/faker";
+import type { User } from "@prisma/client";
+
+const UserFactory = Factory.define<User>(() => ({
+  id: faker.number.int({ max: 10000 }),
+  name: faker.person.fullName(),
+  email: faker.internet.email(),
+  role: faker.helpers.arrayElement(["user", "admin"]),
+}));
+
+// Create one
+const user = await UserFactory.create();
+
+// Create many
+const users = await UserFactory.createMany(10);
+
+// Override fields
+const admin = await UserFactory.create({ role: "admin" });
+
+// Sync build (no afterCreate hook)
+const built = UserFactory.build({ name: "John" });
+
+// With defaults
+const UserFactory = Factory.define<User>(() => ({
+  // ...
+})).withDefaults({ role: "user" });
+
+// After create hook
+const UserFactory = Factory.define<User>(() => ({
+  // ...
+})).afterCreate(async (user) => {
+  await db.auditLog.create({ data: { userId: user.id } });
+});
+
+// Relations via ref
+const PostFactory = Factory.define(() => ({
+  id: faker.number.int(),
+  userId: Factory.ref(() => UserFactory.build().id),
+}));
+
+// Random pick
+const random = Factory.pick(["a", "b", "c"]);
+const two = Factory.pick(["a", "b", "c", "d"], 2);
+```
+
+### Factory API Reference
+
+| Method | Description |
+|--------|-------------|
+| `Factory.define<T>(fn)` | Create a new factory with type T |
+| `.create(overrides?)` | Create one item (async, runs afterCreate) |
+| `.createMany(count, overrides?)` | Create multiple items |
+| `.build(overrides?)` | Generate one item synchronously (no afterCreate) |
+| `.buildMany(count, overrides?)` | Generate multiple items synchronously |
+| `.withDefaults(defaults)` | Set default overrides |
+| `.afterCreate(callback)` | Register post-creation hook |
+| `Factory.ref(fn)` | Lazy reference for relations |
+| `Factory.pick(arr, count?)` | Random item(s) from array |
+
+### Using Factories with Seeders
+
+```bash
+buntok make:seeder user --factory  # generates seeder using factory pattern
+```
+
+Generated seeder:
+```ts
+import { prisma } from "@/lib/prisma";
+import { UserFactory } from "@/factories/user.factory";
+
+export async function seedUser() {
+  console.log("Seeding User...");
+  const items = UserFactory.buildMany(100);
+  await prisma.user.createMany({ data: items });
+  console.log("✓ User seeded successfully (100 records)");
+}
 ```
 
 ---

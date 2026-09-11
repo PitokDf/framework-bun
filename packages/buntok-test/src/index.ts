@@ -1,11 +1,11 @@
-import { App, compress, responseTime, AICache } from "@buntok/core";
+import { App, compress, responseTime } from "@buntok/core";
 import "./env";
 import { TestController } from "./controllers/test.controller";
 import { Container } from "@buntok/core";
-import { DecoratorController } from "@/modules/decorator";
+import { MailerController } from "./controllers/mailer.controller";
+import { PaymentController } from "./controllers/payment.controller";
 
 export const app = new App();
-
 
 app.use(responseTime());
 
@@ -28,5 +28,9 @@ const container = new Container();
 container.scan([TestController]);
 app.setContainer(container);
 
-app.registerController([DecoratorController]);
+app.registerController([
+	TestController,
+	MailerController,
+	PaymentController
+]);
 export default app;

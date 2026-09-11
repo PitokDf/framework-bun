@@ -28,14 +28,91 @@
         }
       }
     },
-    "/decorators": {
+    "/tests/get-token": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "user"
+                    ],
+                    "default": "user"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/tests/get-data": {
       "get": {
         "responses": {
           "200": {
             "description": "Success"
           }
         }
-      },
+      }
+    },
+    "/tests/upload": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "docs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary",
+                      "description": "Binary file (accept: image/png, image/jpeg, image/webp)"
+                    }
+                  }
+                },
+                "required": [
+                  "docs"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/tests/hello/{name}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mailer/send": {
       "post": {
         "responses": {
           "200": {
@@ -44,8 +121,8 @@
         }
       }
     },
-    "/decorators/old": {
-      "query": {
+    "/mailer/welcome": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"
@@ -53,22 +130,44 @@
         }
       }
     },
-    "/decorators/{id}": {
-      "get": {
+    "/mailer/password-reset": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"
           }
         }
-      },
-      "put": {
+      }
+    },
+    "/mailer/verify-email": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"
           }
         }
-      },
-      "delete": {
+      }
+    },
+    "/mailer/invoice": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/payments": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/payments/webhook": {
+      "post": {
         "responses": {
           "200": {
             "description": "Success"

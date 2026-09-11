@@ -15,11 +15,11 @@ async function runBombardier(target: string) {
 		const numCores = os.cpus().length;
 		const hasMultipleCores = numCores >= 2 && os.platform() === 'linux';
 		const cmd = hasMultipleCores ? "taskset" : "./bombardier";
-		
+
 		const midCore = Math.floor(numCores / 2);
 		const bombardierCores = numCores === 2 ? "1" : `${midCore}-${numCores - 1}`;
-		
-		const args = hasMultipleCores 
+
+		const args = hasMultipleCores
 			? ["-c", bombardierCores, "./bombardier", "-c", "125", "-d", "10s", "-l", "-o", "json", target]
 			: ["-c", "125", "-d", "10s", "-l", "-o", "json", target];
 
@@ -49,37 +49,13 @@ async function runBombardier(target: string) {
 	});
 }
 
-async function runAutocannon(target: string) {
-	return new Promise<any[]>((resolve) => {
-		const instance = autocannon({
-			url: target,
-			connections: 100,
-			duration: 10,
-		});
-
-		const timeSeries: any[] = [];
-		let currentSecond = 1;
-
-		instance.on('tick', () => {
-			timeSeries.push({ second: currentSecond++, rps: instance.stat(instance.requests, 'requests') });
-		});
-
-		instance.on('done', (result) => {
-			// Extract the final time series by calculating difference between ticks if needed, 
-			// wait, autocannon emits total requests per tick maybe?
-			// Actually, tick doesn't provide rps directly. Let's just use result.
-			resolve(timeSeries);
-		});
-	});
-}
-
 async function main() {
 	const results: any = {};
 	const timeSeriesData: any = {};
 
 	console.log("🚀 Starting Comprehensive Benchmark Suite...");
 
-	for (const fw of frameworks) {
+	for (const fw of frameworks.reverse()) {
 		console.log(`\nTesting ${fw}...`);
 		results[fw] = {};
 		timeSeriesData[fw] = [];
@@ -89,14 +65,14 @@ async function main() {
 		const numCores = os.cpus().length;
 		const hasMultipleCores = numCores >= 2 && os.platform() === 'linux';
 		const cmd = hasMultipleCores ? "taskset" : "bun";
-		
+
 		const midCore = Math.floor(numCores / 2);
 		const serverCores = numCores === 2 ? "0" : `0-${midCore - 1}`;
-		
-		const args = hasMultipleCores 
+
+		const args = hasMultipleCores
 			? ["-c", serverCores, "bun", "run", `benchmarks/${fw}.ts`]
 			: ["run", `benchmarks/${fw}.ts`];
-			
+
 		const server = spawn(cmd, args, { env, stdio: "pipe" });
 
 		await new Promise<void>((resolve) => {
@@ -119,7 +95,7 @@ async function main() {
 			results[fw].startupTime = performance.now() - startMs; // Fallback
 		}
 
-		await wait(1000); 
+		await wait(1000);
 
 		for (const route of routes) {
 			process.stdout.write(`  - ${route} ... `);
@@ -150,7 +126,7 @@ async function main() {
 			url: `http://localhost:3000/plaintext`,
 			connections: 100,
 			duration: 10,
-		});
+		}) as ReturnType<typeof autocannon> & NodeJS.EventEmitter;
 
 		instance.on('tick', (stats: any) => {
 			timeSeriesData[fw].push({
@@ -158,14 +134,15 @@ async function main() {
 			});
 		});
 
-		await new Promise((resolve) => instance.on('done', resolve));
+		await new Promise<void>((resolve) => instance.on('done', () => resolve()));
 
 		server.kill();
 		await wait(3000);
 	}
 
+	const cpus = os.cpus();
 	const machineInfo = {
-		cpu: os.cpus()[0].model,
+		cpu: cpus[0]?.model ?? "Unknown",
 		cores: os.cpus().length,
 		memory: `${Math.round(os.totalmem() / (1024 * 1024 * 1024))}GB`,
 		os: `${os.type()} ${os.release()}`,

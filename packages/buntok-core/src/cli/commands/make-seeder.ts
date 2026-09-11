@@ -10,7 +10,21 @@ function toPascalCase(str: string): string {
 		.join("");
 }
 
-function generatePrismaSeeder(name: string, pascalName: string): string {
+function generatePrismaSeeder(name: string, pascalName: string, useFactory: boolean): string {
+	if (useFactory) {
+		return `import { prisma } from "@/lib/prisma";
+import { ${pascalName}Factory } from "@/factories/${name}.factory";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
+  const items = ${pascalName}Factory.buildMany(100);
+  await prisma.${name}.createMany({ data: items });
+
+  console.log("✓ ${pascalName} seeded successfully (100 records)");
+}
+`;
+	}
 	return `import { prisma } from "@/lib/prisma";
 
 export async function seed${pascalName}() {
@@ -29,7 +43,22 @@ export async function seed${pascalName}() {
 `;
 }
 
-function generateDrizzleSeeder(name: string, pascalName: string): string {
+function generateDrizzleSeeder(name: string, pascalName: string, useFactory: boolean): string {
+	if (useFactory) {
+		return `import { db } from "@/lib/db";
+import { ${name} } from "@/lib/db/schema";
+import { ${pascalName}Factory } from "@/factories/${name}.factory";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
+  const items = ${pascalName}Factory.buildMany(100);
+  await db.insert(${name}).values(items);
+
+  console.log("✓ ${pascalName} seeded successfully (100 records)");
+}
+`;
+	}
 	return `import { db } from "@/lib/db";
 import { ${name} } from "@/lib/db/schema";
 
@@ -47,7 +76,23 @@ export async function seed${pascalName}() {
 `;
 }
 
-function generateTypeORMSeeder(name: string, pascalName: string): string {
+function generateTypeORMSeeder(name: string, pascalName: string, useFactory: boolean): string {
+	if (useFactory) {
+		return `import { AppDataSource } from "@/lib/data-source";
+import { ${pascalName} } from "@/lib/entities/${pascalName}";
+import { ${pascalName}Factory } from "@/factories/${name}.factory";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
+  const repo = AppDataSource.getRepository(${pascalName});
+  const items = ${pascalName}Factory.buildMany(100);
+  await repo.save(items.map(item => repo.create(item)));
+
+  console.log("✓ ${pascalName} seeded successfully (100 records)");
+}
+`;
+	}
 	return `import { AppDataSource } from "@/lib/data-source";
 import { ${pascalName} } from "@/lib/entities/${pascalName}";
 
@@ -65,22 +110,23 @@ export async function seed${pascalName}() {
 `;
 }
 
-function generateSeeder(name: string, pascalName: string, orm: ORM): string {
+function generateSeeder(name: string, pascalName: string, orm: ORM, useFactory: boolean): string {
 	switch (orm) {
 		case "drizzle":
-			return generateDrizzleSeeder(name, pascalName);
+			return generateDrizzleSeeder(name, pascalName, useFactory);
 		case "typeorm":
-			return generateTypeORMSeeder(name, pascalName);
+			return generateTypeORMSeeder(name, pascalName, useFactory);
 		case "prisma":
 		default:
-			return generatePrismaSeeder(name, pascalName);
+			return generatePrismaSeeder(name, pascalName, useFactory);
 	}
 }
 
-export async function makeSeederCommand(name: string) {
+export async function makeSeederCommand(name: string, flags: string[] = []) {
 	const pascalName = toPascalCase(name);
 	const orm = detectORM();
-	console.log(`\n\x1b[36mScaffolding Seeder for ${pascalName} (orm: ${orm})...\x1b[0m\n`);
+	const useFactory = flags.includes("--factory");
+	console.log(`\n\x1b[36mScaffolding Seeder for ${pascalName} (orm: ${orm}${useFactory ? ", using factory" : ""})...\x1b[0m\n`);
 
 	const seederDir = "src/db/seeders";
 
@@ -98,7 +144,7 @@ export async function makeSeederCommand(name: string) {
 		return;
 	}
 
-	const content = generateSeeder(name, pascalName, orm);
+	const content = generateSeeder(name, pascalName, orm, useFactory);
 	await fs.writeFile(filePath, content);
 
 	const biomeProc = Bun.spawnSync(
@@ -115,4 +161,13 @@ export async function makeSeederCommand(name: string) {
 	}
 
 	console.log(`\x1b[32m✓ Generated seeder:\x1b[0m ${filePath}`);
+
+	if (useFactory) {
+		// Check if factory file exists
+		const factoryPath = `src/factories/${name}.factory.ts`;
+		if (!existsSync(factoryPath)) {
+			console.log(`\n\x1b[33m⚠ Warning: Factory file not found at ${factoryPath}\x1b[0m`);
+			console.log(`  Run \x1b[36mbuntok make:factory ${name}\x1b[0m to create it first.`);
+		}
+	}
 }

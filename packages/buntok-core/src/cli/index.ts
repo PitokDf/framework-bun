@@ -4,8 +4,11 @@ import { buildCommand } from "./commands/build.js";
 import { checkCommand } from "./commands/check.js";
 import { createCommand } from "./commands/create.js";
 import { dbCommand } from "./commands/db.js";
+import { debugRoutesCommand } from "./commands/debug-routes.js";
+import { devCommand } from "./commands/dev.js";
 import { initCommand } from "./commands/init.js";
 import { makeDocsCommand } from "./commands/make-docs.js";
+import { makeFactoryCommand } from "./commands/make-factory.js";
 import { makeMiddlewareCommand } from "./commands/make-middleware.js";
 import { makeSeederCommand } from "./commands/make-seeder.js";
 import { makeTestCommand } from "./commands/make-test.js";
@@ -25,11 +28,14 @@ function printUsage() {
 
 \x1b[36mCommands:\x1b[0m
   init                   Setup project: copy SKILL.md + configure package.json + generate env.ts
+  dev                    Start development server with hot reload
   build                  Build project for production (output → .buntok/)
   check                  Run TypeScript type check
   create <entity>        Generate all files for entity (repo, service, controller, schema)
   db <command>           Database operations (migrate, seed, reset, generate, studio, status)
+  debug:routes           Show all registered routes with middleware chains
   make:docs              Generate OpenAPI documentation automatically
+  make:factory <entity>  Generate data factory for entity
   make:test <entity>     Generate unit test for entity
   make:test:e2e <entity> Generate E2E test for entity
   make:seeder <entity>   Generate database seeder for entity
@@ -45,11 +51,21 @@ function printUsage() {
   --typeorm              Use TypeORM
   --dry-run              Preview files without writing
 
+\x1b[36mOptions (for check command):\x1b[0m
+  --json                 Output results as JSON
+  --plain                Plain text output without colors
+
+\x1b[36mOptions (for make:seeder command):\x1b[0m
+  --factory              Generate seeder using factory pattern
+
 \x1b[36mAliases:\x1b[0m
   g, gen, generate       Shortcut for create
 
 \x1b[36mExamples:\x1b[0m
   buntok init                             # Initialize project setup
+  buntok dev                              # Start development server
+  buntok dev --expose                     # Start with public tunnel URL
+  buntok dev --expose --port=3000         # Start with tunnel on port 3000
   buntok build                            # Build project for production
   buntok check                            # Run TypeScript type check
   buntok create user                      # Generate all files for user entity
@@ -58,6 +74,9 @@ function printUsage() {
   buntok g user --dry-run                 # Preview what would be generated
   buntok db migrate                       # Run pending migrations
   buntok db seed                          # Seed database
+  buntok debug:routes                     # Show all registered routes
+  buntok debug:routes --json              # Output routes as JSON
+  buntok make:factory user                # Generate user data factory
   buntok make:docs                        # Generate OpenAPI documentation
   buntok make:test user                   # Generate unit test for user
   buntok make:test:e2e user               # Generate E2E test for user API
@@ -86,7 +105,10 @@ export async function main() {
 			await buildCommand();
 			break;
 		case "check":
-			await checkCommand();
+			await checkCommand(args.slice(1));
+			break;
+		case "dev":
+			await devCommand(args.slice(1));
 			break;
 		case "g":
 		case "gen":
@@ -104,8 +126,21 @@ export async function main() {
 		case "db":
 			await dbCommand(args.slice(1));
 			break;
+		case "debug:routes":
+			await debugRoutesCommand(args.slice(1));
+			break;
 		case "make:docs":
 			await makeDocsCommand();
+			break;
+		case "make:factory":
+			if (!arg1) {
+				console.error(
+					"\x1b[31mError: entity name is required for make:factory command\x1b[0m",
+				);
+				process.exitCode = 1;
+				return;
+			}
+			await makeFactoryCommand(arg1, args.slice(2));
 			break;
 		case "make:test":
 			if (!arg1) {
@@ -135,7 +170,7 @@ export async function main() {
 				process.exitCode = 1;
 				return;
 			}
-			await makeSeederCommand(arg1);
+			await makeSeederCommand(arg1, args.slice(2));
 			break;
 		case "make:middleware":
 			if (!arg1) {
@@ -150,12 +185,15 @@ export async function main() {
 		default: {
 			const commands = [
 				"init",
+				"dev",
 				"build",
 				"check",
 				"create",
 				"g",
 				"db",
+				"debug:routes",
 				"make:docs",
+				"make:factory",
 				"make:test",
 				"make:test:e2e",
 				"make:seeder",

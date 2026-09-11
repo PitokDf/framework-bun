@@ -218,6 +218,16 @@ export interface ApiDocsOptions {
 	safeOnProduction?: boolean;
 }
 
+export interface RouteDebugInfo {
+	method: string;
+	path: string;
+	middlewares: string[];
+	handler: string;
+	source: "route" | "controller" | "group";
+	controller?: string;
+	group?: string;
+}
+
 export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private router: Router;
 	private middlewares: Middleware<DI>[] = [];
@@ -241,6 +251,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private corsConfig: CorsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: OpenAPI document is dynamically generated
 	private _swaggerDocument: any | null = null;
+	public routeDebugInfo: RouteDebugInfo[] = [];
 
 	/**
 	 * The underlying Bun Server instance. Only available after app.listen() is called.
@@ -618,7 +629,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			this.registerRoute(route.method, fullPath, [
 				...(route.middlewares as Middleware<DI>[]),
 				handler,
-			]);
+			], { source: "controller", controller: ControllerClass.name });
 		}
 
 		return this;
@@ -746,7 +757,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("GET", path, handlers);
+		this.registerRoute("GET", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -793,7 +804,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("POST", path, handlers);
+		this.registerRoute("POST", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -837,7 +848,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("PUT", path, handlers);
+		this.registerRoute("PUT", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -884,7 +895,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("DELETE", path, handlers);
+		this.registerRoute("DELETE", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -931,7 +942,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("OPTIONS", path, handlers);
+		this.registerRoute("OPTIONS", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -975,7 +986,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: string,
 		...handlers: Array<Middleware<DI> | Handler<DI>>
 	): this {
-		this.registerRoute("QUERY", path, handlers);
+		this.registerRoute("QUERY", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -1022,7 +1033,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("PATCH", path, handlers);
+		this.registerRoute("PATCH", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -1069,7 +1080,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("HEAD", path, handlers);
+		this.registerRoute("HEAD", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -1126,7 +1137,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"OPTIONS",
 		];
 		for (const method of methods) {
-			this.registerRoute(method, path, handlers);
+			this.registerRoute(method, path, handlers, { source: "route" });
 		}
 		return this;
 	}
@@ -1227,9 +1238,21 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		method: string,
 		path: string,
 		handlers: Array<Middleware<DI> | Handler<DI>>,
+		options?: { source?: "route" | "controller" | "group"; controller?: string; group?: string },
 	): void {
 		const mainHandler = handlers[handlers.length - 1] as Handler<DI>;
 		const routeMiddlewares = handlers.slice(0, -1) as Middleware<DI>[];
+
+		// Capture debug info before compilation
+		this.routeDebugInfo.push({
+			method,
+			path,
+			middlewares: routeMiddlewares.map((mw) => mw.name || "anonymous"),
+			handler: mainHandler.name || "anonymous",
+			source: options?.source || "route",
+			controller: options?.controller,
+			group: options?.group,
+		});
 
 		// Collect OpenAPI metadata
 		// biome-ignore lint/suspicious/noExplicitAny: Required for flexible schema representation
@@ -2048,7 +2071,7 @@ export class RouterGroup<
 		this.app.registerRoute("GET", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2098,7 +2121,7 @@ export class RouterGroup<
 		this.app.registerRoute("POST", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2145,7 +2168,7 @@ export class RouterGroup<
 		this.app.registerRoute("PUT", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2195,7 +2218,7 @@ export class RouterGroup<
 		this.app.registerRoute("DELETE", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2243,7 +2266,7 @@ export class RouterGroup<
 		this.app.registerRoute("QUERY", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2293,7 +2316,7 @@ export class RouterGroup<
 		this.app.registerRoute("OPTIONS", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2343,7 +2366,7 @@ export class RouterGroup<
 		this.app.registerRoute("PATCH", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2393,7 +2416,7 @@ export class RouterGroup<
 		this.app.registerRoute("HEAD", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2453,7 +2476,7 @@ export class RouterGroup<
 			this.app.registerRoute(method, this.normalizePath(path), [
 				...this.groupMiddlewares,
 				...handlers,
-			]);
+			], { source: "group", group: this.prefix });
 		}
 		return this;
 	}
@@ -2550,7 +2573,7 @@ export class RouterGroup<
 				...(route.middlewares as Middleware<DI>[]),
 				...this.groupMiddlewares,
 				handler,
-			]);
+			], { source: "controller", controller: ControllerClass.name, group: this.prefix });
 		}
 
 		return this;

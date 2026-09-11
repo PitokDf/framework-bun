@@ -32,6 +32,7 @@ export const DOC_ROUTES: DocRoute[] = [
   { href: "/docs/static-files", title: "Static Files", section: "Advanced", description: "Static file serving, public directory, asset configuration." },
   { href: "/docs/emitter", title: "Event Emitter", section: "Advanced", description: "Event emitter pattern, publish/subscribe, decoupled architecture." },
   { href: "/docs/testing", title: "Testing", section: "Advanced", description: "Unit testing, integration testing, test utilities, mocking." },
+  { href: "/docs/factory", title: "Factory", section: "Advanced", description: "Type-safe data factories for generating test and seed data with @faker-js/faker." },
 
   { href: "/docs/cache", title: "Cache", section: "Integrations", description: "Caching layer, MemoryCacheDriver, Redis driver, cache strategies, TTL." },
   { href: "/docs/graphql", title: "GraphQL", section: "Integrations", description: "GraphQL integration with Apollo Server and Yoga, schema, resolvers." },

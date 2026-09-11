@@ -48,9 +48,11 @@ export type {
 	WSHandler,
 	ZodCtx,
 } from "./app";
-export { App, type ApiDocsOptions, type StaticOptions, type WSOptions } from "./app";
+export { App, type ApiDocsOptions, type StaticOptions, type WSOptions, type RouteDebugInfo } from "./app";
 // Auth
 export { JwtService, requireAuth } from "./auth";
+// Factory
+export { Factory } from "./factory";
 // OAuth
 export {
 	BaseOAuthProvider,
