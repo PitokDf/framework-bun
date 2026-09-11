@@ -14,7 +14,7 @@ import { VERSION } from "./core-exports";
 import type { Plugin } from "./plugin";
 import type { CorsOptions } from "./middlewares/cors";
 import { applyCorsHeaders, cors } from "./middlewares/cors";
-import { getClientIP, getDirectClientIP, type TrustedProxyOptions } from "./helpers/network";
+import { getClientIP, type TrustedProxyOptions } from "./helpers/network";
 
 export interface WSData<DI = Record<string, unknown>> {
 	ctx: Context<DI>;
@@ -1600,9 +1600,6 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		);
 
 		const EMPTY_PARAMS = Object.freeze({});
-		const clientIPResolver = this.trustedProxy
-			? (request: Request) => getClientIP(request, this.trustedProxy)
-			: getDirectClientIP;
 		return factory(
 			Context,
 			EMPTY_PARAMS,
@@ -1613,7 +1610,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			this.handleError,
 			this.fallbackHandleRequest.bind(this),
 			this.wsRoutes,
-			clientIPResolver,
+			(request: Request) => getClientIP(request, this.trustedProxy),
 			toResponse,
 		);
 	}
@@ -1637,11 +1634,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (!response) {
 			return new Response("Internal Server Error", { status: 500 });
 		}
-		// Read requestId once for both logging and response header
-		const requestId = request.headers.get("x-request-id");
 		// Skip building the log string entirely when request logging is off
 		if (logger.logRequests) {
 			const status = response.status;
+			const requestId = request.headers.get("x-request-id");
 			const logData = requestId ? { status, requestId } : { status };
 			if (status >= 500) {
 				logger.error(`${request.method} ${pathname}`, logData);
@@ -1654,6 +1650,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (this.poweredByHeaderEnabled) {
 			response.headers.set("X-Powered-By", "buntok");
 		}
+		const requestId = request.headers.get("x-request-id");
 		if (requestId) response.headers.set("x-request-id", requestId);
 		return response;
 	};
@@ -1794,7 +1791,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (server && this.wsRoutes.size > 0) {
 			const wsHandler = this.wsRoutes.get(pathname);
 			if (wsHandler) {
-				const ctx = new Context(request, {}, this.di, this.trustedProxy ? (req) => getClientIP(req, this.trustedProxy) : getDirectClientIP) as Context<DI>;
+				const ctx = new Context(request, {}, this.di, (req) => getClientIP(req, this.trustedProxy)) as Context<DI>;
 				const data: WSData<DI> = { ctx, handler: wsHandler };
 				const upgraded = server.upgrade(request, { data });
 				if (upgraded) {
@@ -1812,7 +1809,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		const route = this.router.find(request.method, pathname);
 
-		const ctx = new Context(request, route.params, this.di, this.trustedProxy ? (req) => getClientIP(req, this.trustedProxy) : getDirectClientIP) as Context<DI>;
+		const ctx = new Context(request, route.params, this.di, (req) => getClientIP(req, this.trustedProxy)) as Context<DI>;
 
 		let finalHandler = route.handler as Handler<DI>;
 		if (!finalHandler) {
