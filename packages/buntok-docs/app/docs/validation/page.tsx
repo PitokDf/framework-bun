@@ -1,30 +1,51 @@
 import { Heading } from "@/components/ui/Heading";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Callout } from "@/components/ui/Callout";
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@/components/ui/Table";
 
 export const metadata = {
   title: "Validation",
-  description: "Validate request bodies, params, and query strings with Zod schemas.",
+  description:
+    "Validate request bodies, params, and query strings with Zod schemas.",
 };
-
 
 export default function ValidationPage() {
   return (
     <div>
-      <Heading level={1} className="text-4xl font-bold mt-8 mb-4 text-text-primary">Validation</Heading>
+      <Heading
+        level={1}
+        className="text-4xl font-bold mt-8 mb-4 text-text-primary"
+      >
+        Validation
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Buntok provides request data validation using Zod schemas. Zod is already included when you install <code>@buntok/core</code>.
+        Buntok provides request data validation using Zod schemas. Zod is
+        already included when you install <code>@buntok/core</code>.
       </p>
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         zValidator
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Middleware for validating request data with Zod schemas. Supports: <code>body</code>, <code>query</code>, <code>params</code>.
+        Middleware for validating request data with Zod schemas. Supports:{" "}
+        <code>body</code>, <code>query</code>, <code>params</code>.
       </p>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Body Validation</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Body Validation
+      </Heading>
       <CodeBlock
         code={`import { zValidator, z } from "@buntok/core";
 
@@ -41,7 +62,12 @@ app.post("/users", zValidator("body", userSchema), (ctx) => {
 });`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Query Validation</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Query Validation
+      </Heading>
       <CodeBlock
         code={`const paginationSchema = z.object({
   page: z.coerce.number().default(1),
@@ -54,7 +80,12 @@ app.get("/users", zValidator("query", paginationSchema), (ctx) => {
 });`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Params Validation</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Params Validation
+      </Heading>
       <CodeBlock
         code={`const idSchema = z.object({ id: z.string().uuid() });
 
@@ -64,16 +95,28 @@ app.get("/users/:id", zValidator("params", idSchema), (ctx) => {
 });`}
       />
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         ZodCtx
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        <code>ZodCtx</code> is a TypeScript type that gives you <strong>fully typed</strong> access to validated data in decorator-based controllers. It infers types directly from your Zod schemas — no manual type annotations needed.
+        <code>ZodCtx</code> is a TypeScript type that gives you{" "}
+        <strong>fully typed</strong> access to validated data in decorator-based
+        controllers. It infers types directly from your Zod schemas — no manual
+        type annotations needed.
       </p>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Why ZodCtx?</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Why ZodCtx?
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Without <code>ZodCtx</code>, you&apos;d have to manually type every validated field:
+        Without <code>ZodCtx</code>, you&apos;d have to manually type every
+        validated field:
       </p>
       <CodeBlock
         code={`// Without ZodCtx — manual types, easy to drift out of sync
@@ -83,7 +126,8 @@ app.post("/users", zValidator("body", userSchema), (ctx) => {
 });`}
       />
       <p className="my-3 text-text-secondary leading-relaxed">
-        With <code>ZodCtx</code>, the type is <strong>inferred automatically</strong> from the schema:
+        With <code>ZodCtx</code>, the type is{" "}
+        <strong>inferred automatically</strong> from the schema:
       </p>
       <CodeBlock
         code={`// With ZodCtx — types auto-inferred from Zod schema
@@ -98,9 +142,18 @@ app.post("/users", zValidator("body", userSchema), (ctx: ZodCtx<{ body: typeof u
 });`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">How It Works</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        How It Works
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        <code>ZodCtx&lt;T&gt;</code> accepts an object with optional <code>body</code>, <code>query</code>, and <code>params</code> keys. Each key accepts a Zod schema type (or a raw TypeScript type). The type system extracts the inferred type via Zod&apos;s internal <code>_type</code> property.
+        <code>ZodCtx&lt;T&gt;</code> accepts an object with optional{" "}
+        <code>body</code>, <code>query</code>, and <code>params</code> keys.
+        Each key accepts a Zod schema type (or a raw TypeScript type). The type
+        system extracts the inferred type via Zod&apos;s internal{" "}
+        <code>_type</code> property.
       </p>
       <CodeBlock
         code={`// ZodCtx infers types from Zod schemas
@@ -116,7 +169,12 @@ type MyCtx = ZodCtx<{
 }>`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Body Validation</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Body Validation
+      </Heading>
       <CodeBlock
         code={`import { Controller, Post, Use, zValidator, ZodCtx, z } from "@buntok/core";
 
@@ -139,7 +197,12 @@ export class UserController {
 }`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Query Validation</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Query Validation
+      </Heading>
       <CodeBlock
         code={`const paginationSchema = z.object({
   page: z.coerce.number().default(1),
@@ -166,7 +229,12 @@ export class UserController {
 }`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Params Validation</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Params Validation
+      </Heading>
       <CodeBlock
         code={`const idSchema = z.object({
   id: z.string().uuid(),
@@ -187,7 +255,12 @@ export class UserController {
 }`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Multiple Validators</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Multiple Validators
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Combine body, query, and params validation in a single endpoint:
       </p>
@@ -227,9 +300,18 @@ export class PostController {
 }`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">What ZodCtx Gives You</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        What ZodCtx Gives You
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        <code>ZodCtx</code> extends the full <a href="/docs/context" className="text-accent hover:underline">Context</a> — you get all context methods plus typed validation:
+        <code>ZodCtx</code> extends the full{" "}
+        <a href="/docs/context" className="text-accent hover:underline">
+          Context
+        </a>{" "}
+        — you get all context methods plus typed validation:
       </p>
       <div className="my-4 overflow-x-auto">
         <Table>
@@ -241,38 +323,59 @@ export class PostController {
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell className="font-mono text-accent">ctx.valid("body")</TableCell>
+              <TableCell className="font-mono text-accent">
+                ctx.valid("body")
+              </TableCell>
               <TableCell>Returns validated body (typed)</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="font-mono text-accent">ctx.valid("query")</TableCell>
+              <TableCell className="font-mono text-accent">
+                ctx.valid("query")
+              </TableCell>
               <TableCell>Returns validated query params (typed)</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="font-mono text-accent">ctx.valid("params")</TableCell>
+              <TableCell className="font-mono text-accent">
+                ctx.valid("params")
+              </TableCell>
               <TableCell>Returns validated route params (typed)</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="font-mono text-accent">ctx.body()</TableCell>
-              <TableCell>Read and parse raw JSON body from request (no validation)</TableCell>
+              <TableCell className="font-mono text-accent">
+                ctx.body()
+              </TableCell>
+              <TableCell>
+                Read and parse raw JSON body from request (no validation)
+              </TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="font-mono text-accent">ctx.json(data)</TableCell>
+              <TableCell className="font-mono text-accent">
+                ctx.json(data)
+              </TableCell>
               <TableCell>JSON response</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="font-mono text-accent">ctx.error(msg, status)</TableCell>
+              <TableCell className="font-mono text-accent">
+                ctx.error(msg, status)
+              </TableCell>
               <TableCell>Error response</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="font-mono text-accent">ctx.paginate()</TableCell>
+              <TableCell className="font-mono text-accent">
+                ctx.paginate()
+              </TableCell>
               <TableCell>Paginated response</TableCell>
             </TableRow>
           </TableBody>
         </Table>
       </div>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">ZodCtx vs Context</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        ZodCtx vs Context
+      </Heading>
       <div className="my-4 overflow-x-auto">
         <Table>
           <TableHeader>
@@ -285,8 +388,12 @@ export class PostController {
           <TableBody>
             <TableRow>
               <TableCell>Validation types</TableCell>
-              <TableCell>Manual: <code>ctx.valid&lt;Type&gt;("body")</code></TableCell>
-              <TableCell>Auto-inferred: <code>ctx.valid("body")</code></TableCell>
+              <TableCell>
+                Manual: <code>ctx.valid&lt;Type&gt;("body")</code>
+              </TableCell>
+              <TableCell>
+                Auto-inferred: <code>ctx.valid("body")</code>
+              </TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Works with</TableCell>
@@ -307,9 +414,15 @@ export class PostController {
         </Table>
       </div>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-title">Functional API</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-title"
+      >
+        Functional API
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        <code>ZodCtx</code> works in functional handlers too, though you can also use manual types with <code>ctx.valid&lt;Type&gt;()</code>:
+        <code>ZodCtx</code> works in functional handlers too, though you can
+        also use manual types with <code>ctx.valid&lt;Type&gt;()</code>:
       </p>
       <CodeBlock
         code={`// ZodCtx pattern (auto-inferred)
@@ -325,11 +438,16 @@ app.post("/users", zValidator("body", userSchema), (ctx) => {
 });`}
       />
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         ctx.valid()
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Retrieve data that has been validated by <code>zValidator</code>. With <code>ZodCtx</code>, the return type is auto-inferred. Without it, pass a type parameter manually.
+        Retrieve data that has been validated by <code>zValidator</code>. With{" "}
+        <code>ZodCtx</code>, the return type is auto-inferred. Without it, pass
+        a type parameter manually.
       </p>
       <CodeBlock
         code={`// With ZodCtx (auto-inferred)
@@ -339,7 +457,10 @@ const data = ctx.valid("body");
 const data = ctx.valid<UserCreateDto>("body");`}
       />
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Shortcuts
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -353,10 +474,23 @@ app.post("/users", validateBody(schema), handler);
 app.get("/users/:id", validateParams(idSchema), handler);`}
       />
       <Callout type="warning">
-        <code>validateBody</code> and <code>validateParams</code> are deprecated. Use <code>zValidator(&quot;body&quot;, schema)</code> and <code>zValidator(&quot;params&quot;, schema)</code> instead — they provide full type inference via <a href="/docs/validation#zodctx" className="text-accent hover:underline">ZodCtx</a>.
+        <code>validateBody</code> and <code>validateParams</code> are
+        deprecated. Use <code>zValidator(&quot;body&quot;, schema)</code> and{" "}
+        <code>zValidator(&quot;params&quot;, schema)</code> instead — they
+        provide full type inference via{" "}
+        <a
+          href="/docs/validation#zodctx"
+          className="text-accent hover:underline"
+        >
+          ZodCtx
+        </a>
+        .
       </Callout>
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Error Response
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -379,7 +513,10 @@ app.get("/users/:id", validateParams(idSchema), handler);`}
 }`}
       />
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Custom Error Message
       </Heading>
       <CodeBlock
@@ -389,7 +526,10 @@ app.get("/users/:id", validateParams(idSchema), handler);`}
 });`}
       />
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Custom Error Format
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -405,40 +545,44 @@ app.get("/users/:id", validateParams(idSchema), handler);`}
 }`}
       />
       <p className="my-3 text-text-secondary leading-relaxed">
-        To customize this format globally, use <code>app.onError()</code>:
+        <code>zValidator()</code> returns a 422 response directly, so it does
+        not pass validation failures to <code>app.onError()</code>. Use a custom
+        middleware if you need to transform the validator response format.
+        <code>app.onError()</code> remains available for errors thrown by route
+        handlers and other middleware:
       </p>
       <CodeBlock
-        code={`import { App, HttpError } from "@buntok/core";
+        code={`import { App } from "@buntok/core";
 
 const app = new App();
 
 app.onError((error, ctx) => {
-  // Handle validation errors (zValidator returns 422 with details array)
-  if (error instanceof HttpError && error.status === 422) {
-    return ctx.json({
-      status: "error",
-      code: "VALIDATION_ERROR",
-      errors: error.details,
-    }, 422);
-  }
-
   // Handle other errors
   return ctx.json({
     status: "error",
     message: error.message,
-  }, error instanceof HttpError ? error.status : 500);
+  }, 500);
 });`}
       />
 
       <Callout type="info">
-        The error handler receives the error and context. Check for validation-specific errors and return your custom format.
+        The error handler receives the thrown error and context. Validation
+        failures returned by <code>zValidator()</code> are already responses and
+        do not enter this handler.
       </Callout>
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         When to Use ZodCtx
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Use <code>ZodCtx</code> in <strong>decorator-based controllers</strong> where you want types auto-inferred from Zod schemas. Use manual types with <code>ctx.valid&lt;Type&gt;()</code> in <strong>functional handlers</strong> or when your schema doesn&apos;t match your runtime type.
+        Use <code>ZodCtx</code> in <strong>decorator-based controllers</strong>{" "}
+        where you want types auto-inferred from Zod schemas. Use manual types
+        with <code>ctx.valid&lt;Type&gt;()</code> in{" "}
+        <strong>functional handlers</strong> or when your schema doesn&apos;t
+        match your runtime type.
       </p>
       <CodeBlock
         code={`// Decorator controller — use ZodCtx for auto-inference
@@ -459,10 +603,16 @@ app.post("/users", zValidator("body", createUserSchema), (ctx) => {
       />
 
       <Callout type="info">
-        <strong>Note:</strong> <code>zValidator</code> only supports <code>&quot;body&quot;</code>, <code>&quot;query&quot;</code>, and <code>&quot;params&quot;</code> targets. For headers validation, use a custom middleware or check <code>ctx.request.headers</code> directly.
+        <strong>Note:</strong> <code>zValidator</code> only supports{" "}
+        <code>&quot;body&quot;</code>, <code>&quot;query&quot;</code>, and{" "}
+        <code>&quot;params&quot;</code> targets. For headers validation, use a
+        custom middleware or check <code>ctx.request.headers</code> directly.
       </Callout>
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Combining Validators
       </Heading>
       <CodeBlock
@@ -478,14 +628,21 @@ app.post("/users", zValidator("body", createUserSchema), (ctx) => {
       />
 
       <Callout type="info">
-        Each <code>zValidator</code> only validates a specific target (body, query, params, or headers). You can use multiple validators simultaneously.
+        Each <code>zValidator</code> only validates a specific target (body,
+        query, params, or headers). You can use multiple validators
+        simultaneously.
       </Callout>
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         File Upload Validation
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        For file uploads, <code>zValidator</code> supports <code>multipart/form-data</code> with <code>z.file()</code> (Zod v4+) to validate file fields directly:
+        For file uploads, <code>zValidator</code> supports{" "}
+        <code>multipart/form-data</code> with <code>z.file()</code> (Zod v4+) to
+        validate file fields directly:
       </p>
       <CodeBlock
         code={`const schema = z.object({
@@ -502,9 +659,15 @@ app.post("/upload", zValidator("body", schema, {
 });`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">Multiple Files</Heading>
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Multiple Files
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Use <code>z.array(z.file())</code> to validate multiple files with the same field name:
+        Use <code>z.array(z.file())</code> to validate multiple files with the
+        same field name:
       </p>
       <CodeBlock
         code={`const schema = z.object({
@@ -522,15 +685,45 @@ app.post("/gallery", zValidator("body", schema, {
       />
 
       <Callout type="info">
-        <code>zValidator</code> with <code>multipart/form-data</code> validates and parses both text fields and file fields. For comprehensive file validation (size, magic bytes, MIME types) and storage, use <code><a href="/docs/upload" className="text-accent hover:underline">handleUploads()</a></code> or the <code><a href="/docs/upload#uploader-middleware" className="text-accent hover:underline">uploader()</a></code> middleware instead.
+        <code>zValidator</code> with <code>multipart/form-data</code> validates
+        and parses both text fields and file fields. For comprehensive file
+        validation (size, magic bytes, MIME types) and storage, use{" "}
+        <code>
+          <a href="/docs/upload" className="text-accent hover:underline">
+            handleUploads()
+          </a>
+        </code>{" "}
+        or the{" "}
+        <code>
+          <a
+            href="/docs/upload#uploader-middleware"
+            className="text-accent hover:underline"
+          >
+            uploader()
+          </a>
+        </code>{" "}
+        middleware instead.
       </Callout>
 
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Next Steps
       </Heading>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
-        <li><a href="/docs/upload" className="text-accent hover:underline">Upload</a> - Validate file uploads</li>
-        <li><a href="/docs/routing" className="text-accent hover:underline">Routing</a> - Route parameters and query strings</li>
+        <li>
+          <a href="/docs/upload" className="text-accent hover:underline">
+            Upload
+          </a>{" "}
+          - Validate file uploads
+        </li>
+        <li>
+          <a href="/docs/routing" className="text-accent hover:underline">
+            Routing
+          </a>{" "}
+          - Route parameters and query strings
+        </li>
       </ul>
     </div>
   );

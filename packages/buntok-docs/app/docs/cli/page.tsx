@@ -4,19 +4,28 @@ import { Callout } from "@/components/ui/Callout";
 
 export const metadata = {
   title: "CLI Commands",
-  description: "Scaffold projects, generate code, and manage databases with the CLI.",
+  description:
+    "Scaffold projects, generate code, and manage databases with the CLI.",
 };
 
 export default function CLIPage() {
   return (
     <div>
-      <Heading level={1} className="text-4xl font-bold mt-8 mb-4 text-text-primary">CLI</Heading>
+      <Heading
+        level={1}
+        className="text-4xl font-bold mt-8 mb-4 text-text-primary"
+      >
+        CLI
+      </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Buntok provides a CLI for scaffolding and managing projects.
       </p>
 
       {/* ──────────────── INIT ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         init
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -24,19 +33,28 @@ export default function CLIPage() {
       </p>
       <CodeBlock code={`bunx buntok init`} />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Interactive Prompts
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         During initialization, you'll be asked:
       </p>
-      <CodeBlock code={`? Do you want to deploy to Vercel? (y/N):
-? Do you want to add Docker support? (Y/n):`} />
+      <CodeBlock
+        code={`? Do you want to deploy to Vercel? (y/N):
+? Do you want to add Docker support? (Y/n):`}
+      />
       <p className="my-3 text-text-secondary leading-relaxed">
-        If you answer <code>y</code>, a <code>vercel.json</code> file will be created with the recommended configuration for Bun projects.
+        If you answer <code>y</code>, a <code>vercel.json</code> file will be
+        created with the recommended configuration for Bun projects.
       </p>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         What Gets Created
       </Heading>
       <CodeBlock
@@ -64,12 +82,16 @@ export default function CLIPage() {
 ✓ Created .dockerignore`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Generated <code>env.ts</code>
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        The <code>src/env.ts</code> file contains a type-safe environment schema using <code>validateEnv()</code>.
-        All variables have sensible defaults and are validated at startup.
+        The <code>src/env.ts</code> file contains a type-safe environment schema
+        using <code>validateEnv()</code>. All variables have sensible defaults
+        and are validated at startup.
       </p>
       <CodeBlock
         code={`import { App, z } from "@buntok/core";
@@ -82,41 +104,63 @@ export const env = App.validateEnv({
 });`}
       />
       <p className="my-3 text-text-secondary leading-relaxed">
-        Add more variables as needed (e.g., <code>DATABASE_URL</code>, <code>JWT_SECRET</code>).
-        The server will exit with a clear error if any required variable is missing or invalid.
+        Add more variables as needed (e.g., <code>DATABASE_URL</code>,{" "}
+        <code>JWT_SECRET</code>). The server will exit with a clear error if any
+        required variable is missing or invalid.
       </p>
 
       {/* ──────────────── BUILD ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         build
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Build project for production. Compiles TypeScript to JavaScript and outputs to <code>.buntok/</code>.
+        Build project for production. Compiles TypeScript to JavaScript and
+        outputs to <code>.buntok/</code>.
       </p>
       <CodeBlock code={`bunx buntok build`} />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         What It Does
       </Heading>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
-        <li>Compiles <code>src/index.ts</code> using <code>Bun.build()</code></li>
-        <li>Resolves path aliases (e.g., <code>@/*</code>) from <code>tsconfig.json</code></li>
+        <li>
+          Compiles the root <code>server.ts</code> entry point using{" "}
+          <code>Bun.build()</code>
+        </li>
+        <li>
+          Resolves path aliases (e.g., <code>@/*</code>) from{" "}
+          <code>tsconfig.json</code>
+        </li>
         <li>Marks all packages as external (not bundled)</li>
-        <li>Outputs to <code>.buntok/index.js</code></li>
+        <li>
+          Outputs to <code>.buntok/server.js</code>
+        </li>
       </ul>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Output
       </Heading>
       <CodeBlock
         code={`$ bunx buntok build
 
 🔨 Building project...
-✅ Build successful → .buntok/index.js
+✅ Build successful → .buntok/server.js
   Deploy: copy .buntok/ + node_modules/ + package.json to server`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Deploying
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -124,12 +168,15 @@ export const env = App.validateEnv({
       </p>
       <CodeBlock
         code={`# Files needed for production
-.buntok/index.js    # Compiled application
+.buntok/server.js    # Compiled application
 node_modules/       # Dependencies
 package.json        # Package manifest`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Development vs Production
       </Heading>
       <CodeBlock
@@ -144,11 +191,15 @@ bun run start`}
       />
 
       {/* ──────────────── CHECK ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         check
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Run TypeScript type checking without emitting files. Displays all errors with file locations and a summary.
+        Run TypeScript type checking without emitting files. Displays all errors
+        with file locations and a summary.
       </p>
       <CodeBlock code={`bunx buntok check`} />
       <CodeBlock
@@ -162,25 +213,49 @@ src/index.ts(2,7): error TS2322: Type 'number' is not assignable to type 'string
   ✗ 2 errors in 2 files`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Options
       </Heading>
       <div className="overflow-x-auto my-4">
         <table className="min-w-full border border-border-primary text-sm">
           <thead>
             <tr className="bg-bg-secondary">
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Flag</th>
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Flag
+              </th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Description
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--json</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Output results as JSON for CI/CD</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--plain</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Plain text output without colors</td></tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--json</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Output results as JSON for CI/CD
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--plain</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Plain text output without colors
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         JSON Output
       </Heading>
       <CodeBlock
@@ -203,15 +278,22 @@ src/index.ts(2,7): error TS2322: Type 'number' is not assignable to type 'string
       />
 
       {/* ──────────────── CREATE ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         create
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Generate repository, service, controller, and schema files for an entity using a modular structure.
+        Generate repository, service, controller, and schema files for an entity
+        using a modular structure.
       </p>
       <CodeBlock code={`bunx buntok create <entity>`} />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Example Output
       </Heading>
       <CodeBlock
@@ -226,14 +308,21 @@ Creating User entity (orm: prisma)...
 ✓ Created src/modules/user/index.ts`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Generated Files
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        By default, <code>create</code> generates all files using the modular structure with <code>@Dependencies</code> for auto DI:
+        By default, <code>create</code> generates all files using the modular
+        structure with <code>@Dependencies</code> for auto DI:
       </p>
 
-      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+      <Heading
+        level={4}
+        className="text-lg font-medium mt-4 mb-2 text-text-primary"
+      >
         Controller
       </Heading>
       <CodeBlock
@@ -251,7 +340,10 @@ export class UserController extends BaseController<User> {
 }`}
       />
 
-      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+      <Heading
+        level={4}
+        className="text-lg font-medium mt-4 mb-2 text-text-primary"
+      >
         Service
       </Heading>
       <CodeBlock
@@ -268,7 +360,10 @@ export class UserService extends BaseService<User> {
 }`}
       />
 
-      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+      <Heading
+        level={4}
+        className="text-lg font-medium mt-4 mb-2 text-text-primary"
+      >
         Repository
       </Heading>
       <CodeBlock
@@ -288,7 +383,10 @@ export class UserRepository extends BaseRepository<
 }`}
       />
 
-      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+      <Heading
+        level={4}
+        className="text-lg font-medium mt-4 mb-2 text-text-primary"
+      >
         Schema (Zod)
       </Heading>
       <CodeBlock
@@ -306,7 +404,10 @@ export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;`}
       />
 
-      <Heading level={4} className="text-lg font-medium mt-4 mb-2 text-text-primary">
+      <Heading
+        level={4}
+        className="text-lg font-medium mt-4 mb-2 text-text-primary"
+      >
         Barrel Export
       </Heading>
       <CodeBlock
@@ -318,11 +419,15 @@ export { CreateUserSchema, UpdateUserSchema } from "./user.schema";
 export type { CreateUserInput, UpdateUserInput } from "./user.schema";`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Partial Generation
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Use flags to generate only specific files. Flags can be <strong>combined</strong>:
+        Use flags to generate only specific files. Flags can be{" "}
+        <strong>combined</strong>:
       </p>
       <CodeBlock
         code={`# Generate only the repository
@@ -341,11 +446,15 @@ bunx buntok create user --schema
 bunx buntok create user --repo --service`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         ORM Selection
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        By default, the CLI auto-detects your ORM from <code>package.json</code> dependencies. You can also specify it explicitly:
+        By default, the CLI auto-detects your ORM from <code>package.json</code>{" "}
+        dependencies. You can also specify it explicitly:
       </p>
       <CodeBlock
         code={`# Auto-detect ORM (default)
@@ -361,7 +470,10 @@ bunx buntok create user --drizzle
 bunx buntok create user --typeorm`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Dry Run
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -370,7 +482,10 @@ bunx buntok create user --typeorm`}
       <CodeBlock code={`bunx buntok create user --dry-run`} />
 
       {/* ──────────────── DB ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         db
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -397,11 +512,17 @@ bunx buntok db studio
 bunx buntok db status`}
       />
       <Callout type="info">
-        Auto-detects ORM (<code>@buntok/prisma</code>, <code>@buntok/drizzle</code>, <code>@buntok/typeorm</code>) via <code>detectOrm()</code>. <code>migrate [name]</code> accepts optional migration name.
+        Auto-detects ORM (<code>@buntok/prisma</code>,{" "}
+        <code>@buntok/drizzle</code>, <code>@buntok/typeorm</code>) via{" "}
+        <code>detectOrm()</code>. <code>migrate [name]</code> accepts optional
+        migration name.
       </Callout>
 
       {/* ──────────────── MAKE:TEST ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         make:test
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -415,7 +536,10 @@ bunx buntok db status`}
       />
 
       {/* ──────────────── MAKE:TEST:E2E ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         make:test:e2e
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -429,11 +553,15 @@ bunx buntok db status`}
       />
 
       {/* ──────────────── MAKE:SEEDER ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         make:seeder
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Generate a database seeder file for an entity. Works with any ORM (Prisma, Drizzle, TypeORM).
+        Generate a database seeder file for an entity. Works with any ORM
+        (Prisma, Drizzle, TypeORM).
       </p>
       <CodeBlock code={`bunx buntok make:seeder <entity>`} />
       <CodeBlock
@@ -442,11 +570,15 @@ bunx buntok db status`}
 ✓ Created src/db/seeders/user.seeder.ts`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Factory Pattern
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Use the <code>--factory</code> flag to generate a seeder that uses the Factory pattern for data generation:
+        Use the <code>--factory</code> flag to generate a seeder that uses the
+        Factory pattern for data generation:
       </p>
       <CodeBlock code={`bunx buntok make:seeder user --factory`} />
       <CodeBlock
@@ -464,15 +596,21 @@ export async function seedUser() {
 }`}
       />
       <Callout type="info">
-        Requires a factory file at <code>src/factories/&lt;entity&gt;.factory.ts</code>. Run <code>buntok make:factory &lt;entity&gt;</code> first.
+        Requires a factory file at{" "}
+        <code>src/factories/&lt;entity&gt;.factory.ts</code>. Run{" "}
+        <code>buntok make:factory &lt;entity&gt;</code> first.
       </Callout>
 
       {/* ──────────────── MAKE:FACTORY ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         make:factory
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Generate a type-safe data factory for an entity. Factories are used for generating test and seed data.
+        Generate a factory scaffold for an entity. Add the required fields to
+        the generated definition before using it in tests or seeders.
       </p>
       <CodeBlock code={`bunx buntok make:factory <entity>`} />
       <CodeBlock
@@ -488,9 +626,17 @@ Usage:
   const admin = await UserFactory.create({ role: "admin" });`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Generated Factory
       </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The generated file is a Prisma-oriented scaffold with a TODO definition.
+        It is not ready to compile until you replace the placeholder with fields
+        required by your <code>User</code> type.
+      </p>
       <CodeBlock
         code={`// src/factories/user.factory.ts
 import { Factory } from "@buntok/core";
@@ -507,40 +653,115 @@ export const UserFactory = Factory.define<User>(() => ({
 }));`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Factory API
       </Heading>
       <div className="overflow-x-auto my-4">
         <table className="min-w-full border border-border-primary text-sm">
           <thead>
             <tr className="bg-bg-secondary">
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Method</th>
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Method
+              </th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Description
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>Factory.define&lt;T&gt;(fn)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create a new factory with type T</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.create(overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create one item (async, runs afterCreate)</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.createMany(count, overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create multiple items</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.build(overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate one item synchronously</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.buildMany(count, overrides?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate multiple items synchronously</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.withDefaults(defaults)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Set default overrides</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>.afterCreate(callback)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Register post-creation hook</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>Factory.ref(fn)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Lazy reference for relations</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>Factory.pick(arr, count?)</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Random item(s) from array</td></tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>Factory.define&lt;T&gt;(fn)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Create a new factory with type T
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>.create(overrides?)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Create one item (async, runs afterCreate)
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>.createMany(count, overrides?)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Create multiple items
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>.build(overrides?)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Generate one item synchronously
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>.buildMany(count, overrides?)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Generate multiple items synchronously
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>.withDefaults(defaults)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Set default overrides
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>.afterCreate(callback)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Register post-creation hook
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>Factory.ref(fn)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Lazy reference for relations
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>Factory.pick(arr, count?)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Random item(s) from array
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
       <Callout type="info">
-        Requires <code>@faker-js/faker</code> as a peer dependency. Install with: <code>bun add -d @faker-js/faker</code>
+        Requires <code>@faker-js/faker</code> as a peer dependency. Install
+        with: <code>bun add -d @faker-js/faker</code>
       </Callout>
 
       {/* ──────────────── DEBUG:ROUTES ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         debug:routes
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Show all registered routes with their middleware chains. Useful for debugging route registration and middleware ordering.
+        Show all registered routes with their middleware chains. Useful for
+        debugging route registration and middleware ordering.
       </p>
       <CodeBlock code={`bunx buntok debug:routes`} />
       <CodeBlock
@@ -560,7 +781,10 @@ By source:
   direct: 1 routes`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         JSON Output
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -569,11 +793,15 @@ By source:
       <CodeBlock code={`bunx buntok debug:routes --json`} />
 
       {/* ──────────────── DEV ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         dev
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Start the development server with hot reload. Optionally expose it publicly for testing webhooks or sharing.
+        Start the development server with hot reload. Optionally expose it
+        publicly for testing webhooks or sharing.
       </p>
       <CodeBlock code={`bunx buntok dev`} />
       <CodeBlock
@@ -586,11 +814,15 @@ Starting development server...
   Press Ctrl+C to stop`}
       />
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Public Tunnel
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Use <code>--expose</code> to create a public URL via localtunnel. Useful for webhook testing, mobile testing, or sharing with others:
+        Use <code>--expose</code> to create a public URL via localtunnel. Useful
+        for webhook testing, mobile testing, or sharing with others:
       </p>
       <CodeBlock code={`bunx buntok dev --expose`} />
       <CodeBlock
@@ -604,29 +836,54 @@ Starting development server with tunnel...
   Press Ctrl+C to stop`}
       />
       <Callout type="warning">
-        Requires <code>localtunnel</code> as a dev dependency. Install with: <code>bun add -d localtunnel</code>
+        Requires <code>localtunnel</code> as a dev dependency. Install with:{" "}
+        <code>bun add -d localtunnel</code>
       </Callout>
 
-      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
         Options
       </Heading>
       <div className="overflow-x-auto my-4">
         <table className="min-w-full border border-border-primary text-sm">
           <thead>
             <tr className="bg-bg-secondary">
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Flag</th>
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Flag
+              </th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Description
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--expose</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create public tunnel URL via localtunnel</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--port=PORT</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Port number (default: 1212)</td></tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--expose</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Create public tunnel URL via localtunnel
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--port=PORT</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Port number (default: 1212)
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
 
       {/* ──────────────── MAKE:MIDDLEWARE ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         make:middleware
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -640,19 +897,28 @@ Starting development server with tunnel...
       />
 
       {/* ──────────────── MAKE:DOCS ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         make:docs
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Manually regenerate OpenAPI documentation. <strong>Optional</strong> — <code>swagger.json</code> is auto-generated on <code>app.listen()</code>.
+        Manually regenerate OpenAPI documentation. <strong>Optional</strong> —{" "}
+        <code>swagger.json</code> is auto-generated on <code>app.listen()</code>
+        .
       </p>
       <CodeBlock code={`bunx buntok make:docs`} />
       <Callout type="info">
-        Use this for CI/CD pipelines or when you need to regenerate <code>swagger.json</code> without starting the server.
+        Use this for CI/CD pipelines or when you need to regenerate{" "}
+        <code>swagger.json</code> without starting the server.
       </Callout>
 
       {/* ──────────────── ALIASES ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Aliases
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -667,11 +933,15 @@ bunx buntok generate user`}
       />
 
       {/* ──────────────── PROJECT STRUCTURE ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Project Structure
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        After using <code>buntok init</code> and <code>buntok create user</code>:
+        After using <code>buntok init</code> and <code>buntok create user</code>
+        :
       </p>
       <CodeBlock
         code={`my-app/
@@ -702,30 +972,97 @@ bunx buntok generate user`}
       />
 
       <Callout type="info">
-        Each entity lives in its own module directory under <code>src/modules/</code>. The <code>@Dependencies</code> decorator enables automatic dependency injection — just register your controllers with <code>app.registerController()</code> and the container resolves the entire dependency tree.
+        Each entity lives in its own module directory under{" "}
+        <code>src/modules/</code>. The <code>@Dependencies</code> decorator
+        enables automatic dependency injection — just register your controllers
+        with <code>app.registerController()</code> and the container resolves
+        the entire dependency tree.
       </Callout>
 
       {/* ──────────────── FLAGS REFERENCE ──────────────── */}
-      <Heading level={2} className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Flags Reference
       </Heading>
       <div className="overflow-x-auto my-4">
         <table className="min-w-full border border-border-primary text-sm">
           <thead>
             <tr className="bg-bg-secondary">
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Flag</th>
-              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Flag
+              </th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Description
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--repo</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only repository</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--service</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only service</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--controller</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only controller</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--schema</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Generate only Zod schema</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--prisma</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Use Prisma ORM (default: auto-detect)</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--drizzle</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Use Drizzle ORM</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--typeorm</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Use TypeORM</td></tr>
-            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--dry-run</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Preview files without writing</td></tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--repo</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Generate only repository
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--service</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Generate only service
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--controller</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Generate only controller
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--schema</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Generate only Zod schema
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--prisma</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Use Prisma ORM (default: auto-detect)
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--drizzle</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Use Drizzle ORM
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--typeorm</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Use TypeORM
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>--dry-run</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Preview files without writing
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

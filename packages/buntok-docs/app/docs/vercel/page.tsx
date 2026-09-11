@@ -12,21 +12,28 @@ export default function VercelPage() {
     <>
       <Heading level={1}>Vercel Deployment</Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        BunTok supports zero-config deployment on Vercel with Bun runtime. Select &quot;Yes&quot;
-        when prompted during <code>buntok init</code> to set up the clean entry point pattern.
+        BunTok provides a Bun runtime configuration for Vercel. Select
+        &quot;Yes&quot; when prompted during <code>buntok init</code> to create{" "}
+        <code>vercel.json</code>.
       </p>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary"
+      >
         How It Works
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        BunTok uses a single <code>server.ts</code> entry point for all modes — local development
-        and Vercel. The <code>app.listen()</code> method auto-detects the runtime: it calls{" "}
-        <code>Bun.serve()</code> locally, and works seamlessly on Vercel serverless.
+        The generated <code>server.ts</code> entry point starts a local Bun
+        server with <code>app.listen()</code>. A serverless deployment uses the
+        app's fetch handler instead of binding a local port.
       </p>
 
-      <Heading level={3} className="text-lg font-semibold mt-6 mb-2 text-text-primary">
-        server.ts — universal entry point
+      <Heading
+        level={3}
+        className="text-lg font-semibold mt-6 mb-2 text-text-primary"
+      >
+        server.ts — local server entry point
       </Heading>
       <CodeBlock
         language="typescript"
@@ -36,46 +43,67 @@ import { env } from "./src/env";
 app.listen(env.PORT);`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary"
+      >
         Why `app.listen()` Works Everywhere
       </Heading>
       <ul className="my-3 text-text-secondary leading-relaxed list-disc list-inside space-y-1">
         <li>
-          <strong>Local dev</strong> — <code>app.listen()</code> calls <code>Bun.serve()</code>{" "}
-          and binds to a port
+          <strong>Local dev</strong> — <code>app.listen()</code> calls{" "}
+          <code>Bun.serve()</code> and binds to a port
         </li>
         <li>
-          <strong>Vercel</strong> — <code>app.listen()</code> detects the serverless environment
-          and delegates to <code>app.fetch()</code> automatically
+          <strong>Serverless deployment</strong> — expose <code>app.fetch</code>{" "}
+          through the deployment adapter instead of binding a local port
         </li>
-        <li>No separate entry points needed — one <code>server.ts</code> works for both</li>
+        <li>
+          Keep the local server entry point separate from the serverless
+          adapter.
+        </li>
       </ul>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         app.fetch() vs app.listen()
       </Heading>
       <div className="my-4 overflow-x-auto">
         <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
           <thead className="bg-bg-tertiary border-b border-border-primary">
             <tr>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Method</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Use Case</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Binds Port</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Method
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Use Case
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Binds Port
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">app.listen(port)</td>
+              <td className="px-4 py-2 font-mono text-accent">
+                app.listen(port)
+              </td>
               <td className="px-4 py-2">Local development</td>
               <td className="px-4 py-2">Yes</td>
             </tr>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">app.fetch(request)</td>
+              <td className="px-4 py-2 font-mono text-accent">
+                app.fetch(request)
+              </td>
               <td className="px-4 py-2">Vercel/serverless</td>
               <td className="px-4 py-2">No</td>
             </tr>
             <tr className="border-b border-border-primary">
-              <td className="px-4 py-2 font-mono text-accent">app.request(input, init?)</td>
+              <td className="px-4 py-2 font-mono text-accent">
+                app.request(input, init?)
+              </td>
               <td className="px-4 py-2">Testing</td>
               <td className="px-4 py-2">No</td>
             </tr>
@@ -83,7 +111,10 @@ app.listen(env.PORT);`}
         </table>
       </div>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary"
+      >
         vercel.json
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
@@ -99,15 +130,19 @@ app.listen(env.PORT);`}
       />
       <ul className="my-3 text-text-secondary leading-relaxed list-disc list-inside space-y-1">
         <li>
-          <code>framework: &quot;bun&quot;</code> — tells Vercel to use Bun runtime (required for
-          GitHub-triggered deploys).
+          <code>framework: &quot;bun&quot;</code> — tells Vercel to use Bun
+          runtime (required for GitHub-triggered deploys).
         </li>
         <li>
-          <code>bunVersion: &quot;1.4.x&quot;</code> — pins the Bun runtime version.
+          <code>bunVersion: &quot;1.4.x&quot;</code> — pins the Bun runtime
+          version.
         </li>
       </ul>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary"
+      >
         Deploy
       </Heading>
       <CodeBlock
@@ -122,16 +157,26 @@ vercel
 vercel --prod`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary"
+      >
         Local Development
       </Heading>
-      <CodeBlock language="bash" code={`bun run dev   # runs: bun --watch server.ts`} />
+      <CodeBlock
+        language="bash"
+        code={`bun run dev   # runs: bun --watch server.ts`}
+      />
       <p className="my-3 text-text-secondary leading-relaxed">
-        The <code>dev</code> script runs <code>server.ts</code> which calls <code>app.listen()</code>{" "}
-        — this is separate from the Vercel entry point.
+        The <code>dev</code> script runs <code>server.ts</code>, which calls{" "}
+        <code>app.listen()</code> for local development. A serverless deployment
+        uses <code>app.fetch</code> instead.
       </p>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary"
+      >
         Project Structure
       </Heading>
       <CodeBlock
@@ -142,29 +187,38 @@ vercel --prod`}
 │   ├── controllers/
 │   ├── services/
 │   └── repositories/
-├── server.ts                 # app.listen(env.PORT) — universal entry point
+├── server.ts                 # app.listen(env.PORT) — local server entry point
 ├── vercel.json               # Vercel config (framework: "bun")
 ├── package.json
 └── ...`}
       />
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Common Issues
       </Heading>
 
-      <Heading level={3} className="text-lg font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-lg font-semibold mt-6 mb-2 text-text-primary"
+      >
         `cannot read properties of undefined (reading 'readFile')`
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        This error occurs when <code>typescript</code> is listed as a <strong>peerDependency</strong> in your
-        project. Vercel tries to resolve peer dependencies during build, and if the version doesn&apos;t exist
-        (e.g., <code>typescript@^7</code>), the TypeScript compiler fails to load.
+        This error occurs when <code>typescript</code> is listed as a{" "}
+        <strong>peerDependency</strong> in your project. Vercel tries to resolve
+        peer dependencies during build, and if the version doesn&apos;t exist
+        (e.g., <code>typescript@^7</code>), the TypeScript compiler fails to
+        load.
       </p>
       <Callout type="warning">
-        <strong>Fix:</strong> Remove <code>typescript</code> from <code>peerDependencies</code> in your{" "}
-        <code>package.json</code>. Keep it only as a <code>devDependency</code> if needed. TypeScript is
-        already included transitively through <code>tsup</code>, <code>@prisma/client</code>, and other
-        build tools.
+        <strong>Fix:</strong> Remove <code>typescript</code> from{" "}
+        <code>peerDependencies</code> in your <code>package.json</code>. Keep it
+        only as a <code>devDependency</code> if needed. TypeScript is already
+        included transitively through <code>tsup</code>,{" "}
+        <code>@prisma/client</code>, and other build tools.
       </Callout>
       <CodeBlock
         language="json"
@@ -179,30 +233,40 @@ vercel --prod`}
 }`}
       />
 
-      <Heading level={3} className="text-lg font-semibold mt-6 mb-2 text-text-primary">
+      <Heading
+        level={3}
+        className="text-lg font-semibold mt-6 mb-2 text-text-primary"
+      >
         Build fails with `Module not found`
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Make sure all dependencies are installed before building. Run{" "}
-        <code>bun install</code> locally and verify <code>node_modules</code> exists.
-        For Vercel, ensure your <code>installCommand</code> or <code>buildCommand</code>{" "}
-        includes dependency installation.
+        <code>bun install</code> locally and verify <code>node_modules</code>{" "}
+        exists. For Vercel, ensure your <code>installCommand</code> or{" "}
+        <code>buildCommand</code> includes dependency installation.
       </p>
 
-      <Heading level={2} className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2">
+      <Heading
+        level={2}
+        className="text-xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Notes
       </Heading>
       <ul className="my-3 text-text-secondary leading-relaxed list-disc list-inside space-y-1">
-        <li>WebSocket routes may need additional Vercel configuration</li>
         <li>
-          For monorepos, set the <strong>Root Directory</strong> in Vercel dashboard to your
-          project subfolder
+          WebSocket routes require a runtime that supports WebSockets; verify
+          platform support before deploying.
+        </li>
+        <li>
+          For monorepos, set the <strong>Root Directory</strong> in Vercel
+          dashboard to your project subfolder
         </li>
       </ul>
 
       <Callout type="info">
-        <code>app.listen()</code> is the universal entry point — it works for both local
-        development and Vercel serverless. No special configuration needed.
+        Use <code>app.listen()</code> for a local Bun server. Use{" "}
+        <code>app.fetch</code> through your platform's serverless adapter when
+        the platform invokes a fetch handler.
       </Callout>
     </>
   );

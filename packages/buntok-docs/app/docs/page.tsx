@@ -107,7 +107,7 @@ export default app;`}
         Generated <code>server.ts</code>
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Universal entry point — works for both local dev and Vercel:
+        Local server entry point used by the development script:
       </p>
       <CodeBlock
         code={`import { app } from "./src/index";
@@ -164,7 +164,9 @@ export const env = App.validateEnv({
               <td className="px-4 py-2">
                 <code>src/index.ts</code>
               </td>
-              <td className="px-4 py-2">Application entry point — exports the app instance</td>
+              <td className="px-4 py-2">
+                Application entry point — exports the app instance
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
@@ -216,15 +218,22 @@ export const env = App.validateEnv({
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
-                <code>vercel.json</code> <span className="text-xs text-text-secondary">(optional)</span>
+                <code>vercel.json</code>{" "}
+                <span className="text-xs text-text-secondary">(optional)</span>
               </td>
-              <td className="px-4 py-2">Vercel deployment config — includes <code>framework: "bun"</code></td>
+              <td className="px-4 py-2">
+                Vercel deployment config — includes{" "}
+                <code>framework: "bun"</code>
+              </td>
             </tr>
             <tr className="border-b border-border-primary">
               <td className="px-4 py-2">
                 <code>server.ts</code>
               </td>
-              <td className="px-4 py-2">Universal entry point — <code>app.listen(env.PORT)</code> works everywhere</td>
+              <td className="px-4 py-2">
+                Local server entry point — calls{" "}
+                <code>app.listen(env.PORT)</code>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -325,7 +334,7 @@ export const env = App.validateEnv({
 │           ├── user.repository.ts
 │           ├── user.service.ts
 │           └── user.controller.ts
-├── server.ts                 # app.listen(env.PORT) — universal entry point
+├── server.ts                 # app.listen(env.PORT) — local server entry point
 ├── vercel.json               # Vercel config (framework: "bun")
 ├── .agents/
 │   └── skills/
@@ -343,7 +352,9 @@ export const env = App.validateEnv({
 
       <Callout type="info">
         Without Vercel, <code>vercel.json</code> is not created.{" "}
-        <code>server.ts</code> is always created — it works for both local dev and Vercel.
+        <code>server.ts</code> is always created for local development. A
+        serverless deployment uses <code>app.fetch</code> through its deployment
+        adapter.
       </Callout>
 
       {/* ──────────────── DATABASE SETUP ──────────────── */}
@@ -399,7 +410,9 @@ export const env = App.validateEnv({
         Prisma v7 (Recommended)
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        We recommend using Prisma v7 for better stability and performance with Bun. Prisma v7 includes native Bun support and improved query performance.
+        We recommend using Prisma v7 for better stability and performance with
+        Bun. Prisma v7 includes native Bun support and improved query
+        performance.
       </p>
 
       <CodeBlock
@@ -715,7 +728,8 @@ app.post("/users", (ctx) => {
                 <code>buntok create &lt;entity&gt;</code>
               </td>
               <td className="px-4 py-2">
-                Generate repository, service, and controller in <code>src/modules/&lt;entity&gt;/</code>
+                Generate repository, service, and controller in{" "}
+                <code>src/modules/&lt;entity&gt;/</code>
               </td>
             </tr>
             <tr className="border-b border-border-primary">
@@ -758,7 +772,9 @@ app.post("/users", (ctx) => {
               <td className="px-4 py-2">
                 <code>buntok make:docs</code>
               </td>
-              <td className="px-4 py-2">Manual OpenAPI docs regeneration (auto-generated on startup)</td>
+              <td className="px-4 py-2">
+                Manual OpenAPI docs regeneration (auto-generated on startup)
+              </td>
             </tr>
           </tbody>
         </table>
@@ -824,8 +840,8 @@ export class UserController {
       <Callout type="info">
         Use <code>buntok create user --repo</code>, <code>--service</code>, or{" "}
         <code>--controller</code> for partial generation. Add{" "}
-        <code>--prisma</code>, <code>--drizzle</code>, or{" "}
-        <code>--typeorm</code> to specify ORM.
+        <code>--prisma</code>, <code>--drizzle</code>, or <code>--typeorm</code>{" "}
+        to specify ORM.
       </Callout>
 
       {/* ──────────────── PACKAGE SCRIPTS ──────────────── */}
@@ -845,7 +861,7 @@ export class UserController {
   "scripts": {
     "dev": "bun --watch server.ts",
     "build": "bunx buntok build",
-    "start": "bun .buntok/index.js",
+    "start": "bun .buntok/server.js",
     "check": "bunx @biomejs/biome check --write .",
     "format": "bunx @biomejs/biome format --write .",
     "lint": "bunx @biomejs/biome lint ."
@@ -1030,7 +1046,9 @@ PORT=3000 bun run dev`}
         Vercel Build Error: `readFile` undefined
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        If you see <code>cannot read properties of undefined (reading 'readFile')</code> on Vercel:
+        If you see{" "}
+        <code>cannot read properties of undefined (reading 'readFile')</code> on
+        Vercel:
       </p>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
         <li>
@@ -1041,7 +1059,8 @@ PORT=3000 bun run dev`}
           Keep it only as <code>devDependency</code> if needed
         </li>
         <li>
-          TypeScript is already included via <code>tsup</code> and other build tools
+          TypeScript is already included via <code>tsup</code> and other build
+          tools
         </li>
       </ul>
       <Callout type="info">

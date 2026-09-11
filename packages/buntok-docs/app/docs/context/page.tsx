@@ -60,8 +60,8 @@ export default function ContextPage() {
               ],
               [
                 "ctx.user",
-                "Record<string, unknown> | null",
-                "JWT payload (null before auth)",
+                "Record<string, unknown> | undefined",
+                "JWT payload (undefined before auth)",
               ],
               ["ctx.ip", "string", "Client IP (reads X-Forwarded-For)"],
               [
@@ -320,32 +320,70 @@ app.get("/search", zValidator("query", searchSchema), (ctx) => {
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
         Handlers may return primitives/objects directly — the framework
-        auto-serializes via <code>toResponse()</code>. Both styles work side-by-side:
+        auto-serializes via <code>toResponse()</code>. Both styles work
+        side-by-side:
       </p>
       <div className="my-4 overflow-x-auto">
         <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
           <thead className="bg-bg-tertiary border-b border-border-primary">
             <tr>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Return</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Serialized as</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Content-Type</th>
-              <th className="px-4 py-2 text-left font-semibold text-text-primary">Status</th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Return
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Serialized as
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Content-Type
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Status
+              </th>
             </tr>
           </thead>
           <tbody>
             {[
-              ["string", "new Response(string)", "text/plain; charset=utf-8", "200"],
-              ["number / boolean / bigint", "String(value)", "text/plain; charset=utf-8", "200"],
-              ["object / array", "Response.json(value)", "application/json", "200"],
+              [
+                "string",
+                "new Response(string)",
+                "text/plain; charset=utf-8",
+                "200",
+              ],
+              [
+                "number / boolean / bigint",
+                "String(value)",
+                "text/plain; charset=utf-8",
+                "200",
+              ],
+              [
+                "object / array",
+                "Response.json(value)",
+                "application/json",
+                "200",
+              ],
               ["null / undefined / void", "empty body", "—", "204"],
-              ["Blob / ArrayBuffer / Uint8Array / ReadableStream", "new Response(value)", "from value", "200"],
+              [
+                "Blob / ArrayBuffer / Uint8Array / ReadableStream",
+                "new Response(value)",
+                "from value",
+                "200",
+              ],
               ["Response", "passthrough", "as-is", "as-is"],
             ].map(([ret, ser, ct, status]) => (
-              <tr key={ret} className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <tr
+                key={ret}
+                className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors"
+              >
                 <td className="px-4 py-2 font-mono text-accent">{ret}</td>
-                <td className="px-4 py-2 font-mono text-text-secondary">{ser}</td>
-                <td className="px-4 py-2 font-mono text-text-secondary">{ct}</td>
-                <td className="px-4 py-2 font-mono text-text-secondary">{status}</td>
+                <td className="px-4 py-2 font-mono text-text-secondary">
+                  {ser}
+                </td>
+                <td className="px-4 py-2 font-mono text-text-secondary">
+                  {ct}
+                </td>
+                <td className="px-4 py-2 font-mono text-text-secondary">
+                  {status}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -368,9 +406,9 @@ app.get("/profile", ({ store, request }) => store.user);`}
       />
       <Callout type="info">
         Type <code>HandlerReturn</code> (<code>src/app.ts:112</code>, exported
-        from <code>@buntok/core</code>) covers all cases. <code>toResponse()</code>{" "}
-        and <code>toResponseMaybeAsync()</code> are also exported from{" "}
-        <code>@buntok/core</code> for custom wrapping.
+        from <code>@buntok/core</code>) covers all cases.{" "}
+        <code>toResponse()</code> and <code>toResponseMaybeAsync()</code> are
+        also exported from <code>@buntok/core</code> for custom wrapping.
       </Callout>
 
       {/* ──────────────── RESPONSE METHODS ──────────────── */}
@@ -530,7 +568,8 @@ return ctx.redirect("/new-url", 301);`}
         Post-Response Hooks
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Register hooks that run after the response is sent — useful for logging, metrics, or response transformation:
+        Register hooks that run after the response is sent — useful for logging,
+        metrics, or response transformation:
       </p>
       <CodeBlock
         code={`app.get("/api", (ctx) => {
