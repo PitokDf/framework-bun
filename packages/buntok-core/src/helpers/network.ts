@@ -43,6 +43,14 @@ function getRemoteAddress(request: Request): string | undefined {
 }
 
 /**
+ * Fast path: return remote address without proxy checks.
+ * Used when no trusted proxy is configured (common case).
+ */
+export function getDirectClientIP(request: Request): string {
+	return getRemoteAddress(request) ?? "unknown";
+}
+
+/**
  * Get the client IP. Forwarding headers are ignored unless the direct peer is
  * explicitly trusted through addresses or a proxy depth.
  */
