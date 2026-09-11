@@ -625,6 +625,125 @@ export default { fetch: (req) => app.fetch(req) };`}
         level={2}
         className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
       >
+        Graceful Shutdown
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Production-ready shutdown with resource cleanup, in-flight request drain, and signal handling.
+      </p>
+      <CodeBlock
+        code={`const app = new App({
+  handleSignals: true,        // auto-register SIGINT/SIGTERM (default: true)
+  shutdownTimeout: 30_000,    // max ms to wait for resource cleanup
+});
+
+// Register resources for cleanup on shutdown
+app.registerResource({
+  name: "db-pool",
+  close: async () => {
+    await db.$disconnect();
+  },
+});
+
+// Manual shutdown (e.g., in tests)
+await app.close({ timeout: 5_000 });  // stop accepting, flush in 5s
+await app.shutdown();                  // alias for app.close()`}
+      />
+
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full border border-border-primary text-sm">
+          <thead>
+            <tr className="bg-bg-secondary">
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Option / Method
+              </th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>handleSignals</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Auto-register <code>SIGINT</code>/<code>SIGTERM</code> handlers (default: <code>true</code>)
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>shutdownTimeout</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Max ms to wait for resource cleanup (default: <code>30000</code>)
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>app.close(options?)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Stop accepting traffic, flush resources — <code>{`{ timeout?, force? }`}</code>
+              </td>
+            </tr>
+            <tr>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                <code>app.registerResource(resource)</code>
+              </td>
+              <td className="border border-border-primary px-4 py-2 text-text-secondary">
+                Register a resource for cleanup — <code>{`{ name?, close?(), dispose?() }`}</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* ──────────────── FULL EXAMPLE ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        WebSocket Configuration
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Configure Bun WebSocket options globally (permessage-deflate, payload limits, backpressure).
+      </p>
+      <CodeBlock
+        code={`app.wsOptions({
+  perMessageDeflate: true,      // enable compression (default: false)
+  maxPayloadLength: 1024 * 1024, // 1MB max message size
+  idleTimeout: 30,              // seconds before idle connection closes
+  maxBackpressure: 1024,        // max bytes buffered per connection
+  publishToSelf: false,         // don't deliver to sender's own connection
+});`}
+      />
+
+      {/* ──────────────── TRUSTED PROXY ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Trusted Proxy
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Configure which proxy peers supply <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code>, etc. headers. <strong>Not trusted by default.</strong>
+      </p>
+      <CodeBlock
+        code={`// Trust only specific proxy addresses
+app.setTrustedProxy({
+  addresses: ["127.0.0.1", "10.0.0.0/8"],
+  depth: 1,  // how many proxies to trust (default: 1)
+});
+
+// Trust all (e.g., behind reverse proxy in same network)
+app.setTrustedProxy();`}
+      />
+
+      {/* ──────────────── FULL EXAMPLE ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Full Example
       </Heading>
       <CodeBlock

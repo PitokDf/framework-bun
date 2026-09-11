@@ -126,12 +126,17 @@ export async function makeSeederCommand(name: string, flags: string[] = []) {
 	const pascalName = toPascalCase(name);
 	const orm = detectORM();
 	const useFactory = flags.includes("--factory");
-	console.log(`\n\x1b[36mScaffolding Seeder for ${pascalName} (orm: ${orm}${useFactory ? ", using factory" : ""})...\x1b[0m\n`);
+	const dryRun = flags.includes("--dry-run");
+	console.log(`\n\x1b[36mScaffolding Seeder for ${pascalName} (orm: ${orm}${useFactory ? ", using factory" : ""}${dryRun ? ", dry-run" : ""})...\x1b[0m\n`);
 
 	const seederDir = "src/db/seeders";
 
 	if (!existsSync(seederDir)) {
-		await fs.mkdir(seederDir, { recursive: true });
+		if (dryRun) {
+			console.log(`\x1b[90mWould create directory: ${seederDir}\x1b[0m`);
+		} else {
+			await fs.mkdir(seederDir, { recursive: true });
+		}
 	}
 
 	const filePath = join(seederDir, `${name}.seeder.ts`);
@@ -145,6 +150,14 @@ export async function makeSeederCommand(name: string, flags: string[] = []) {
 	}
 
 	const content = generateSeeder(name, pascalName, orm, useFactory);
+
+	if (dryRun) {
+		console.log(`\x1b[90mWould create file: ${filePath}\x1b[0m`);
+		console.log(`\n\x1b[36m--- Generated content ---\x1b[0m\n`);
+		console.log(content);
+		return;
+	}
+
 	await fs.writeFile(filePath, content);
 
 	const biomeProc = Bun.spawnSync(

@@ -52,4 +52,30 @@ describe("JwtService", () => {
 		const payload = await jwt.verify(token);
 		expect(payload).not.toBeNull();
 	});
+
+	it("should reject a token with an unexpected algorithm", async () => {
+		const token = await jwt.sign({ data: "test" });
+		const parts = token.split(".");
+		const header = btoa(JSON.stringify({ alg: "HS512", typ: "JWT" }))
+			.replace(/\+/g, "-")
+			.replace(/\//g, "_")
+			.replace(/=+$/, "");
+		expect(await jwt.verify(`${header}.${parts[1]}.${parts[2]}`)).toBeNull();
+	});
+
+	it("should validate issuer, audience, and not-before claims", async () => {
+		const configured = new JwtService(secret, {
+			issuer: "https://issuer.example",
+			audience: "api",
+		});
+		const valid = await configured.sign({ nbf: Math.floor(Date.now() / 1000) - 1 });
+		const payload = await configured.verify(valid);
+		expect(payload).not.toBeNull();
+
+		const wrongIssuer = new JwtService(secret, { issuer: "https://other.example" });
+		expect(await wrongIssuer.verify(valid)).toBeNull();
+
+		const future = await jwt.sign({ nbf: Math.floor(Date.now() / 1000) + 60 });
+		expect(await jwt.verify(future)).toBeNull();
+	});
 });

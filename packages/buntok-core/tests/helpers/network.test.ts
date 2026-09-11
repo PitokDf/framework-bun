@@ -2,33 +2,41 @@ import { describe, it, expect } from "bun:test";
 import { getClientIP, isPrivateIP, parseUserAgent } from "../../src/helpers/network";
 
 describe("getClientIP", () => {
-	it("should extract IP from X-Forwarded-For", () => {
+	it("should ignore forwarded headers by default", () => {
 		const req = new Request("http://localhost", {
 			headers: { "x-forwarded-for": "192.168.1.1, 10.0.0.1" },
 		});
-		expect(getClientIP(req)).toBe("192.168.1.1");
+		expect(getClientIP(req)).toBe("unknown");
 	});
 
-	it("should extract IP from X-Real-IP", () => {
+	it("should ignore X-Real-IP by default", () => {
 		const req = new Request("http://localhost", {
 			headers: { "x-real-ip": "203.0.113.50" },
 		});
-		expect(getClientIP(req)).toBe("203.0.113.50");
+		expect(getClientIP(req)).toBe("unknown");
 	});
 
-	it("should return 'unknown' when no headers present", () => {
+	it("should return 'unknown' when no peer address is present", () => {
 		const req = new Request("http://localhost");
 		expect(getClientIP(req)).toBe("unknown");
 	});
 
-	it("should prefer X-Forwarded-For over X-Real-IP", () => {
+	it("should use forwarding headers for an explicitly trusted proxy", () => {
 		const req = new Request("http://localhost", {
 			headers: {
 				"x-forwarded-for": "1.2.3.4",
 				"x-real-ip": "5.6.7.8",
 			},
 		});
-		expect(getClientIP(req)).toBe("1.2.3.4");
+		Object.defineProperty(req, "remoteAddress", { value: "10.0.0.2" });
+		expect(getClientIP(req, { addresses: ["10.0.0.0/8"] })).toBe("1.2.3.4");
+	});
+
+	it("supports proxy depth for forwarded chains", () => {
+		const req = new Request("http://localhost", {
+			headers: { "x-forwarded-for": "198.51.100.10, 10.0.0.2, 10.0.0.3" },
+		});
+		expect(getClientIP(req, { depth: 2 })).toBe("198.51.100.10");
 	});
 });
 

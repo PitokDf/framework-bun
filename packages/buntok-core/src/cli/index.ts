@@ -150,7 +150,7 @@ export async function main() {
 				process.exitCode = 1;
 				return;
 			}
-			await makeTestCommand(arg1);
+			await makeTestCommand(arg1, args.slice(2));
 			break;
 		case "make:test:e2e":
 			if (!arg1) {
@@ -180,7 +180,7 @@ export async function main() {
 				process.exitCode = 1;
 				return;
 			}
-			await makeMiddlewareCommand(arg1);
+			await makeMiddlewareCommand(arg1, args.slice(2));
 			break;
 		default: {
 			const commands = [

@@ -528,11 +528,14 @@ bunx buntok db status`}
       <p className="my-3 text-text-secondary leading-relaxed">
         Generate a unit test file for an entity.
       </p>
-      <CodeBlock code={`bunx buntok make:test <entity>`} />
+      <CodeBlock code={`bunx buntok make:test <entity> [--dry-run]`} />
       <CodeBlock
         code={`$ bunx buntok make:test user
 
-✓ Created tests/user.test.ts`}
+✓ Created tests/user.test.ts
+
+# Preview without writing
+$ bunx buntok make:test user --dry-run`}
       />
 
       {/* ──────────────── MAKE:TEST:E2E ──────────────── */}
@@ -545,11 +548,14 @@ bunx buntok db status`}
       <p className="my-3 text-text-secondary leading-relaxed">
         Generate an E2E test file for an entity's API endpoints.
       </p>
-      <CodeBlock code={`bunx buntok make:test:e2e <entity>`} />
+      <CodeBlock code={`bunx buntok make:test:e2e <entity> [--dry-run]`} />
       <CodeBlock
         code={`$ bunx buntok make:test:e2e user
 
-✓ Created tests/e2e/user.e2e.test.ts`}
+✓ Created tests/e2e/user.e2e.test.ts
+
+# Preview without writing
+$ bunx buntok make:test:e2e user --dry-run`}
       />
 
       {/* ──────────────── MAKE:SEEDER ──────────────── */}
@@ -563,11 +569,17 @@ bunx buntok db status`}
         Generate a database seeder file for an entity. Works with any ORM
         (Prisma, Drizzle, TypeORM).
       </p>
-      <CodeBlock code={`bunx buntok make:seeder <entity>`} />
+      <CodeBlock code={`bunx buntok make:seeder <entity> [--factory] [--dry-run]`} />
       <CodeBlock
         code={`$ bunx buntok make:seeder user
 
-✓ Created src/db/seeders/user.seeder.ts`}
+✓ Created src/db/seeders/user.seeder.ts
+
+# With factory pattern
+$ bunx buntok make:seeder user --factory
+
+# Preview without writing
+$ bunx buntok make:seeder user --dry-run`}
       />
 
       <Heading
@@ -889,11 +901,14 @@ Starting development server with tunnel...
       <p className="my-3 text-text-secondary leading-relaxed">
         Generate a middleware file.
       </p>
-      <CodeBlock code={`bunx buntok make:middleware <name>`} />
+      <CodeBlock code={`bunx buntok make:middleware <name> [--dry-run]`} />
       <CodeBlock
         code={`$ bunx buntok make:middleware auth
 
-✓ Created src/middlewares/auth.ts`}
+✓ Created src/middlewares/auth.ts
+
+# Preview without writing
+$ bunx buntok make:middleware auth --dry-run`}
       />
 
       {/* ──────────────── MAKE:DOCS ──────────────── */}

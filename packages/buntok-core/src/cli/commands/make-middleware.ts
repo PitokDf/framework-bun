@@ -26,14 +26,19 @@ export const ${pascalName}Middleware: Middleware = async (ctx: Context, next: ()
 `;
 }
 
-export async function makeMiddlewareCommand(name: string) {
+export async function makeMiddlewareCommand(name: string, flags: string[] = []) {
 	const pascalName = toPascalCase(name);
-	console.log(`\n\x1b[36mCreating ${pascalName} Middleware...\x1b[0m\n`);
+	const dryRun = flags.includes("--dry-run");
+	console.log(`\n\x1b[36mCreating ${pascalName} Middleware${dryRun ? " (dry-run)" : ""}...\x1b[0m\n`);
 
 	const middlewaresDir = "src/middlewares";
 
 	if (!existsSync(middlewaresDir)) {
-		await fs.mkdir(middlewaresDir, { recursive: true });
+		if (dryRun) {
+			console.log(`\x1b[90mWould create directory: ${middlewaresDir}\x1b[0m`);
+		} else {
+			await fs.mkdir(middlewaresDir, { recursive: true });
+		}
 	}
 
 	const filePath = join(middlewaresDir, `${name}.middleware.ts`);
@@ -47,6 +52,14 @@ export async function makeMiddlewareCommand(name: string) {
 	}
 
 	const content = generateMiddleware(name, pascalName);
+
+	if (dryRun) {
+		console.log(`\x1b[90mWould create file: ${filePath}\x1b[0m`);
+		console.log(`\n\x1b[36m--- Generated content ---\x1b[0m\n`);
+		console.log(content);
+		return;
+	}
+
 	await fs.writeFile(filePath, content);
 
 	// Auto-format generated file with Biome if available

@@ -20,8 +20,22 @@ function base64UrlDecode(str: string) {
 /**
  * Zero-dependency, ultra-fast JWT implementation using WebCrypto API
  */
+export interface JwtOptions {
+	/** Algorithms accepted during verification. Defaults to HS256 only. */
+	algorithms?: ["HS256"];
+	/** Expected issuer claim. */
+	issuer?: string;
+	/** Expected audience claim. */
+	audience?: string;
+	/** Clock tolerance for exp and nbf, in seconds. */
+	clockToleranceSeconds?: number;
+}
+
 export class JwtService {
-	constructor(private secret: string) {}
+	constructor(
+		private secret: string,
+		private options: JwtOptions = {},
+	) { }
 
 	async sign(
 		payload: Record<string, unknown>,
@@ -34,9 +48,13 @@ export class JwtService {
 		const exp = expiresInSeconds
 			? Math.floor(Date.now() / 1000) + expiresInSeconds
 			: undefined;
-		const data = base64UrlEncode(
-			textEncoder.encode(JSON.stringify({ ...payload, exp })),
-		);
+		const claims: Record<string, unknown> = {
+			...payload,
+			...(exp !== undefined ? { exp } : {}),
+		};
+		if (this.options.issuer && claims.iss === undefined) claims.iss = this.options.issuer;
+		if (this.options.audience && claims.aud === undefined) claims.aud = this.options.audience;
+		const data = base64UrlEncode(textEncoder.encode(JSON.stringify(claims)));
 
 		const key = await crypto.subtle.importKey(
 			"raw",
@@ -59,6 +77,12 @@ export class JwtService {
 		if (parts.length !== 3) return null;
 
 		try {
+			const header = JSON.parse(
+				new TextDecoder().decode(base64UrlDecode(parts[0]!)),
+			) as { alg?: string; typ?: string };
+			if (!this.options.algorithms?.includes(header.alg as "HS256") && header.alg !== "HS256") return null;
+			if (header.typ && header.typ !== "JWT") return null;
+
 			const key = await crypto.subtle.importKey(
 				"raw",
 				textEncoder.encode(this.secret),
@@ -81,9 +105,16 @@ export class JwtService {
 				new TextDecoder().decode(base64UrlDecode(parts[1]!)),
 			);
 
-			// Check expiration
-			if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
+			const now = Math.floor(Date.now() / 1000);
+			const tolerance = this.options.clockToleranceSeconds ?? 0;
+			if (typeof payload.exp === "number" && now >= payload.exp + tolerance) {
 				return null;
+			}
+			if (typeof payload.nbf === "number" && now + tolerance < payload.nbf) return null;
+			if (this.options.issuer && payload.iss !== this.options.issuer) return null;
+			if (this.options.audience) {
+				const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+				if (!audiences.includes(this.options.audience)) return null;
 			}
 
 			return payload as T;
@@ -104,8 +135,9 @@ export class JwtService {
  */
 export function requireAuth(
 	secret: string,
+	options?: JwtOptions,
 ): Middleware<Record<string, unknown>> {
-	const jwt = new JwtService(secret);
+	const jwt = new JwtService(secret, options);
 
 	return async (
 		ctx: Context<Record<string, unknown>>,

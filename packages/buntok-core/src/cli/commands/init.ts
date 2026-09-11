@@ -144,8 +144,6 @@ export const app = new App();
 app.get("/", (ctx) => {
   return ctx.json({ message: "Hello from Buntok!" });
 });
-
-export default app;
 `;
 
 const ENV_TS_TEMPLATE = `import { App, z } from "@buntok/core";
@@ -415,6 +413,7 @@ node_modules/
 *.swp
 *.swo
 *~
+public/swagger.json
 
 # OS
 .DS_Store

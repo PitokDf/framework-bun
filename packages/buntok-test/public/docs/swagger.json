@@ -19,7 +19,7 @@
         }
       }
     },
-    "/rtr": {
+    "/metrics": {
       "get": {
         "responses": {
           "200": {

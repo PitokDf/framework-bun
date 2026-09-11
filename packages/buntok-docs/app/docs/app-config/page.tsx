@@ -189,7 +189,7 @@ app
   .disable("x-powered-by")
   .enableReusePort()
   .icon("./public/favicon.svg")
-  .use(cors())
+  .cors()
   .use(compress())
   .onError(handler)
   .notFound(notFoundHandler)

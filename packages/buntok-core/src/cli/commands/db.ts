@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { createInterface } from "node:readline";
 
 type DbCommand = "migrate" | "seed" | "reset" | "generate" | "studio" | "status";
 
@@ -32,7 +33,11 @@ function detectOrm(): "prisma" | "drizzle" | "typeorm" | null {
 	return null;
 }
 
-function runCommand(cmd: string): void {
+function runCommand(cmd: string, dryRun = false): void {
+	if (dryRun) {
+		console.log(`\x1b[90m[dry-run] Would execute: ${cmd}\x1b[0m`);
+		return;
+	}
 	console.log(`\x1b[90m$ ${cmd}\x1b[0m`);
 	try {
 		execSync(cmd, { stdio: "inherit", cwd: process.cwd() });
@@ -42,12 +47,22 @@ function runCommand(cmd: string): void {
 	}
 }
 
-function prismaCommand(subcommand: string, args: string[]): void {
-	const cmd = `npx prisma ${subcommand} ${args.join(" ")}`.trim();
-	runCommand(cmd);
+async function confirm(message: string): Promise<boolean> {
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	return new Promise((resolve) => {
+		rl.question(`\x1b[33m${message} (y/N): \x1b[0m`, (answer) => {
+			rl.close();
+			resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+		});
+	});
 }
 
-function drizzleCommand(subcommand: string, args: string[]): void {
+function prismaCommand(subcommand: string, args: string[], dryRun = false): void {
+	const cmd = `npx prisma ${subcommand} ${args.join(" ")}`.trim();
+	runCommand(cmd, dryRun);
+}
+
+function drizzleCommand(subcommand: string, args: string[], dryRun = false): void {
 	const commands: Record<string, string> = {
 		migrate: "drizzle-kit generate",
 		seed: "drizzle-kit seed",
@@ -57,10 +72,10 @@ function drizzleCommand(subcommand: string, args: string[]): void {
 		studio: "drizzle-kit studio",
 	};
 	const cmd = `${commands[subcommand] ?? subcommand} ${args.join(" ")}`.trim();
-	runCommand(cmd);
+	runCommand(cmd, dryRun);
 }
 
-function typeormCommand(subcommand: string, args: string[]): void {
+function typeormCommand(subcommand: string, args: string[], dryRun = false): void {
 	const commands: Record<string, string> = {
 		migrate: "typeorm migration:run",
 		seed: "typeorm seed",
@@ -70,13 +85,13 @@ function typeormCommand(subcommand: string, args: string[]): void {
 		studio: "echo 'TypeORM does not have a built-in studio command'",
 	};
 	const cmd = `${commands[subcommand] ?? subcommand} ${args.join(" ")}`.trim();
-	runCommand(cmd);
+	runCommand(cmd, dryRun);
 }
 
 function printUsage(): void {
 	console.log(`
 \x1b[36mUsage:\x1b[0m
-  buntok db <command> [args]
+  buntok db <command> [args] [flags]
 
 \x1b[36mCommands:\x1b[0m
   migrate [name]      Run pending migrations
@@ -86,6 +101,9 @@ function printUsage(): void {
   studio              Open database GUI
   status              Show migration status
 
+\x1b[36mFlags:\x1b[0m
+  --dry-run           Preview command without executing
+
 \x1b[36mSupported ORMs:\x1b[0m
   Prisma, Drizzle, TypeORM (auto-detected)
 
@@ -94,8 +112,11 @@ function printUsage(): void {
   buntok db migrate add user_table     # Create new migration
   buntok db seed                       # Seed database
   buntok db studio                     # Open Prisma Studio / etc
+  buntok db reset --dry-run            # Preview reset command
 `);
 }
+
+const DESTRUCTIVE_COMMANDS: DbCommand[] = ["reset"];
 
 export async function dbCommand(args: string[]): Promise<void> {
 	const subcommand = args[0] as DbCommand | undefined;
@@ -122,18 +143,31 @@ export async function dbCommand(args: string[]): Promise<void> {
 		return;
 	}
 
+	const dryRun = args.includes("--dry-run");
+	const subArgs = args.slice(1).filter((a) => a !== "--dry-run");
+
 	console.log(`\x1b[36mDetected ORM: ${orm}\x1b[0m`);
 
-	const subArgs = args.slice(1);
+	// Confirmation for destructive commands
+	if (DESTRUCTIVE_COMMANDS.includes(subcommand) && !dryRun) {
+		const confirmed = await confirm(
+			`\x1b[31mWARNING: This will ${subcommand} the database. Continue?\x1b[0m`,
+		);
+		if (!confirmed) {
+			console.log("\x1b[90mAborted.\x1b[0m");
+			return;
+		}
+	}
+
 	switch (orm) {
 		case "prisma":
-			prismaCommand(subcommand, subArgs);
+			prismaCommand(subcommand, subArgs, dryRun);
 			break;
 		case "drizzle":
-			drizzleCommand(subcommand, subArgs);
+			drizzleCommand(subcommand, subArgs, dryRun);
 			break;
 		case "typeorm":
-			typeormCommand(subcommand, subArgs);
+			typeormCommand(subcommand, subArgs, dryRun);
 			break;
 	}
 }

@@ -8,7 +8,7 @@ export enum LogLevel {
 	ERROR = 3,
 }
 
-interface LoggerOptions {
+export interface LoggerOptions {
 	level?: LogLevel;
 	format?: "text" | "json";
 	// Disable request logging (useful for benchmarks)
@@ -16,6 +16,45 @@ interface LoggerOptions {
 	// Buffer settings
 	flushInterval?: number; // ms between auto-flush (default: 2000)
 	flushThreshold?: number; // lines before forced flush (default: 100)
+	// Custom redaction patterns (merged with built-in SENSITIVE_KEY)
+	redactPatterns?: (string | RegExp)[];
+	// Custom redaction replacement text (default: "[REDACTED]")
+	redactReplacement?: string;
+}
+
+const REDACTED = "[REDACTED]";
+const DEFAULT_SENSITIVE = /authorization|cookie|password|passwd|secret|token|api[-_]?key|database[-_]?url/i;
+
+function buildRedactRegex(patterns: (string | RegExp)[]): RegExp {
+	const sources = patterns.map((p) => (typeof p === "string" ? p : p.source));
+	return new RegExp(sources.join("|"), "i");
+}
+
+/** Redact credentials and secrets from structured log metadata. */
+export function redactLogMeta<T>(
+	value: T,
+	seen = new WeakSet<object>(),
+	extraPatterns?: (string | RegExp)[],
+	replacement = REDACTED,
+): T {
+	if (typeof value === "string" || value === null || typeof value !== "object") {
+		return value;
+	}
+	if (seen.has(value)) return "[Circular]" as T;
+	seen.add(value);
+
+	if (Array.isArray(value)) {
+		return value.map((item) => redactLogMeta(item, seen, extraPatterns, replacement)) as T;
+	}
+
+	const regex = extraPatterns ? buildRedactRegex([DEFAULT_SENSITIVE, ...extraPatterns]) : DEFAULT_SENSITIVE;
+	const result: Record<string, unknown> = {};
+	for (const [key, item] of Object.entries(value)) {
+		result[key] = regex.test(key)
+			? replacement
+			: redactLogMeta(item, seen, extraPatterns, replacement);
+	}
+	return result as T;
 }
 
 // Pre-computed ANSI colors for each log level
@@ -47,6 +86,10 @@ export class Logger {
 	private stdoutBuffer: string[] = [];
 	private stderrBuffer: string[] = [];
 
+	// Redaction
+	private redactPatterns?: (string | RegExp)[];
+	private redactReplacement: string;
+
 	constructor(options?: LoggerOptions) {
 		this.isProd = process.env.NODE_ENV === "production";
 		this.level =
@@ -55,6 +98,8 @@ export class Logger {
 		this._logRequests = options?.logRequests ?? true;
 		this.flushInterval = options?.flushInterval ?? 2000;
 		this.flushThreshold = options?.flushThreshold ?? 100;
+		this.redactPatterns = options?.redactPatterns;
+		this.redactReplacement = options?.redactReplacement ?? REDACTED;
 
 		this.logDir = process.env.LOG_DIR;
 		if (this.logDir && !existsSync(this.logDir)) {
@@ -128,12 +173,13 @@ export class Logger {
 		meta?: Record<string, unknown>,
 	) {
 		if (level < this.level) return;
+		const safeMeta = meta ? redactLogMeta(meta, new WeakSet(), this.redactPatterns, this.redactReplacement) : undefined;
 
 		const isStderr = level === LogLevel.ERROR;
 
 		if (this.format === "json") {
 			const timestamp = new Date().toISOString();
-			const logEntryObj = { timestamp, level: levelName, message, ...meta };
+			const logEntryObj = { timestamp, level: levelName, message, ...safeMeta };
 			const jsonString = JSON.stringify(logEntryObj);
 			const line = `${jsonString}\n`;
 
@@ -155,14 +201,14 @@ export class Logger {
 
 			let logString = `[${now}] ${color}[${levelName}]${RESET} ${message}`;
 
-			if (meta) {
-				const keys = Object.keys(meta);
+			if (safeMeta) {
+				const keys = Object.keys(safeMeta);
 				if (keys.length > 0) {
 					if (keys.length === 1) {
-						const val = meta[keys[0] || 0];
+						const val = safeMeta[keys[0] || 0];
 						logString += ` ${GRAY}{${JSON.stringify(keys[0])}:${JSON.stringify(val)}}${RESET}`;
 					} else {
-						logString += ` ${GRAY}${JSON.stringify(meta)}${RESET}`;
+						logString += ` ${GRAY}${JSON.stringify(safeMeta)}${RESET}`;
 					}
 				}
 			}
@@ -177,7 +223,7 @@ export class Logger {
 
 			// File logging (buffered batch write) - strip ANSI for clean log files
 			if (this.logDir) {
-				const cleanLine = `[${now}] [${levelName}] ${message}${meta ? ` ${JSON.stringify(meta)}` : ""}\n`;
+				const cleanLine = `[${now}] [${levelName}] ${message}${safeMeta ? ` ${JSON.stringify(safeMeta)}` : ""}\n`;
 				this.enqueueFile(cleanLine);
 			}
 		}

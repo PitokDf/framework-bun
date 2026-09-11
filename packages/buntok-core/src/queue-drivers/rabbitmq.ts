@@ -1,4 +1,4 @@
-import type { QueueDriver, Job, JobHandler, QueueOptions } from "../queue";
+import type { QueueDriver, Job, JobHandler, QueueCapabilities, QueueOptions } from "../queue";
 
 /**
  * Queue Driver using RabbitMQ (AMQP).
@@ -33,12 +33,21 @@ export interface RabbitmqQueueDriverOptions {
 }
 
 export class RabbitmqQueueDriver<T> implements QueueDriver<T> {
+	readonly capabilities: QueueCapabilities = {
+		durability: "persistent",
+		delivery: "at-least-once",
+		acknowledgment: "driver",
+		crashRecovery: true,
+		deadLetter: false,
+	};
 	private connection: any = null;
 	private channel: any = null;
 	private queueName: string;
 	private opts: Required<Omit<RabbitmqQueueDriverOptions, "url" | "queue">>;
 	private handlers: JobHandler<T>[] = [];
 	private isProcessing = false;
+	private consumerTag?: string;
+	private closed = false;
 
 	constructor(public name: string, private options: RabbitmqQueueDriverOptions) {
 		this.queueName = options.queue ?? name;
@@ -52,6 +61,7 @@ export class RabbitmqQueueDriver<T> implements QueueDriver<T> {
 	}
 
 	private async ensureConnected(): Promise<void> {
+		if (this.closed) return;
 		if (this.channel) return;
 
 		try {
@@ -117,8 +127,8 @@ export class RabbitmqQueueDriver<T> implements QueueDriver<T> {
 		this.startConsumer();
 	}
 
-	size(): number {
-		return 0;
+	size(): number | null {
+		return null;
 	}
 
 	async clear(): Promise<void> {
@@ -179,6 +189,35 @@ export class RabbitmqQueueDriver<T> implements QueueDriver<T> {
 					this.channel.nack(msg, false, false);
 				}
 			}
+		}).then((result: { consumerTag: string }) => {
+			this.consumerTag = result.consumerTag;
 		});
+	}
+
+	async close(): Promise<void> {
+		if (this.closed) return;
+		this.closed = true;
+		if (this.channel && this.consumerTag) {
+			await this.channel.cancel(this.consumerTag).catch(() => undefined);
+		}
+		await this.channel?.close().catch(() => undefined);
+		await this.connection?.close().catch(() => undefined);
+		this.channel = null;
+		this.connection = null;
+	}
+
+	async drain(options?: { timeout?: number }): Promise<void> {
+		if (!this.channel || this.closed) return;
+		const deadline = options?.timeout ? Date.now() + options.timeout : Date.now() + 30_000;
+		while (Date.now() < deadline) {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) break;
+			const msg = await Promise.race([
+				this.channel.get(this.queueName),
+				new Promise<false>((resolve) => setTimeout(() => resolve(false), Math.min(remaining, 100))),
+			]);
+			if (!msg) break;
+			this.channel.ack(msg);
+		}
 	}
 }

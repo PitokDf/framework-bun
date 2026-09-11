@@ -36,6 +36,27 @@ describe("requestId", () => {
 		);
 	});
 
+	it("should replace malformed or oversized request IDs", async () => {
+		const middleware = requestId();
+		const ctx = createMockContext("bad id with spaces");
+
+		const result = await middleware(ctx, async () => new Response("ok"));
+		const id = (result as Response).headers.get("x-request-id");
+		expect(id).toBeDefined();
+		expect(id).not.toBe("bad id with spaces");
+		expect(id).toMatch(/^[A-Za-z0-9._:-]{1,128}$/);
+	});
+
+	it("makes generated IDs available on the request for logging", async () => {
+		const middleware = requestId({ generator: () => "generated-id" });
+		const ctx = createMockContext();
+
+		await middleware(ctx, async () => {
+			expect(ctx.request.headers.get("x-request-id")).toBe("generated-id");
+			return new Response("ok");
+		});
+	});
+
 	it("should store request ID in ctx.store", async () => {
 		const middleware = requestId();
 		const ctx = createMockContext();

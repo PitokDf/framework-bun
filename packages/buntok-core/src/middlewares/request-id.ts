@@ -28,9 +28,18 @@ export function requestId(options: RequestIdOptions = {}): Middleware {
 	const useStore = options.store !== false;
 
 	return async (ctx, next) => {
-		// Check for existing request ID (from upstream proxy)
+		// Accept only bounded header values; malformed IDs are replaced locally.
 		const existingId = ctx.request.headers.get(header);
-		const id = existingId || generator();
+		const id = existingId && /^[A-Za-z0-9._:-]{1,128}$/.test(existingId)
+			? existingId
+			: generator();
+
+		// Make the generated ID available to the app logger as well as handlers.
+		try {
+			ctx.request.headers.set(header, id);
+		} catch {
+			// Some adapter Requests expose immutable headers.
+		}
 
 		// Store in ctx.store if enabled
 		if (useStore) {

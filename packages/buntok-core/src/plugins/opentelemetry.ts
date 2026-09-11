@@ -38,6 +38,7 @@ export interface OtelPluginConfig {
  * ```
  */
 export function otelPlugin(config: OtelPluginConfig): Plugin {
+	let shutdownSdk: (() => Promise<void>) | undefined;
 	return createPlugin({
 		name: "@buntok/opentelemetry",
 		install: async (app) => {
@@ -104,8 +105,7 @@ export function otelPlugin(config: OtelPluginConfig): Plugin {
 					// ignore
 				}
 			};
-			process.on("SIGTERM", shutdown);
-			process.on("SIGINT", shutdown);
+			shutdownSdk = shutdown;
 
 			// Create tracer for per-request spans
 			const tracer = otelApi.trace.getTracer(config.serviceName, config.serviceVersion ?? "0.0.0");
@@ -158,6 +158,10 @@ export function otelPlugin(config: OtelPluginConfig): Plugin {
 			};
 
 			app.use(otelMiddleware);
+		},
+		dispose: async () => {
+			await shutdownSdk?.();
+			shutdownSdk = undefined;
 		},
 	});
 }

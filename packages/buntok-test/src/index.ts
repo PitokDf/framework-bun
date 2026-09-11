@@ -1,15 +1,23 @@
-import { App, compress, responseTime } from "@buntok/core";
+import { App, metricsEndpoint, metricsMiddleware } from "@buntok/core";
 import "./env";
 import { TestController } from "./controllers/test.controller";
 import { Container } from "@buntok/core";
 import { MailerController } from "./controllers/mailer.controller";
 import { PaymentController } from "./controllers/payment.controller";
+import { Metrics } from "@buntok/core";
 
-export const app = new App();
+export const app = new App({ handleSignals: true });
 
-app.use(responseTime());
+app.registerResource({
+	name: "test", close() {
+		console.log("Closing test resource...");
+	},
+})
 
-app.use(compress());
+const metric = new Metrics()
+app.use(metricsMiddleware(metric));
+metricsEndpoint(metric)(app);
+
 app.cors({
 	origin: "*",
 	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -22,8 +30,6 @@ app.apiDocs({
 	description: "api docs for buntok test",
 });
 
-app.get("/rtr", () => "Hai");
-
 const container = new Container();
 container.scan([TestController]);
 app.setContainer(container);
@@ -33,4 +39,3 @@ app.registerController([
 	MailerController,
 	PaymentController
 ]);
-export default app;

@@ -553,6 +553,86 @@ app.ws("/chat/:room", {
 app.listen(1212);`}
       />
 
+      {/* ──────────────── RATE LIMITING ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Rate Limiting
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Limit the number of messages per connection to prevent abuse.
+      </p>
+      <CodeBlock
+        code={`import { wsRateLimit } from "@buntok/core";
+
+app.ws("/chat", {
+  ...wsRateLimit({
+    windowMs: 60_000,   // 1 minute window
+    max: 100,           // max 100 messages per window
+    closeCode: 4002,    // custom close code (default: 4002)
+  }),
+  message: (ws, msg) => { /* handle */ },
+});`}
+      />
+
+      {/* ──────────────── PLUGGABLE INFRASTRUCTURE ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Pluggable Infrastructure
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        For multi-instance deployments, replace in-memory PubSub and rate limit stores.
+      </p>
+      <CodeBlock
+        code={`import {
+  MemoryWSPubSub,        // default in-memory PubSub
+  MemoryWSRateLimitStore, // default in-memory rate limit store
+} from "@buntok/core";
+
+// Custom PubSub (e.g., Redis-backed for cluster-wide broadcasting)
+const pubSub = new RedisWSPubSub({ url: "redis://localhost:6379" });
+
+// Custom rate limit store (e.g., Redis-backed for distributed limits)
+const rateLimitStore = new RedisWSRateLimitStore({ url: "redis://localhost:6379" });`}
+      />
+
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Interface
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Methods
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Default
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <td className="px-4 py-2 font-mono text-accent">WSPubSub</td>
+              <td className="px-4 py-2 font-mono text-xs">publish, subscribe, unsubscribe</td>
+              <td className="px-4 py-2">MemoryWSPubSub</td>
+            </tr>
+            <tr className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <td className="px-4 py-2 font-mono text-accent">WSRateLimitStore</td>
+              <td className="px-4 py-2 font-mono text-xs">increment, get, reset</td>
+              <td className="px-4 py-2">MemoryWSRateLimitStore</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <Callout type="info">
+        Room supports cluster-wide broadcasting: <code>new Room("name", {"{"} pubSub, channel {"}"})</code>
+      </Callout>
+
       {/* ──────────────── NEXT STEPS ──────────────── */}
       <Heading
         level={2}

@@ -43,6 +43,8 @@ export const DOC_ROUTES: DocRoute[] = [
   { href: "/docs/queue", title: "Queue", section: "Integrations", description: "Background job processing with built-in drivers: Memory, Redis, Bun Redis, BullMQ, and RabbitMQ." },
   { href: "/docs/scheduler", title: "Scheduler", section: "Integrations", description: "Task scheduling, cron jobs, interval tasks, MemorySchedulerDriver, Bun cron." },
 
+  { href: "/docs/metrics", title: "Metrics", section: "Utilities", description: "Request metrics collector, Prometheus export, per-route stats, in-flight tracking." },
+
   { href: "/docs/helpers", title: "Helpers", section: "Utilities", description: "Utility functions: hash, compare, slug, random, formatDate, paginate." },
   { href: "/docs/download", title: "Download / Export", section: "Utilities", description: "File downloads, data export (CSV/JSON), and archive creation with Bun.Archive." },
   { href: "/docs/client", title: "Client SDK", section: "Utilities", description: "Type-safe RPC client with retry, timeout, interceptors, contracts." },

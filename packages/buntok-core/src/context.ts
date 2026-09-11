@@ -1,4 +1,5 @@
 import { createSSE, type SSE, type SSEOptions } from "./sse";
+import { getClientIP } from "./helpers/network";
 
 export class Context<
 	DI = Record<string, unknown>,
@@ -14,11 +15,13 @@ export class Context<
 	private _validated: Record<string, unknown> | undefined;
 	public readonly di: DI;
 	public _afterHooks?: Array<(res: Response) => Response | undefined>;
+	private readonly clientIPResolver: (request: Request) => string;
 
-	constructor(request: Request, params: Record<string, string>, di: DI) {
+	constructor(request: Request, params: Record<string, string>, di: DI, clientIPResolver: (request: Request) => string = getClientIP) {
 		this.request = request;
 		this.params = params as unknown as Params & Record<string, string>;
 		this.di = di;
+		this.clientIPResolver = clientIPResolver;
 	}
 
 	public get store(): Record<string, unknown> {
@@ -33,11 +36,7 @@ export class Context<
 	}
 
 	public get ip(): string {
-		const forwardedFor = this.request.headers.get("x-forwarded-for");
-		if (forwardedFor) {
-			return forwardedFor.split(",")[0]?.trim() ?? "";
-		}
-		return "127.0.0.1";
+		return this.clientIPResolver(this.request);
 	}
 
 	private parseCookies(): Record<string, string> {
@@ -379,7 +378,7 @@ export class Context<
 				await callback(stream);
 			} catch (err) {
 				console.error("[SSE Error]", err);
-				try { stream.sendEvent("error", String((err as Error).message)); } catch {}
+				try { stream.sendEvent("error", String((err as Error).message)); } catch { }
 				stream.close();
 			}
 		});

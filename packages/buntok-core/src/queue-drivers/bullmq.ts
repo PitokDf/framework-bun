@@ -1,4 +1,4 @@
-import type { QueueDriver, Job, JobHandler, QueueOptions } from "../queue";
+import type { QueueDriver, Job, JobHandler, QueueCapabilities } from "../queue";
 
 /**
  * Queue Driver using BullMQ (Redis-backed enterprise queue).
@@ -41,6 +41,13 @@ export interface BullmqQueueDriverOptions {
 }
 
 export class BullmqQueueDriver<T> implements QueueDriver<T> {
+	readonly capabilities: QueueCapabilities = {
+		durability: "persistent",
+		delivery: "at-least-once",
+		acknowledgment: "driver",
+		crashRecovery: true,
+		deadLetter: false,
+	};
 	private queue: any;
 	private worker: any;
 	private prefix: string;
@@ -131,13 +138,25 @@ export class BullmqQueueDriver<T> implements QueueDriver<T> {
 		this.ensureInitialized().then(() => this.startWorker());
 	}
 
-	size(): number {
-		return 0;
+	size(): number | null {
+		return null;
 	}
 
 	async clear(): Promise<void> {
 		if (this.queue) {
 			await this.queue.obliterate({ force: true });
 		}
+	}
+
+	async close(): Promise<void> {
+		await this.worker?.close();
+		await this.queue?.close();
+		this.worker = undefined;
+		this.queue = undefined;
+	}
+
+	async drain(options?: { timeout?: number }): Promise<void> {
+		if (!this.worker) return;
+		await this.worker.close(options?.timeout ? { drainDelay: options.timeout / 1000 } : undefined);
 	}
 }

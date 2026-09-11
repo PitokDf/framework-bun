@@ -14,6 +14,7 @@ import { VERSION } from "./core-exports";
 import type { Plugin } from "./plugin";
 import type { CorsOptions } from "./middlewares/cors";
 import { applyCorsHeaders, cors } from "./middlewares/cors";
+import { getClientIP, type TrustedProxyOptions } from "./helpers/network";
 
 export interface WSData<DI = Record<string, unknown>> {
 	ctx: Context<DI>;
@@ -132,6 +133,9 @@ export type ZodCtx<
 
 export type HandlerReturn =
 	| Response
+	| Blob
+	| ArrayBuffer
+	| Uint8Array
 	| string
 	| number
 	| boolean
@@ -143,6 +147,9 @@ export type HandlerReturn =
 	| void
 	| Promise<
 		| Response
+		| Blob
+		| ArrayBuffer
+		| Uint8Array
 		| string
 		| number
 		| boolean
@@ -228,6 +235,19 @@ export interface RouteDebugInfo {
 	group?: string;
 }
 
+export interface AppOptions {
+	/** Register SIGINT and SIGTERM handlers when the app starts listening. */
+	handleSignals?: boolean;
+	/** Maximum time allowed for graceful shutdown. */
+	shutdownTimeout?: number;
+}
+
+export interface DisposableResource {
+	name?: string;
+	close?: () => void | Promise<void>;
+	dispose?: () => void | Promise<void>;
+}
+
 export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private router: Router;
 	private middlewares: Middleware<DI>[] = [];
@@ -248,6 +268,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	public openApiDocs: any[] = [];
 	private container: Container | null = null;
 	private installedPlugins = new Set<string>();
+	private pluginDisposers = new Map<string, (app: App<DI>) => void | Promise<void>>();
+	private trustedProxy?: TrustedProxyOptions;
+	private readonly handleSignals: boolean;
+	private readonly shutdownTimeout: number;
+	private shutdownPromise?: Promise<void>;
+	private signalHandlers?: { signal: "SIGTERM" | "SIGINT"; handler: () => void }[];
+	private resources = new Set<DisposableResource>();
 	private corsConfig: CorsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: OpenAPI document is dynamically generated
 	private _swaggerDocument: any | null = null;
@@ -309,13 +336,28 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		);
 	};
 
-	constructor() {
+	constructor(options: AppOptions = {}) {
+		this.handleSignals = options.handleSignals ?? true;
+		this.shutdownTimeout = options.shutdownTimeout ?? 30_000;
 		this.router = new Router();
 		this.registerFaviconRoute();
 	}
 
 	public use(middleware: Middleware<DI>): this {
 		this.middlewares.push(middleware);
+		return this;
+	}
+
+	/** Configure which proxy peers may supply forwarding headers. */
+	public setTrustedProxy(options?: TrustedProxyOptions): this {
+		this.trustedProxy = options;
+		this._aotReady = false;
+		return this;
+	}
+
+	/** Register an owned resource for graceful application shutdown. */
+	public registerResource(resource: DisposableResource): this {
+		this.resources.add(resource);
 		return this;
 	}
 
@@ -337,7 +379,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	public async plugin(plugin: Plugin<DI>): Promise<this> {
 		if (this.installedPlugins.has(plugin.name)) return this;
 		this.installedPlugins.add(plugin.name);
-		await plugin.install(this);
+		try {
+			await plugin.install(this);
+			if (plugin.dispose) this.pluginDisposers.set(plugin.name, plugin.dispose);
+		} catch (error) {
+			this.installedPlugins.delete(plugin.name);
+			throw error;
+		}
 		return this;
 	}
 
@@ -1458,7 +1506,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code +=
 				"  if (server && wsRoutes.has(pathname)) {\n" +
 				"    const wsHandler = wsRoutes.get(pathname);\n" +
-				"    const ctx = new Context(request, EMPTY_PARAMS, di);\n" +
+				"    const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n" +
 				"    const data = { ctx, handler: wsHandler };\n" +
 				"    const upgraded = server.upgrade(request, { data });\n" +
 				"    if (upgraded) return undefined;\n" +
@@ -1498,7 +1546,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			for (const route of routes) {
 				const handlerRef = getHandlerIndex(route.handler);
 				code += `    case "${route.path}": {\n`;
-				code += "      const ctx = new Context(request, EMPTY_PARAMS, di);\n";
+				code += "      const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n";
 				code += "      try {\n";
 				code += hasGlobalMiddleware
 					? "        const raw = compiledGlobalPipeline(ctx, " +
@@ -1546,6 +1594,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"handleError",
 			"fallback",
 			"wsRoutes",
+			"clientIPResolver",
 			"toResponse",
 			code,
 		);
@@ -1561,6 +1610,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			this.handleError,
 			this.fallbackHandleRequest.bind(this),
 			this.wsRoutes,
+			(request: Request) => getClientIP(request, this.trustedProxy),
 			toResponse,
 		);
 	}
@@ -1587,7 +1637,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		// Skip building the log string entirely when request logging is off
 		if (logger.logRequests) {
 			const status = response.status;
-			const logData = { status };
+			const requestId = request.headers.get("x-request-id");
+			const logData = requestId ? { status, requestId } : { status };
 			if (status >= 500) {
 				logger.error(`${request.method} ${pathname}`, logData);
 			} else if (status >= 400) {
@@ -1599,6 +1650,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (this.poweredByHeaderEnabled) {
 			response.headers.set("X-Powered-By", "buntok");
 		}
+		const requestId = request.headers.get("x-request-id");
+		if (requestId) response.headers.set("x-request-id", requestId);
 		return response;
 	};
 
@@ -1738,7 +1791,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (server && this.wsRoutes.size > 0) {
 			const wsHandler = this.wsRoutes.get(pathname);
 			if (wsHandler) {
-				const ctx = new Context(request, {}, this.di) as Context<DI>;
+				const ctx = new Context(request, {}, this.di, (req) => getClientIP(req, this.trustedProxy)) as Context<DI>;
 				const data: WSData<DI> = { ctx, handler: wsHandler };
 				const upgraded = server.upgrade(request, { data });
 				if (upgraded) {
@@ -1756,7 +1809,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		const route = this.router.find(request.method, pathname);
 
-		const ctx = new Context(request, route.params, this.di) as Context<DI>;
+		const ctx = new Context(request, route.params, this.di, (req) => getClientIP(req, this.trustedProxy)) as Context<DI>;
 
 		let finalHandler = route.handler as Handler<DI>;
 		if (!finalHandler) {
@@ -1942,63 +1995,98 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (callback) callback();
 	}
 
+	/** Stop accepting traffic and release resources owned by this app. */
+	public close(options: { timeout?: number; force?: boolean } = {}): Promise<void> {
+		if (this.shutdownPromise) return this.shutdownPromise;
+
+		const timeout = options.timeout ?? this.shutdownTimeout;
+		this.shutdownPromise = (async () => {
+			this.removeSignalHandlers();
+			if (!this.server) {
+				this.isListening = false;
+				await this.closeResources(timeout);
+				return;
+			}
+
+			const server = this.server;
+			this.server = undefined;
+			this.isListening = false;
+			let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+			try {
+				const stopped = await Promise.race([
+					Promise.resolve(server.stop(false)).then(() => true),
+					new Promise<boolean>((resolve) => {
+						timeoutHandle = setTimeout(() => resolve(false), timeout);
+					}),
+				]);
+				if (!stopped && options.force) server.stop(true);
+			} finally {
+				if (timeoutHandle) clearTimeout(timeoutHandle);
+			}
+			await this.closeResources(timeout);
+		})().catch((error) => {
+			this.shutdownPromise = undefined;
+			throw error;
+		});
+
+		return this.shutdownPromise;
+	}
+
+	private async closeResources(timeout: number): Promise<void> {
+		const deadline = Date.now() + timeout;
+		for (const resource of this.resources) {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) break;
+			await Promise.race([
+				(resource.close ?? resource.dispose)?.(),
+				new Promise<void>((resolve) => setTimeout(resolve, remaining)),
+			]);
+		}
+		this.resources.clear();
+		for (const dispose of this.pluginDisposers.values()) {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) break;
+			await Promise.race([
+				dispose(this),
+				new Promise<void>((resolve) => setTimeout(resolve, remaining)),
+			]);
+		}
+		this.pluginDisposers.clear();
+	}
+
+	/** Alias for close(), kept for hosts that use shutdown terminology. */
+	public shutdown(options: { timeout?: number; force?: boolean } = {}): Promise<void> {
+		return this.close(options);
+	}
+
 	/**
 	 * Setup graceful shutdown handlers for SIGTERM and SIGINT signals.
 	 * When a signal is received, the server stops accepting new connections,
 	 * waits for in-flight requests to complete, then exits cleanly.
 	 */
 	private setupGracefulShutdown(): void {
-		// Prevent duplicate signal handlers (e.g., hot reload, multiple instances)
-		if ((globalThis as any).__buntokShutdownHandlers) return;
-		(globalThis as any).__buntokShutdownHandlers = true;
+		if (!this.handleSignals || this.signalHandlers) return;
 
 		const shutdown = async (signal: string) => {
 			logger.info(`\n${signal} received. Starting graceful shutdown...`);
-
-			if (this.server) {
-				// Stop accepting new connections
-				this.server.stop(false);
-
-				// Drain SSE — industrial graceful (close all streams dengan 30s heartbeat comment)
-				try {
-					const { SSE } = await import("./sse");
-					// kirim close event sebelum terminate
-					for (const c of SSE.getActiveConnections()) {
-						try { c.sendEvent("close", "Server shutting down"); } catch { }
-					}
-					// beri waktu 1s untuk flush
-					await new Promise((r) => setTimeout(r, 1000));
-					SSE.closeAll();
-				} catch { }
-
-				// Drain WS — close dengan 1001 Going Away
-				try {
-					// broadcast ke semua topic jika pakai publish
-					try { this.server.publish("buntok:shutdown", "shutting down"); } catch { }
-				} catch { }
-
-				// Give in-flight requests time to complete (max 30 seconds)
-				const shutdownTimeout = 30_000;
-				const forceExitTimeout = setTimeout(() => {
-					logger.warn("Forcing shutdown after timeout");
-					process.exit(1);
-				}, shutdownTimeout);
-				// Jangan clear langsung — biarkan timeout jadi safety net
-				// Cleanup setelah graceful selesai
-				setTimeout(() => {
-					clearTimeout(forceExitTimeout);
-					logger.info("Server shut down gracefully");
-					process.exit(0);
-				}, 1500);
-				return;
-			}
-
+			await this.close();
 			logger.info("Server shut down gracefully");
 			process.exit(0);
 		};
 
-		process.on("SIGTERM", () => shutdown("SIGTERM"));
-		process.on("SIGINT", () => shutdown("SIGINT"));
+		const signals = ["SIGTERM", "SIGINT"] as const;
+		this.signalHandlers = signals.map((signal) => {
+			const handler = () => { shutdown(signal).catch(() => process.exit(1)); };
+			process.on(signal, handler);
+			return { signal, handler };
+		});
+	}
+
+	private removeSignalHandlers(): void {
+		for (const { signal, handler } of this.signalHandlers ?? []) {
+			process.off(signal, handler);
+		}
+		this.signalHandlers = undefined;
 	}
 }
 
@@ -2572,8 +2660,8 @@ export class RouterGroup<
 			) as Handler<DI>;
 
 			this.app.registerRoute(route.method, fullPath, [
-				...(route.middlewares as Middleware<DI>[]),
 				...this.groupMiddlewares,
+				...(route.middlewares as Middleware<DI>[]),
 				handler,
 			], { source: "controller", controller: ControllerClass.name, group: this.prefix });
 		}
