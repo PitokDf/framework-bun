@@ -1634,10 +1634,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (!response) {
 			return new Response("Internal Server Error", { status: 500 });
 		}
+		// Read requestId once for both logging and response propagation
+		const requestId = request.headers.get("x-request-id");
 		// Skip building the log string entirely when request logging is off
 		if (logger.logRequests) {
 			const status = response.status;
-			const requestId = request.headers.get("x-request-id");
 			const logData = requestId ? { status, requestId } : { status };
 			if (status >= 500) {
 				logger.error(`${request.method} ${pathname}`, logData);
@@ -1650,7 +1651,6 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (this.poweredByHeaderEnabled) {
 			response.headers.set("X-Powered-By", "buntok");
 		}
-		const requestId = request.headers.get("x-request-id");
 		if (requestId) response.headers.set("x-request-id", requestId);
 		return response;
 	};
