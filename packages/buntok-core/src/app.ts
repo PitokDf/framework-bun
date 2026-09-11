@@ -559,6 +559,22 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			if (hasStatus || hasHeaders || hasRedirect) {
 				const original = handler;
 				const routeMeta = route;
+				const apply = (res: Response): Response => {
+					let r: Response = res;
+					if (hasStatus && r.status === 200) {
+						// Override status only if default 200 (preserve explicit ctx.status etc.)
+						r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
+					} else if (hasStatus && r.status === 204 && routeMeta.statusCode !== 204) {
+						// For void returns that became 204, respect HttpCode
+						r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
+					}
+					if (hasHeaders) {
+						for (const [k, v] of routeMeta.headers!) {
+							r.headers.set(k, v);
+						}
+					}
+					return r;
+				};
 				// biome-ignore lint/suspicious/noExplicitAny: wrapper must accept any Context shape
 				handler = ((ctx: any) => {
 					// Redirect - static or dynamic override (Nest behavior)
@@ -597,22 +613,6 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 						});
 					}
 					const raw: any = original(ctx);
-					const apply = (res: Response): Response => {
-						let r: Response = res;
-						if (hasStatus && r.status === 200) {
-							// Override status only if default 200 (preserve explicit ctx.status etc.)
-							r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
-						} else if (hasStatus && r.status === 204 && routeMeta.statusCode !== 204) {
-							// For void returns that became 204, respect HttpCode
-							r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
-						}
-						if (hasHeaders) {
-							for (const [k, v] of routeMeta.headers!) {
-								r.headers.set(k, v);
-							}
-						}
-						return r;
-					};
 					if (raw instanceof Promise) {
 						return raw.then((v: any) =>
 							typeof v === "string"
