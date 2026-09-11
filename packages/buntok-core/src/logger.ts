@@ -173,7 +173,11 @@ export class Logger {
 		meta?: Record<string, unknown>,
 	) {
 		if (level < this.level) return;
-		const safeMeta = meta ? redactLogMeta(meta, new WeakSet(), this.redactPatterns, this.redactReplacement) : undefined;
+		const safeMeta = meta
+			? this.redactPatterns
+				? redactLogMeta(meta, new WeakSet(), this.redactPatterns, this.redactReplacement)
+				: meta
+			: undefined;
 
 		const isStderr = level === LogLevel.ERROR;
 
