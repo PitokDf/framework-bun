@@ -1569,11 +1569,12 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				const needsFullContext = analysis.needsFullContext;
 				const needsParamsOnly = analysis.needsParams && !needsFullContext;
 				const ctxArg = needsFullContext ? "ctx" : needsParamsOnly ? "{ request, params: routeParams }" : "{ request }";
+				// Error handler always needs full Context, so we declare ctx for catch blocks
 				const ctxDecl = needsFullContext
 					? "      const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n"
 					: needsParamsOnly
-					? ""  // params come from router.find, but in AOT we use EMPTY_PARAMS for static routes
-					: "";
+					? "      let ctx;\n"
+					: "      let ctx;\n";
 
 				code += `    case "${route.path}": {\n`;
 				code += ctxDecl;
@@ -1585,7 +1586,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 						// Fastest path: no logging, no powered-by — skip setPoweredBy entirely
 						code += "      if (raw instanceof Promise) {\n";
 						code +=
-							'        return raw.then((v) => typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v)).catch((e) => handleError(request, pathname, { request }, e));\n';
+							'        return raw.then((v) => typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v)).catch((e) => { if (!ctx) ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver); return handleError(request, pathname, ctx, e); });\n';
 						code += "      }\n";
 						code +=
 							'      if (typeof raw === "string") return new Response(raw, plainTextHeaders);\n';
@@ -1596,7 +1597,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 					} else {
 						code += "      if (raw instanceof Promise) {\n";
 						code +=
-							'        return raw.then((v) => setPoweredBy(typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => handleError(request, pathname, { request }, e));\n';
+							'        return raw.then((v) => setPoweredBy(typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => { if (!ctx) ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver); return handleError(request, pathname, ctx, e); });\n';
 						code += "      }\n";
 						code +=
 							'      if (typeof raw === "string") return setPoweredBy(new Response(raw, plainTextHeaders));\n';
@@ -1608,7 +1609,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				} else {
 					code += "      if (raw instanceof Promise) {\n";
 					code +=
-						'        return raw.then((v) => typeof v === "string" ? logResponse(request, pathname, new Response(v, plainTextHeaders)) : logResponse(request, pathname, v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => handleError(request, pathname, { request }, e));\n';
+						'        return raw.then((v) => typeof v === "string" ? logResponse(request, pathname, new Response(v, plainTextHeaders)) : logResponse(request, pathname, v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => { if (!ctx) ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver); return handleError(request, pathname, ctx, e); });\n';
 					code += "      }\n";
 					code +=
 						'      if (typeof raw === "string") return logResponse(request, pathname, new Response(raw, plainTextHeaders));\n';
@@ -1624,7 +1625,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code += "}\n";
 		}
 
-		code += "  }\n  } catch(err) { return handleError(request, pathname, { request }, err); }\n" + "  return fallback(request, server);\n" + "};\n";
+		code += "  }\n  } catch(err) { if (!ctx) ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver); return handleError(request, pathname, ctx, err); }\n" + "  return fallback(request, server);\n" + "};\n";
 
 		const factory = new Function(
 			"Context",
