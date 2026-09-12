@@ -1,28 +1,10 @@
-// Core
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+// VERSION
+export { VERSION } from "./version";
 
-const __dirname = import.meta.dir;
-let _version = "0.0.0-dev";
-try {
-	// 1. Check framework's own package.json (dev/monorepo context)
-	let pkgPath = join(__dirname, "..", "package.json");
-	if (!existsSync(pkgPath)) {
-		// 2. CLI bundle context (dist/cli/)
-		pkgPath = join(__dirname, "..", "..", "package.json");
-	}
-	if (!existsSync(pkgPath)) {
-		// 3. User project — read from node_modules/@buntok/core/package.json
-		pkgPath = join(process.cwd(), "node_modules", "@buntok", "core", "package.json");
-	}
-	if (existsSync(pkgPath)) {
-		const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-		if (typeof pkg.version === "string") _version = pkg.version;
-	}
-} catch { }
-export const VERSION: string = _version;
+// NOTE: Heavy zod-dependent modules (validation, payment, scheduler, ws-helpers)
+// are exported from "./full" entry point to keep cold start fast.
+// Import from "@buntok/core/full" if you need them.
 
-export { z } from "zod";
 // AOT / Sucrose
 export {
 	analyzeHandler,
@@ -119,9 +101,7 @@ export {
 	Query,
 	Use,
 	UseGuard,
-	// Nest-style alias (deprecated old kept)
 	UseGuards,
-	// New zero-cost decorators
 	SetMetadata,
 	Public,
 	HttpCode,
@@ -137,7 +117,7 @@ export { getBackend, isNativeAvailable } from "./ffi";
 export type { RetryOptions } from "./helpers/async";
 // Async helpers
 export { delay, retry } from "./helpers/async";
-// Response helpers (Elysia-style flexible return)
+// Response helpers
 export { toResponse, toResponseMaybeAsync } from "./helpers/response";
 // Error helpers
 export {
@@ -313,7 +293,6 @@ export {
 	runReadinessChecks,
 } from "./middlewares/health-check";
 export type { HelmetOptions } from "./middlewares/helmet";
-// Helmet
 export { helmet } from "./middlewares/helmet";
 export type { RateLimiterOptions } from "./middlewares/rate-limiter";
 export {
@@ -330,18 +309,8 @@ export { TimeoutError, timeout } from "./middlewares/timeout";
 // RBAC
 export { requirePermission, requireRole } from "./middlewares/rbac";
 export type { RequirePermissionOptions, RequireRoleOptions } from "./middlewares/rbac";
-export type {
-	BodyContentType,
-	ValidationTarget,
-	ZValidatorOptions,
-} from "./middlewares/validator";
-export {
-	validate,
-	validateBody,
-	validateParams,
-	zResponse,
-	zValidator,
-} from "./middlewares/validator";
+// NOTE: validation (zod-dependent) moved to "./middlewares/validator" subpath
+// Import: import { validate, z } from "@buntok/core/middlewares/validator"
 // Queue
 export {
 	type Job,
@@ -369,51 +338,8 @@ export {
 } from "./queue-drivers";
 export { Router } from "./router";
 export { Metrics, metricsEndpoint, metricsMiddleware, type MetricSnapshot } from "./metrics";
-// Payment
-export {
-	PaymentConfigurationError,
-	PaymentError,
-	PaymentIdempotencyError,
-	PaymentProviderError,
-	PaymentVerificationError,
-	paymentWebhook,
-	createPayment,
-	generateIdempotencyKey,
-	normalizeCheckoutStatus,
-	normalizeRefundStatus,
-	normalizeSubscriptionStatus,
-	CreateCheckoutInputSchema,
-	CreatePaymentLinkInputSchema,
-	CreateRefundInputSchema,
-	CreateSubscriptionInputSchema,
-	MoneyAmountSchema,
-	StripeDriver,
-	MidtransDriver,
-	XenditDriver,
-	PayPalDriver,
-} from "./payment";
-export type {
-	CheckoutResult,
-	CheckoutStatus,
-	CreateCheckoutInput,
-	CreatePaymentLinkInput,
-	CreateRefundInput,
-	CreateSubscriptionInput,
-	PaymentDriver,
-	PaymentLinkResult,
-	PaymentOptions,
-	RefundResult,
-	RefundStatus,
-	StripeDriverConfig,
-	MidtransDriverConfig,
-	XenditDriverConfig,
-	PayPalDriverConfig,
-	SubscriptionResult,
-	SubscriptionStatus,
-	WebhookEvent,
-	WebhookEventType,
-	WebhookMiddlewareOptions,
-} from "./payment";
+// NOTE: payment (zod-dependent) moved to "./payment" subpath
+// Import: import { createPayment, StripeDriver } from "@buntok/core/payment"
 // Scheduler / CronJob
 export {
 	BunCronSchedulerDriver,
@@ -423,7 +349,7 @@ export {
 	type SchedulerDriver,
 	setDefaultSchedulerDriver,
 } from "./schedule";
-// SSE - industrial, pluggable (mirip StorageDriver)
+// SSE
 export type { SSEBroadcasterOptions, SSEHistoryStore, SSEMessage, SSEOptions, SSEPubSub } from "./sse";
 export { MemorySSEHistory, MemorySSEPubSub, SSE, SSEBroadcaster, createSSE } from "./sse";
 // Upload
@@ -442,22 +368,11 @@ export {
 	handleUploads,
 	uploader,
 } from "./upload";
-// WebSocket helpers - industrial, pluggable
-export type { RoomOptions, WSPubSub, WSRateLimitOptions, WSRateLimitStore } from "./ws-helpers";
-export {
-	MemoryWSPubSub,
-	MemoryWSRateLimitStore,
-	Room,
-	validateWSMessage,
-	wsAuth,
-	wsHeartbeat,
-	wsHeartbeatPong,
-	wsRateLimit,
-} from "./ws-helpers";
+// NOTE: ws-helpers (zod-dependent) moved to "./ws-helpers" subpath
+// Import: import { Room, wsAuth } from "@buntok/core/ws-helpers"
 // Plugin system
 export { createPlugin } from "./plugin";
 export type { Plugin } from "./plugin";
-// htmlStream is on Context (exported via Context class)
 // Enhanced client
 export { createClient, ClientError } from "./client";
 export type {

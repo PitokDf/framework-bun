@@ -26,7 +26,7 @@ export default function PaymentPage() {
         Use the <code>createPayment</code> factory to instantiate drivers:
       </p>
       <CodeBlock
-        code={`import { createPayment } from "@buntok/core";
+        code={`import { createPayment } from "@buntok/core/payment";
 
 const stripe = createPayment.stripe({
   secretKey: process.env.STRIPE_SECRET_KEY!,

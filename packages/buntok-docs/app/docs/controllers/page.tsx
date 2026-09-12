@@ -164,7 +164,7 @@ app.listen(1212);`}
       </p>
       <CodeBlock
         code={`import { Controller, Get, Use } from "@buntok/core";
-import { zValidator } from "@buntok/core";
+import { zValidator } from "@buntok/core/middlewares/validator";
 import type { Context, ZodCtx } from "@buntok/core";
 
 const auth = async (ctx: Context, next) => {

@@ -10,7 +10,7 @@ function toPascalCase(str: string): string {
 }
 
 function generateSchema(name: string, pascalName: string): string {
-	return `import { z } from "@buntok/core";
+	return `import { z } from "@buntok/core/middlewares/validator";
 
 export const Create${pascalName}Schema = z.object({
   name: z.string().min(1).max(100),

@@ -83,6 +83,36 @@
 				"types": "./dist/plugins/opentelemetry.d.cts",
 				"default": "./dist/plugins/opentelemetry.cjs"
 			}
+		},
+		"./middlewares/validator": {
+			"import": {
+				"types": "./dist/middlewares/validator.d.ts",
+				"default": "./dist/middlewares/validator.js"
+			},
+			"require": {
+				"types": "./dist/middlewares/validator.d.cts",
+				"default": "./dist/middlewares/validator.cjs"
+			}
+		},
+		"./payment": {
+			"import": {
+				"types": "./dist/payment/index.d.ts",
+				"default": "./dist/payment/index.js"
+			},
+			"require": {
+				"types": "./dist/payment/index.d.cts",
+				"default": "./dist/payment/index.cjs"
+			}
+		},
+		"./ws-helpers": {
+			"import": {
+				"types": "./dist/ws-helpers.d.ts",
+				"default": "./dist/ws-helpers.js"
+			},
+			"require": {
+				"types": "./dist/ws-helpers.d.cts",
+				"default": "./dist/ws-helpers.cjs"
+			}
 		}
 	},
 	"files": [

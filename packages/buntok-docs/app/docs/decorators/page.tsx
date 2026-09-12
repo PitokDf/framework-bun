@@ -275,7 +275,7 @@ class UserController {
         With zValidator
       </Heading>
       <CodeBlock
-        code={`import { zValidator, z } from "@buntok/core";
+        code={`import { zValidator, z } from "@buntok/core/middlewares/validator";
 import type { ZodCtx } from "@buntok/core";
 
 const userSchema = z.object({
