@@ -66,6 +66,29 @@ export default function QueuePage() {
         </table>
       </div>
 
+      <Heading
+        level={3}
+        className="text-xl font-semibold mt-6 mb-2 text-text-primary"
+      >
+        Driver Imports
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        For production use, import driver classes directly:
+      </p>
+      <CodeBlock
+        code={`import {
+  Queue,
+  RedisQueueDriver,
+  BunRedisQueueDriver,
+  BullmqQueueDriver,
+  RabbitmqQueueDriver,
+} from "@buntok/core";
+
+// Pass driver instance directly
+const redisDriver = new RedisQueueDriver({ url: "redis://localhost:6379" });
+const queue = new Queue("email", redisDriver);`}
+      />
+
       {/* ──────────────── BASIC USAGE ──────────────── */}
       <Heading
         level={2}

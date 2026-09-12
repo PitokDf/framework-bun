@@ -1,11 +1,15 @@
 {
 	"name": "@buntok/core",
-	"version": "2.1.13",
+	"version": "2.1.14-alpha.0",
 	"description": "Core HTTP framework for Bun, bring your own structure",
 	"module": "dist/core-exports.js",
 	"type": "module",
 	"main": "dist/core-exports.cjs",
 	"types": "dist/core-exports.d.ts",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"bin": {
 		"buntok": "./dist/cli/index.js"
 	},
@@ -88,7 +92,11 @@
 		"README.md"
 	],
 	"scripts": {
-		"test": "bun --watch test/src/index.ts",
+		"test": "bun test tests",
+		"test:watch": "bun test --watch tests",
+		"test:unit": "bun test tests/helpers tests/middlewares",
+		"test:integration": "bun test tests/combinations.test.ts tests/context.test.ts",
+		"test:server": "bun run test/src/index.ts",
 		"build": "tsup && bun run fix-node-prefix && bun run build:types && bun run build:dcts && mkdir -p dist/cli/templates && cp src/cli/templates/* dist/cli/templates/",
 		"build:types": "bunx tsc --project tsconfig.build.json",
 		"build:dcts": "cd dist && for f in *.d.ts; do cp \"$f\" \"${f%.d.ts}.d.cts\"; done",
@@ -97,6 +105,7 @@
 		"sync-deps": "bun scripts/sync-local-deps.ts",
 		"dev": "tsup --watch",
 		"typecheck": "tsc --noEmit",
+		"ci": "bun run typecheck && bun test tests && bun run build",
 		"clean": "rm -rf dist"
 	},
 	"devDependencies": {

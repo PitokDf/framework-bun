@@ -131,6 +131,14 @@ app.disable("x-powered-by");
 app.enable("x-powered-by");`}
       />
 
+      <Callout type="info">
+        <strong>Production defaults (performance-optimized):</strong> Request
+        logging (<code>logRequests</code>) and <code>x-request-id</code> header
+        generation are <strong>disabled by default</strong> in production for
+        maximum throughput. Enable via <code>LOG_REQUESTS=true</code> env or{" "}
+        <code>app.setLogResponse(true)</code> when you need observability.
+      </Callout>
+
       {/* ──────────────── ENABLEREUSEPORT ──────────────── */}
       <Heading
         level={2}
@@ -189,7 +197,7 @@ app
   .disable("x-powered-by")
   .enableReusePort()
   .icon("./public/favicon.svg")
-  .use(cors())
+  .cors()
   .use(compress())
   .onError(handler)
   .notFound(notFoundHandler)

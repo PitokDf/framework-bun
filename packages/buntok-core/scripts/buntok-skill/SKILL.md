@@ -7,6 +7,29 @@ description: Use when the user is building, coding, or asking questions about a 
 
 Complete reference for building applications with `@buntok/core`.
 
+## How to work with this guide
+
+Use this order when starting or changing a Buntok project:
+
+1. Inspect the project entry points, `package.json`, `tsconfig.json`, and the existing route/module structure before editing.
+2. Prefer the functional API (`new App()`, `app.get()`, `app.use()`) unless the project already uses controllers and decorators.
+3. Keep `src/index.ts` focused on app construction and route registration. Start a local server from the root `server.ts` or the generated `dev` script.
+4. Use `app.request()` in tests instead of binding a port.
+5. Run `buntok check` and the relevant Bun tests after changing routes, middleware, schemas, or generated code.
+6. Do not invent APIs. Confirm an export in `src/core-exports.ts` or a method in `src/app.ts` before using it in code or documentation.
+
+### Choose an application style
+
+| Situation | Use |
+|-----------|-----|
+| Small API or an existing functional project | `new App()` with `app.get()`, `app.post()`, and `app.use()` |
+| Feature modules with constructor dependencies | Controllers plus `@Dependencies()` and an IoC `Container` |
+| Local development after `buntok init` | `bun run dev` (`bun --watch server.ts`) |
+| Production Bun server | `bun run build` followed by `bun run start` |
+| Serverless adapter | Export `app.fetch` from the platform entry point |
+
+The framework does not execute arbitrary TypeScript in the browser. Use Bun to run the application.
+
 ## Install
 
 ```bash
@@ -46,43 +69,83 @@ bunx buntok init                 # interactive setup — generates all boilerpla
 ├── .agents/skills/buntok-skill/SKILL.md
 ├── .vscode/settings.json
 ├── src/
-│   ├── index.ts              # export default app (clean — no listen)
+│   ├── index.ts              # export const app and default app (no listen)
 │   ├── env.ts                # App.validateEnv({ PORT, AUTH_STORE, ... })
-│   ├── controllers/          # buntok create <entity> --controller
-│   ├── services/             # buntok create <entity> --service
-│   └── repositories/         # buntok create <entity> --repo
-├── server.ts                 # build entry point — app.listen(env.PORT)
+│   ├── modules/              # feature-based modules
+│   │   └── <entity>/         # buntok create <entity>
+│   │       ├── <entity>.controller.ts
+│   │       ├── <entity>.service.ts
+│   │       ├── <entity>.repository.ts
+│   │       ├── <entity>.schema.ts     # Zod validation schemas
+│   │       └── index.ts               # barrel export
+│   ├── middlewares/          # buntok make:middleware <name>
+│   ├── lib/                  # shared utilities (prisma.ts, db.ts, etc.)
+│   └── config/               # configuration (env.ts)
+├── server.ts                 # local/production Bun entry point — app.listen(env.PORT)
 ├── public/docs/swagger.json  # auto-generated on app.listen()
+├── tests/
+│   ├── *.spec.ts             # buntok make:test <entity>
+│   └── e2e/
+│       └── *.e2e.spec.ts     # buntok make:test:e2e <entity>
 ├── .env / .env.example
 ├── tsconfig.json / biome.json / vercel.json? / Dockerfile? / .dockerignore? / .gitignore
 ├── package.json
 └── .buntok/                  # buntok build output (server.js)
 ```
 
-> `src/index.ts` must `export const app` — used by `buntok make:docs` (optional manual regeneration). `server.ts` is the build entry point for all modes (Vercel, Docker, local). It calls `app.listen(env.PORT)` which internally uses `Bun.serve()`.
+> `src/index.ts` must export `const app` for `buntok make:docs` and other tooling. The generated `server.ts` calls `app.listen(env.PORT)` for a local or production Bun server. A serverless deployment should expose `app.fetch` through its platform adapter instead of calling `app.listen()`.
 
 ### 3. Generate code
 
 ```bash
-buntok create user                      # repo + service + controller for "user"
+buntok create user                      # module: repo + service + controller + schema + barrel
 buntok create user --repo --service     # only repo & service
 buntok create user --controller         # only controller
+buntok create user --schema             # only schema
+buntok create user --drizzle            # use Drizzle ORM (default: auto-detect)
+buntok create user --prisma             # use Prisma ORM
+buntok create user --typeorm            # use TypeORM
 
-# Auto: creates src/repositories/user.repository.ts, src/services/user.service.ts,
-# src/controllers/user.controller.ts and injects:
-#   const repo = new UserRepository(); const service = new UserService(repo);
-#   app.registerController(new UserController(service));
+# Auto: creates src/modules/user/ with:
+#   user.repository.ts, user.service.ts, user.controller.ts, user.schema.ts, index.ts
+# Uses @Dependencies decorator for auto DI resolution via container.scan()
 # then runs `bunx biome format --write`
+
+# Generate tests and middleware
+buntok make:test user                   # unit test at tests/user.spec.ts
+buntok make:test:e2e user               # E2E test at tests/e2e/user.e2e.spec.ts
+buntok make:seeder user                 # seeder at src/db/seeders/user.seeder.ts
+buntok make:seeder user --factory       # seeder using factory pattern
+buntok make:middleware auth             # middleware at src/middlewares/auth.middleware.ts
+
+# Preview without writing (--dry-run)
+buntok make:test user --dry-run         # preview test file content
+buntok make:middleware auth --dry-run   # preview middleware content
+buntok create user --dry-run            # preview all files
+
+# Debug and development
+buntok debug:routes                     # show all registered routes
+buntok debug:routes --json              # output as JSON
+buntok dev                              # optional convenience wrapper around bun --watch server.ts
+buntok dev --expose                     # start with public tunnel URL
 ```
 
 ### 4. Build / DB / Docs
 
 ```bash
-buntok build              # production bundle → .buntok/server.js
-buntok db migrate         # migrate | seed | reset | generate | studio | status
+buntok build              # production bundle → dist/server.js
+buntok db migrate         # delegate migrate | seed | reset | generate | studio | status to detected ORM
 buntok db seed
+buntok db reset --dry-run # preview reset command without executing
 buntok make:docs          # optional: manual swagger.json regeneration
 bun run dev               # after init: bun --watch server.ts
+```
+
+**DB CLI:** Auto-detects ORM (Prisma/Drizzle/TypeORM) from config files or package.json. Destructive commands (`reset`) require confirmation prompt. Use `--dry-run` to preview commands without executing.
+
+```bash
+buntok db migrate add user_table --dry-run   # preview migration command
+buntok db reset --dry-run                    # preview destructive command
 ```
 
 **CLI reference (`src/cli/index.ts:15`):**
@@ -90,10 +153,18 @@ bun run dev               # after init: bun --watch server.ts
 | Command | Args / Flags | Description |
 |---------|--------------|-------------|
 | `buntok init` | — | Project setup |
+| `buntok dev` | `--expose --port=PORT` | Start dev server (HMR). `--expose` creates public tunnel via localtunnel |
 | `buntok build` | — | Build to `.buntok/` |
-| `buntok create <entity>` | `--repo --service --controller` | Generate layered files |
-| `buntok db <cmd>` | `migrate, seed, reset, generate, studio, status` | ORM delegation |
+| `buntok check` | `--json --plain` | TypeScript type check with error details and summary |
+| `buntok create <entity>` | `--repo --service --controller --schema --prisma --drizzle --typeorm --dry-run` | Generate module files |
+| `buntok db <cmd>` | `migrate, seed, reset, generate, studio, status` | ORM delegation (confirmation required for `reset`) |
+| `buntok debug:routes` | `--json` | Show all registered routes with middleware chains |
+| `buntok make:factory <entity>` | `--dry-run` | Generate data factory (`src/factories/<entity>.factory.ts`) |
 | `buntok make:docs` | — | Manual swagger.json regeneration (auto-generated on `app.listen()` by default) |
+| `buntok make:test <entity>` | `--dry-run` | Generate unit test |
+| `buntok make:test:e2e <entity>` | `--dry-run` | Generate E2E test |
+| `buntok make:seeder <entity>` | `--factory --dry-run` | Generate database seeder. `--factory` uses factory pattern |
+| `buntok make:middleware <name>` | `--dry-run` | Generate middleware |
 
 ---
 
@@ -116,6 +187,8 @@ app.get("/users/:id", ({ params }) => params);            // direct return + des
 
 app.listen(1212);
 ```
+
+For a project created with `buntok init`, keep the generated `app.listen()` call in the root `server.ts` and keep `src/index.ts` importable. Use `bun run dev` during development; it runs `bun --watch server.ts`.
 
 ---
 
@@ -160,11 +233,16 @@ const app = new App();
 | `app.disable` | `("x-powered-by")` | Disable built-in `X-Powered-By: buntok` header |
 | `app.enable` | `("x-powered-by")` | Re-enable disabled features |
 | `app.enableReusePort` | `(enabled?)` | `SO_REUSEPORT` (Linux only — warns on macOS/Windows) |
-| `app.icon` | `(path)` | Set custom favicon path (default `./public/favicon.ico` + built-in fallback) |
+| `app.icon` | `(path?)` | Register favicon route with optional custom path (default `./public/favicon.ico` + built-in fallback). Not registered by default in production to reduce AOT overhead — call `app.icon()` if you need it. |
 | `app.apiDocs` | `(options?)` | Register API docs UI at `/docs` — routes NOT in `openApiDocs` |
 | `app.server` | `Server<WSData>` | Underlying `Bun.Server` after `listen()` — for `server.publish()` |
 | `app.di` | `DI` | Public DI store |
 | `app.openApiDocs` | `any[]` | Collected OpenAPI docs per route (for `make:docs`) |
+| `app.close` | `(options?)` | Stop accepting traffic, flush resources, release server — `options: { timeout?, force? }` |
+| `app.shutdown` | `(options?)` | Alias for `app.close()` |
+| `app.registerResource` | `(resource)` | Register a `DisposableResource` for cleanup on shutdown — `{ name?, close?(), dispose?() }` |
+| `app.wsOptions` | `(opts)` | Configure Bun WebSocket options globally — `WSOptions { perMessageDeflate?, maxPayloadLength?, idleTimeout?, maxBackpressure?, publishToSelf? }` |
+| `app.setTrustedProxy` | `(options?)` | Configure which proxy peers supply forwarding headers — `TrustedProxyOptions { addresses?, depth? }` |
 
 ### validateEnv()
 
@@ -283,6 +361,72 @@ Linux-only. On macOS/Windows warns and is ignored.
 app.enableReusePort(true); // SO_REUSEPORT
 ```
 
+### Graceful Shutdown
+
+Production-ready shutdown with resource cleanup, in-flight request drain, and signal handling.
+
+```ts
+import { App } from "@buntok/core";
+
+const app = new App({
+  handleSignals: true,        // auto-register SIGINT/SIGTERM (default: true)
+  shutdownTimeout: 30_000,    // max ms to wait for resource cleanup (default: 30000)
+});
+
+// Register resources for cleanup on shutdown
+app.registerResource({
+  name: "db-pool",
+  close: async () => {
+    await db.$disconnect();
+  },
+});
+
+// Manual shutdown (e.g., in tests or custom signal handling)
+await app.close({ timeout: 5_000 });  // stop accepting, flush in 5s
+await app.shutdown();                  // alias for app.close()
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `handleSignals` | `boolean` | `true` | Auto-register `SIGINT`/`SIGTERM` handlers |
+| `shutdownTimeout` | `number` | `30000` | Max ms to wait for resource cleanup before force exit |
+
+**Shutdown flow:**
+1. Remove signal handlers (prevent re-entry)
+2. Stop accepting new connections (`server.stop()`)
+3. Wait up to `timeout` ms for in-flight requests to finish
+4. Call `close()` on all registered resources
+5. `process.exit(0)` if clean, or `process.exit(1)` on timeout
+
+### WebSocket Configuration
+
+Configure Bun WebSocket options globally (permessage-deflate, payload limits, backpressure):
+
+```ts
+app.wsOptions({
+  perMessageDeflate: true,     // enable compression (default: false)
+  maxPayloadLength: 1024 * 1024, // 1MB max message size
+  idleTimeout: 30,             // seconds before idle connection closes
+  maxBackpressure: 1024,       // max bytes buffered per connection
+  publishToSelf: false,        // don't deliver to sender's own connection
+});
+```
+
+### Trusted Proxy
+
+Configure which proxy peers supply `X-Forwarded-For`, `X-Forwarded-Proto`, etc. headers. **Not trusted by default.**
+
+```ts
+// Trust only specific proxy addresses
+app.setTrustedProxy({
+  addresses: ["127.0.0.1", "10.0.0.0/8"],
+  depth: 1,  // how many proxies to trust (default: 1)
+});
+
+// Trust all (e.g., behind reverse proxy in same network)
+app.setTrustedProxy();
+```
+
 ---
 
 ## Dev Server
@@ -367,6 +511,63 @@ server.stop(); // stop the server
 
 ---
 
+## Route Debugger
+
+CLI tool to inspect all registered routes with their middleware chains. Useful for debugging route registration and middleware ordering.
+
+```bash
+buntok debug:routes                     # show all registered routes
+buntok debug:routes --json              # output as JSON (for programmatic use)
+```
+
+### Output
+
+```
+Method │ Path               │ Middlewares                    │ Handler
+───────┼────────────────────┼────────────────────────────────┼──────────
+GET    │ /                  │ —                              │ (index)
+GET    │ /users             │ cors, compress                 │ getAll
+GET    │ /users/:id         │ cors, compress, auth           │ getById
+POST   │ /users             │ cors, compress, validation     │ create
+
+4 routes registered
+
+By source:
+  UserController: 3 routes
+  route: 1 routes
+```
+
+### How It Works
+
+The route debugger captures metadata during route registration (before AOT compilation). Each route entry includes:
+
+| Field | Description |
+|-------|-------------|
+| `method` | HTTP method (GET, POST, etc.) |
+| `path` | Route path with params |
+| `middlewares` | Array of middleware names |
+| `handler` | Handler function name |
+| `source` | Where the route came from: `route`, `controller`, or `group` |
+| `controller` | Controller class name (if from `registerController`) |
+| `group` | Group prefix (if from `RouterGroup`) |
+
+### Programmatic Access
+
+```ts
+const app = new App();
+app.get("/users", getAll);
+app.post("/users", create);
+
+// Access route debug info
+console.log(app.routeDebugInfo);
+// [
+//   { method: "GET", path: "/users", middlewares: [], handler: "getAll", source: "route" },
+//   { method: "POST", path: "/users", middlewares: [], handler: "create", source: "route" },
+// ]
+```
+
+---
+
 ## Handler & Context
 
 Handlers receive a single `ctx: Context` argument. Two ergonomic styles are supported.
@@ -416,6 +617,11 @@ app.get("/profile", ({ store, request }) => store.user);
 `async ({ request }) => await request.json()` works for body; `ctx.body()`/`ctx.valid()` remain for validated body.
 
 `HandlerReturn` type (`src/app.ts:112`, exported from `@buntok/core`) covers all of the above. `Handler = (ctx: Context) => HandlerReturn`.
+
+The runtime normalizer also accepts `Blob`, `ArrayBuffer`, `Uint8Array`, and
+`ReadableStream`, but the current exported `HandlerReturn` type does not include
+those binary/body types. Use an explicit `Response` or extend the type locally
+until the public type is updated.
 
 ---
 
@@ -513,7 +719,7 @@ app.query("/users", queryUsers);  // RFC 10008
 app.all("/users", allHandler);    // All methods
 ```
 
-> **⚠️ Route matching order:** Routes are matched in the order they are registered. If multiple routes could match the same URL, the **first registered** route wins. For example, `app.get("/users/:id", ...)` and `app.get("/users/admin", ...)` — register the static route (`/users/admin`) **before** the parameterized route (`/users/:id`), otherwise `:id` will match `"admin"`.
+> **⚠️ Route matching:** Exact static routes are checked before dynamic routes, so `/users/admin` takes precedence over `/users/:id` regardless of registration order. If the same static method and path are registered more than once, the later registration replaces the earlier handler.
 
 ---
 
@@ -595,7 +801,7 @@ app.use(rateLimiter({
   headers: true,
   skip: (ctx) => ctx.ip === "127.0.0.1",
   keyGenerator: (ctx) => ctx.ip,
-  // store: sqliteStore("./rate.db") // bun:sqlite
+  // `sqliteStore` exists in the source middleware but is not currently re-exported from `@buntok/core`.
 }));
 ```
 
@@ -796,7 +1002,7 @@ Stage 3 TC39 decorators — no `experimentalDecorators` needed.
 | `@Delete(path)` | DELETE |
 | `@Options(path)` | OPTIONS |
 | `@Head(path)` | HEAD |
-| `@All(path)` | All (GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS) — `method="ALL"` |
+| `@All(path)` | Declares an `ALL` route metadata entry; verify router support before using it. The functional `app.all()` method is the supported all-method route API. |
 | `@Query(path)` | QUERY (RFC 10008) |
 
 ### Response Decorators (zero-cost, AOT <1%)
@@ -808,7 +1014,7 @@ Boot-time metadata — no per-request overhead. Same reference alias kept for ba
 | `@HttpCode(status)` | Override status for flexible return (e.g. `@HttpCode(201)` for POST) | Inlined constant |
 | `@SetHeader(name, value)` | Set static response header (repeatable) | `headers.set` after `toResponse` |
 | `@Header(name, value)` | **Deprecated** alias to `SetHeader` — use `SetHeader` | same as above |
-| `@Redirect(url, status=302)` | Static redirect (handler not executed; handler `{url,statusCode}` overrides) | `new Response(null,{headers:{Location}})` |
+| `@Redirect(url, status=302)` | Redirect response; the decorated handler currently executes before the redirect response is created | `new Response(null,{headers:{Location}})` |
 | `@Version("1"\|"1,2")` | Version metadata (for guards/docs) | metadata only |
 | `@SetMetadata(key, val)` | Arbitrary metadata (read via `getMetadata`) | WeakMap |
 | `@Public()` | `SetMetadata("isPublic",true)` shorthand | same |
@@ -871,7 +1077,7 @@ secret() {}
 ```ts
 import { Use, UseGuard, UseGuards } from "@buntok/core";
 // Type: GuardFn = (ctx: Context) => boolean | Promise<boolean>
-// UseGuards is alias to UseGuard (UseGuard deprecated -> use UseGuards)
+// UseGuards is the deprecated alias; use UseGuard for new code.
 
 @Use(authMiddleware)
 @Get("/profile")
@@ -1115,15 +1321,7 @@ app.plugin(healthPlugin);
 - Dedup by `name` — installing same plugin twice is a no-op
 - `install()` runs immediately when `app.plugin()` is called
 - Async `install()` is awaited — server won't start until all plugins finish
-- Installed names tracked in `app.installedPlugins` (Set)
-
-### Checking Installed Plugins
-
-```ts
-if (app.installedPlugins.has("logger")) {
-  console.log("Logger plugin is installed");
-}
-```
+- Installed names are tracked internally by the app to deduplicate plugins. The set is private; use `app.plugin()` as the supported public API.
 
 ### Plugin Order Matters
 
@@ -1239,27 +1437,29 @@ Circular dependencies are detected and throw with a resolution chain hint.
 
 ### registerController behavior
 
-`app.registerController()` auto-detects whether the class needs DI:
+`app.registerController()` auto-detects whether the class needs DI and accepts a single class/instance **or an array**:
 
 ```ts
-// Controller with @Dependencies → resolved from container
-@Dependencies(UserService)
-class UserController {
-  constructor(private service: UserService) {}
-}
+// Single registration
+app.registerController(UserController);
+app.registerController(HealthController);
 
-// Controller without @Dependencies → created directly (new UserController())
-class HealthController {
-  health() { return { ok: true }; }
-}
+// Array registration (Overload approach)
+app.registerController([UserController, PostController, CommentController]);
 
+// With DI container
 const container = new Container();
 container.scan([UserController]);  // only controllers with @Dependencies need scan()
 app.setContainer(container);
 
 app.registerController(UserController);     // DI: from container
 app.registerController(HealthController);   // no DI: new HealthController()
+app.registerController([UserController, PostController]);  // array works too
 ```
+
+**Key behaviors:**
+- `RouterGroup` uses `container.has()` to check registration (not `container.resolve()`), so controllers without `@Dependencies` work correctly in groups
+- Both `App` and `RouterGroup` accept the same overloads: single class, single instance, or array of either
 
 ---
 
@@ -1420,6 +1620,79 @@ const avatar = result.fields.avatar;
 const deleted = await deleteUploadedFile(options.storage, avatar);
 ```
 
+### Metrics
+
+Request metrics collector with Prometheus export. Tracks request count, duration, errors, and in-flight requests.
+
+```ts
+import { Metrics, metricsEndpoint, metricsMiddleware } from "@buntok/core";
+
+const metrics = new Metrics();
+
+// Add middleware to record all requests
+app.use(metricsMiddleware(metrics));
+
+// Register /metrics endpoint for Prometheus scraping
+metricsEndpoint(metrics, "/metrics");  // default: "/metrics"
+
+// Read metrics programmatically
+const snapshot = metrics.read();
+console.log(snapshot.requests);       // total requests
+console.log(snapshot.errors);        // total errors
+console.log(snapshot.inFlight);      // currently in-flight
+console.log(snapshot.byRoute);       // { "GET /users": { count, avgDurationMs, p99Ms } }
+console.log(snapshot.byStatusClass); // { "2xx": 150, "4xx": 12, "5xx": 3 }
+
+// Export Prometheus format
+const prometheus = metrics.toPrometheus();
+```
+
+| Method | Description |
+|--------|-------------|
+| `metrics.record(route, statusCode, durationMs)` | Record a completed request |
+| `metrics.start(route)` | Start timing a request (returns end function) |
+| `metrics.read()` | Get current `MetricSnapshot` |
+| `metrics.toPrometheus()` | Export in Prometheus text format |
+| `metricsMiddleware(metrics, route?)` | Middleware that auto-records requests |
+| `metricsEndpoint(metrics, path?)` | Register `/metrics` endpoint |
+
+### Health Check
+
+Kubernetes-ready liveness and readiness probes.
+
+```ts
+import { livenessCheck, readinessCheck } from "@buntok/core";
+
+// Liveness probe — is the process alive?
+livenessCheck(app, { path: "/health/live" });  // default: "/health/live"
+
+// Readiness probe — can it serve traffic?
+readinessCheck(app, {
+  path: "/health/ready",
+  checks: [
+    async () => {
+      const dbOk = await checkDbConnection();
+      return dbOk
+        ? { status: "healthy" }
+        : { status: "unhealthy", message: "DB unreachable" };
+    },
+  ],
+});
+```
+
+| Function | Description |
+|----------|-------------|
+| `livenessCheck(app, opts?)` | Register liveness endpoint — always returns `200 OK` if server is running |
+| `readinessCheck(app, opts?)` | Register readiness endpoint — runs `checks` array, returns `200` if all healthy |
+| `runReadinessChecks(checks)` | Execute `ReadinessCheck[]` and aggregate results |
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `path` | `string` | `"/health/live"` or `"/health/ready"` | Endpoint path |
+| `checks` | `ReadinessCheck[]` | `[]` | Array of `() => Promise<HealthStatus>` |
+| `healthy` | `() => boolean` | — | Additional liveness check function |
+| `unhealthy` | `(err) => void` | — | Custom unhealthy handler |
+
 ### Rate Limiting
 
 Combine with the built-in rate limiter to prevent upload abuse:
@@ -1564,8 +1837,13 @@ app.get("/export/bundle", async (ctx) => {
   const users = await db.users.find();
   const orders = await db.orders.find();
 
+  const usersCsv = [
+    "id,name",
+    ...users.map((user) => `${user.id},${user.name}`),
+  ].join("\n");
+
   return createZIP(ctx, [
-    { name: "users.csv", data: exportCSVToString(users) },
+    { name: "users.csv", data: usersCsv },
     { name: "orders.json", data: JSON.stringify(orders) },
   ], "export.tar");
 
@@ -1574,7 +1852,7 @@ app.get("/export/bundle", async (ctx) => {
 });
 ```
 
-`createZIP(ctx, files, filename?, options?)` → `Promise<Response>`. Files: `ZIPEntry[]` where `ZIPEntry = { name: string, data: string | Blob | ArrayBuffer | Uint8Array }`. Options: `{ compress? }`.
+`createZIP(ctx, files, filename?, options?)` → `Promise<Response>`. Files: `ZIPEntry[]` where `ZIPEntry = { name: string, data: string | Blob | ArrayBuffer | Uint8Array }`. Use `exportCSV()` or `JSON.stringify()` to produce string contents before creating the archive. Options: `{ compress? }`.
 
 ---
 
@@ -1652,6 +1930,41 @@ broadcaster.sendAll({ event: "notice", data: "hello" });
 broadcaster.closeAll();
 console.log(broadcaster.size, broadcaster.isEmpty);
 ```
+
+### SSE Pluggable Infrastructure
+
+For production cluster deployments (multiple instances), replace in-memory PubSub and history with pluggable stores:
+
+```ts
+import {
+  SSEBroadcaster,
+  MemorySSEPubSub,     // default in-memory PubSub
+  MemorySSEHistory,    // default in-memory ring buffer (1000 msg)
+} from "@buntok/core";
+
+// Default (single instance)
+const broadcaster = new SSEBroadcaster();
+
+// Custom (e.g., Redis-backed for multi-instance)
+const broadcaster = new SSEBroadcaster({
+  pubSub: redisPubSub,      // implements SSEPubSub interface
+  historyStore: redisHistory, // implements SSEHistoryStore interface
+  channel: "events",        // pub/sub channel name
+});
+```
+
+| Interface | Methods | Default |
+|-----------|---------|---------|
+| `SSEPubSub` | `publish(channel, msg)`, `subscribe(channel, cb)`, `unsubscribe(channel)` | `MemorySSEPubSub` |
+| `SSEHistoryStore` | `add(msg)`, `getAfter(lastEventId)`, `clear()` | `MemorySSEHistory` (1000 msg ring buffer) |
+
+Additional SSE methods:
+
+| Method | Description |
+|--------|-------------|
+| `sse.sendComment(comment)` | Send SSE comment line (custom heartbeat) |
+| `sse.offClose(callback)` | Unregister a close callback |
+| `SSE.closeAll()` | Gracefully close all active SSE connections |
 
 ---
 
@@ -1756,6 +2069,52 @@ app.ws("/chat", {
 });
 ```
 
+### WebSocket Rate Limiting
+
+```ts
+import { wsRateLimit } from "@buntok/core";
+
+app.ws("/chat", {
+  ...wsRateLimit({
+    windowMs: 60_000,   // 1 minute window
+    max: 100,           // max 100 messages per window
+    closeCode: 4002,    // custom close code (default: 4002)
+  }),
+  message: (ws, msg) => { /* handle */ },
+});
+```
+
+### WebSocket Pluggable Infrastructure
+
+For multi-instance deployments, replace in-memory PubSub and rate limit stores:
+
+```ts
+import {
+  MemoryWSPubSub,        // default in-memory PubSub
+  MemoryWSRateLimitStore, // default in-memory rate limit store
+} from "@buntok/core";
+
+// Custom PubSub (e.g., Redis-backed for cluster-wide broadcasting)
+const pubSub = new RedisWSPubSub({ url: "redis://localhost:6379" });
+
+// Custom rate limit store (e.g., Redis-backed for distributed limits)
+const rateLimitStore = new RedisWSRateLimitStore({ url: "redis://localhost:6379" });
+```
+
+| Interface | Methods | Default |
+|-----------|---------|---------|
+| `WSPubSub` | `publish(channel, msg)`, `subscribe(channel, cb)`, `unsubscribe(channel)` | `MemoryWSPubSub` |
+| `WSRateLimitStore` | `increment(key, windowMs)`, `get(key)`, `reset(key)` | `MemoryWSRateLimitStore` |
+
+Room options for cluster-wide broadcasting:
+
+```ts
+const room = new Room("general", {
+  pubSub: redisPubSub,   // cluster-wide broadcasting
+  channel: "ws-rooms",   // pub/sub channel prefix
+});
+```
+
 ---
 
 ## Logger
@@ -1767,11 +2126,33 @@ logger.info("Server started", { port: 1212 });
 logger.warn("High memory usage", { mb: 512 });
 logger.error("DB connection failed");
 // LogLevel: DEBUG=0, INFO=1, WARN=2, ERROR=3
-// Logger {level, format:"text"|"json", logRequests} — production defaults to JSON+WARN, else text+INFO
-// Env: LOG_DIR=./logs → daily app-YYYY-MM-DD.log, LOG_REQUESTS=false disables
+// Logger {level, logFileLevel, format:"text"|"json", logRequests, redactPatterns, redactReplacement} — production defaults to JSON+WARN
+// logRequests defaults to false in production (opt-in for performance). Enable via `LOG_REQUESTS=true` env or `new Logger({ logRequests: true })`
+// logFileLevel defaults to DEBUG (write all to file) — independent of console level
+// Env: LOG_DIR=./logs → daily app-YYYY-MM-DD.log, LOG_REQUESTS=true enables request logging
 logger.debug("verbose", { meta: 1 });
 logger.flushSync(); // flush file logs
 ```
+
+**File logging is independent of console level.** In production, console defaults to `WARN` (no `info()`), but file logging defaults to `DEBUG` (writes everything). Override with `logFileLevel`:
+
+```ts
+// Custom: console WARN only, file INFO+
+const logger = new Logger({ level: LogLevel.WARN, logFileLevel: LogLevel.INFO });
+```
+
+### Configurable Log Redaction
+
+By default, logger redacts `password`, `token`, `secret`, `authorization`, and `creditCard` fields. Extend with custom patterns:
+
+```ts
+const logger = new Logger({
+  redactPatterns: [/ssn/i, /api[_-]?key/i],  // additional regex patterns
+  redactReplacement: "[REDACTED]",             // custom replacement (default: "[REDACTED]")
+});
+```
+
+`redactLogMeta(meta, patterns)` accepts optional extra patterns beyond those configured in the Logger constructor. The logger automatically redacts fields matching both built-in and custom patterns before writing to logs.
 
 ---
 
@@ -2047,7 +2428,7 @@ const api = createClient(routes, "http://localhost:1212", {
 
 ### ClientError
 
-Typed error thrown when a request fails (non-2xx status or network error):
+Typed error thrown when a request receives a non-2xx HTTP response:
 
 ```ts
 import { ClientError } from "@buntok/core/client";
@@ -2077,7 +2458,7 @@ try {
    - Applies `onResponse` interceptor after fetch
    - Retries on failure if `retries > 0` and status matches `retryOn`
    - Parses response as JSON or text based on Content-Type
-   - Throws `ClientError` on non-2xx if not retryable
+  - Throws `ClientError` on non-2xx if not retryable; network and abort errors are rethrown as their original error types
 
 ### RouteContract Type
 
@@ -2110,6 +2491,101 @@ app.get("/ping", (ctx) => ctx.json({ pong: true }));
 const res = await app.request("/ping");
 const data = await res.json();
 console.assert(res.status === 200);
+```
+
+---
+
+## Factory (Data Generation)
+
+Type-safe data factories for generating test and seed data. Requires `@faker-js/faker` as optional peer dependency.
+
+```bash
+buntok make:factory user    # generates a scaffold at src/factories/user.factory.ts
+buntok make:factory user --dry-run  # preview without writing
+```
+
+The CLI generator currently produces a Prisma-oriented scaffold with a TODO factory definition. Replace the placeholder with fields required by your model before compiling or using the generated factory. The `Factory` API itself is ORM-independent.
+
+### Factory API
+
+```ts
+import { Factory } from "@buntok/core";
+import { faker } from "@faker-js/faker";
+import type { User } from "@prisma/client";
+
+const UserFactory = Factory.define<User>(() => ({
+  id: faker.number.int({ max: 10000 }),
+  name: faker.person.fullName(),
+  email: faker.internet.email(),
+  role: faker.helpers.arrayElement(["user", "admin"]),
+}));
+
+// Create one
+const user = await UserFactory.create();
+
+// Create many
+const users = await UserFactory.createMany(10);
+
+// Override fields
+const admin = await UserFactory.create({ role: "admin" });
+
+// Sync build (no afterCreate hook)
+const built = UserFactory.build({ name: "John" });
+
+// With defaults
+const UserFactory = Factory.define<User>(() => ({
+  // ...
+})).withDefaults({ role: "user" });
+
+// After create hook
+const UserFactory = Factory.define<User>(() => ({
+  // ...
+})).afterCreate(async (user) => {
+  await db.auditLog.create({ data: { userId: user.id } });
+});
+
+// Relations via ref
+const PostFactory = Factory.define(() => ({
+  id: faker.number.int(),
+  userId: Factory.ref(() => UserFactory.build().id),
+}));
+
+// Random pick
+const random = Factory.pick(["a", "b", "c"]);
+const two = Factory.pick(["a", "b", "c", "d"], 2);
+```
+
+### Factory API Reference
+
+| Method | Description |
+|--------|-------------|
+| `Factory.define<T>(fn)` | Create a new factory with type T |
+| `.create(overrides?)` | Create one item (async, runs afterCreate) |
+| `.createMany(count, overrides?)` | Create multiple items |
+| `.build(overrides?)` | Generate one item synchronously (no afterCreate) |
+| `.buildMany(count, overrides?)` | Generate multiple items synchronously |
+| `.withDefaults(defaults)` | Set default overrides |
+| `.afterCreate(callback)` | Register post-creation hook |
+| `Factory.ref(fn)` | Resolves the reference immediately for relations; it is not lazy in the current implementation |
+| `Factory.pick(arr, count?)` | Random item(s) from array |
+
+### Using Factories with Seeders
+
+```bash
+buntok make:seeder user --factory  # generates seeder using factory pattern
+```
+
+Generated seeder:
+```ts
+import { prisma } from "@/lib/prisma";
+import { UserFactory } from "@/factories/user.factory";
+
+export async function seedUser() {
+  console.log("Seeding User...");
+  const items = UserFactory.buildMany(100);
+  await prisma.user.createMany({ data: items });
+  console.log("✓ User seeded successfully (100 records)");
+}
 ```
 
 ---
@@ -2186,7 +2662,7 @@ app.listen(1212);
 |----------|--------|
 | `NODE_ENV=production` | JSON format logs, WARN level |
 | `LOG_DIR=./logs` | Write logs to file |
-| `LOG_REQUESTS=false` | Disable request logging |
+| `LOG_REQUESTS=true` | Enable request logging (disabled by default in production for performance) |
 | `PORT=1212` | Server port (default: 1212) |
 
 ---
@@ -2206,10 +2682,7 @@ app.listen(1212);
 ### Usage
 
 ```bash
-# Build & run with Docker Compose
-docker compose up --build
-
-# Or build manually
+# Build & run manually
 docker build -t my-app .
 docker run -p 1212:1212 my-app
 ```
@@ -2226,11 +2699,11 @@ docker run -e PORT=8080 -p 8080:8080 my-app
 
 ## Vercel Deployment
 
-BunTok supports zero-config deployment on Vercel with Bun runtime. Select "Yes" when prompted during `buntok init`.
+`buntok init` can create a `vercel.json` with Bun runtime settings when you select "Yes". The generated `server.ts` is for a Bun server; a serverless deployment must use the platform's adapter and expose `app.fetch`.
 
 ### Clean Entry Point Pattern
 
-When Vercel is selected, the project uses a clean entry point pattern (matching Elysia/Hono):
+Keep application construction separate from the local server entry point. This pattern also gives a serverless adapter an importable app:
 
 **`src/index.ts`** — clean export only (no `app.listen()`):
 
@@ -2245,7 +2718,7 @@ export const app = new App();
 export default app;
 ```
 
-**`server.ts`** — build entry point (all modes):
+**`server.ts`** — local and production Bun server entry point:
 
 ```ts
 import { app } from "./src/index";
@@ -2257,19 +2730,18 @@ app.listen(env.PORT);
 ### Why Two Files?
 
 - **`src/index.ts`** exports `app` cleanly — used by `buntok make:docs` (loads it with `BUNTOK_DOCS_BUILD=1`)
-- **`server.ts`** is the build entry point — calls `app.listen()` which internally uses `Bun.serve()`
-- Both Vercel and non-Vercel use `server.ts` as the build entry point
+- **`server.ts`** is the local and production Bun server entry point — it calls `app.listen()` which uses `Bun.serve()`
+- A serverless entry point imports the app from `src/index.ts` and exposes `app.fetch`
 
 ### `app.fetch()`
 
-For Vercel serverless functions, `app.fetch()` processes requests without binding a port:
+For a serverless function adapter, `app.fetch()` processes requests without binding a port:
 
 ```ts
-// What Vercel calls internally:
 const response = await app.fetch(request);
 ```
 
-`app.fetch(input, init?)` delegates to `app.request()` which handles lazy AOT compilation automatically. No need to call it yourself — Vercel does it.
+`app.fetch(request)` delegates to `app.request()` and returns a `Promise<Response>`. The deployment adapter is responsible for calling it; `app.fetch` does not bind a port.
 
 ### `app.request()` vs `app.fetch()`
 
@@ -2313,7 +2785,7 @@ vercel --prod
 bun run dev   # runs: bun --watch server.ts
 ```
 
-The `dev` script runs `server.ts` which calls `app.listen()` — this is separate from the Vercel entry point.
+The `dev` script runs `server.ts`, which calls `app.listen()` for local development. This is separate from the serverless entry point that exposes `app.fetch`.
 
 ### Project Structure
 
@@ -2325,7 +2797,7 @@ my-app/
 │   ├── controllers/
 │   ├── services/
 │   └── repositories/
-├── server.ts         # build entry point — app.listen(env.PORT)
+├── server.ts         # local/production Bun server — app.listen(env.PORT)
 ├── vercel.json       # Vercel config (optional)
 ├── package.json      # dev script: bun --watch server.ts
 └── ...
@@ -2333,9 +2805,9 @@ my-app/
 
 ### Notes
 
-- `server.ts` is the build entry point for all modes (Vercel, Docker, local)
+- `server.ts` is the local/production Bun server entry point
 - `src/index.ts` must export `app` — used by `buntok make:docs`
-- WebSocket routes may need additional Vercel configuration
+- WebSocket routes require a runtime that supports WebSockets; verify platform support before deploying
 
 ---
 
@@ -2563,7 +3035,7 @@ app.get("/admin", requireAuth(secret), requireRole({
 // Custom error message
 app.get("/admin", requireAuth(secret), requireRole({
   roles: ["superadmin"],
-  message: "Hanya superadmin yang boleh akses",
+  message: "Only superadmin can access",
 }), adminHandler);
 ```
 
@@ -2571,7 +3043,7 @@ app.get("/admin", requireAuth(secret), requireRole({
 
 ```ts
 // Stage 3: evaluated top→bottom, applied bottom→top (via unshift)
-// @Use(requireAuth) di ATAS agar run pertama (auth sebelum role)
+// @Use(requireAuth) goes FIRST so auth runs before role check
 
 @Get("/admin")
 @Use(requireAuth(secret))    // ← evaluated 2nd, applied 3rd → run 1st
@@ -2617,7 +3089,7 @@ app.delete("/users/:id",
 ### Decorator Usage
 
 ```ts
-// Stage 3: evaluated top→bottom, applied bottom→top — ATAS run duluan
+// Stage 3: evaluated top→bottom, applied bottom→top — FIRST runs first
 
 @Delete("/users/:id")
 @Use(requireAuth(secret))                        // ← evaluated 2nd, applied 3rd → run 1st
@@ -2626,7 +3098,7 @@ async deleteUser(ctx: Context) {
   // ...
 }
 
-// Multiple permissions (harus semua) — auth tetap di ATAS
+// Multiple permissions (all required) — auth still goes FIRST
 @Post("/posts")
 @Use(requireAuth(secret))
 @Use(requirePermission("posts:create", "posts:publish"))
@@ -2638,7 +3110,7 @@ async createPost(ctx: Context) {
 **Difference from requireRole:**
 | | `requireRole` | `requirePermission` |
 |--|---------------|---------------------|
-| Logic | **OR** (salah satu cukup) | **AND** (harus semua) |
+| Logic | **OR** (any one matches) | **AND** (all required) |
 | Default field | `user.role` / `user.roles` | `user.permissions` |
 
 **Error responses:**
@@ -3330,13 +3802,29 @@ import { Queue } from "@buntok/core";
 
 ### Drivers
 
-| Driver | Package | Import |
-|--------|---------|--------|
-| **Memory** | built-in | `new Queue("email")` |
-| **Redis** | `ioredis` | `{ driver: "redis", url: "..." }` |
-| **Bun Redis** | `bun` (native) | `{ driver: "bun-redis", url: "..." }` |
-| **BullMQ** | `bullmq` | `{ driver: "bullmq", connection: {...} }` |
-| **RabbitMQ** | `amqplib` | `{ driver: "rabbitmq", url: "..." }` |
+| Driver | Package | Import | Use Case |
+|--------|---------|--------|----------|
+| **Memory** | built-in | `new Queue("email")` | Development, testing |
+| **Redis** | `ioredis` | `{ driver: "redis", url: "..." }` | Production (most common) |
+| **Bun Redis** | `bun` (native) | `{ driver: "bun-redis", url: "..." }` | Production (zero deps) |
+| **BullMQ** | `bullmq` | `{ driver: "bullmq", connection: {...} }` | Enterprise (scheduling, rate limiting) |
+| **RabbitMQ** | `amqplib` | `{ driver: "rabbitmq", url: "..." }` | Multi-language, fan-out |
+
+**Direct driver imports** (for advanced use — e.g., passing to queue constructor):
+
+```ts
+import {
+  RedisQueueDriver,
+  BunRedisQueueDriver,
+  BullmqQueueDriver,
+  RabbitmqQueueDriver,
+  MemoryQueueDriver,
+} from "@buntok/core";
+
+// Pass driver instance directly
+const redisDriver = new RedisQueueDriver({ url: "redis://localhost:6379" });
+const queue = new Queue("email", redisDriver);
+```
 
 ### Usage
 
@@ -3401,6 +3889,10 @@ await queue.add({ to: "user@example.com", subject: "Welcome" }, {
 // Introspect
 queue.size();   // pending count
 queue.clear();  // remove all pending
+
+// Drain — wait for in-flight jobs to finish (graceful shutdown)
+await queue.drain();           // wait indefinitely
+await queue.drain(10_000);     // wait up to 10 seconds
 ```
 
 ### Custom Driver

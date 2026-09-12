@@ -72,6 +72,7 @@ Port default: `3000`, atau dari `process.env.PORT`.
 - [Cookie Helpers](#cookie-helpers)
 - [Logger](#logger)
 - [Health Check](#health-check)
+- [Queue](#queue)
 - [File Upload](#file-upload)
 - [Crypto Helpers](#crypto-helpers)
 - [Password Helpers](#password-helpers)
@@ -1492,6 +1493,41 @@ healthCheck(app, {
 });
 // Response 200 jika semua sehat, 503 jika ada yang unhealthy
 ```
+
+---
+
+## Queue
+
+```ts
+import { Queue } from "@buntok/core";
+
+const queue = new Queue<{ email: string }>("emails");
+queue.process(async (job) => {
+  await sendEmail(job.data.email);
+});
+
+await queue.add({ email: "user@example.com" });
+await queue.drain({ timeout: 5000 });
+await queue.close();
+```
+
+`Queue` exposes `add`, `process`, `size`, `drain`, `close`, `pause`, and `resume`.
+Call `app.registerResource(queue)` when the queue belongs to an `App`, so
+`app.close()` releases its worker and connection resources.
+
+### Driver capabilities
+
+| Driver | Durability | Delivery | Crash recovery | Dead letter | `size()` |
+|--------|------------|----------|----------------|-------------|----------|
+| Memory | Process-local | Best effort | No | No | Exact count |
+| Redis / Bun Redis | Persistent storage | At least once | Not guaranteed | No | `null` |
+| BullMQ | Persistent storage | At least once | Yes | No | `null` |
+| RabbitMQ | Persistent when configured durable | At least once | Yes | No | `null` |
+
+The memory driver does not recover jobs after a process crash. External drivers
+do not claim dead-letter support unless their driver configuration provides it.
+`size()` returns `null` when a driver cannot determine the queue size without
+making an unsupported guarantee.
 
 ---
 

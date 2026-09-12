@@ -11,7 +11,7 @@ function toPascalCase(str: string): string {
 
 function generateE2ETest(name: string, pascalName: string): string {
 	return `import { describe, it, expect } from "bun:test";
-import { app } from "../../src/index"; // Adjust this import if your app instance is exported elsewhere
+import { app } from "@/index";
 
 describe("${pascalName} API (E2E)", () => {
   it("should return a list of items (GET /${name}s)", async () => {
@@ -20,7 +20,7 @@ describe("${pascalName} API (E2E)", () => {
     });
 
     expect(response.status).toBe(200);
-    
+
     // const body = await response.json();
     // expect(Array.isArray(body)).toBe(true);
   });

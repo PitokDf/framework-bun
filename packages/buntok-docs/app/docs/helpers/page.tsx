@@ -46,7 +46,7 @@ export default function HelpersPage() {
                 hashPassword(password)
               </td>
               <td className="px-4 py-2">
-                Hash password using scrypt (memory-hard)
+                Hash password using argon2id (via Bun.password)
               </td>
             </tr>
             <tr className="border-b border-border-primary">
@@ -54,7 +54,7 @@ export default function HelpersPage() {
                 verifyPassword(password, hash)
               </td>
               <td className="px-4 py-2">
-                Verify password (supports scrypt + legacy PBKDF2)
+                Verify password (supports argon2id + legacy scrypt + PBKDF2)
               </td>
             </tr>
           </tbody>
@@ -70,8 +70,8 @@ const hash = await hashPassword("my-password");
 const isValid = await verifyPassword("my-password", hash);`}
       />
       <Callout type="info">
-        Uses <strong>scrypt</strong> (built-in, memory-hard). Backward compatible
-        with legacy PBKDF2 hashes.
+        Uses <strong>argon2id</strong> via <code>Bun.password</code> (native, Zig-based, 2-10x faster than node:crypto). Backward compatible
+        with legacy scrypt and PBKDF2 hashes.
       </Callout>
 
       {/* ──────────────── TIMEZONE ──────────────── */}

@@ -3,6 +3,9 @@ import {
 	healthCheck,
 	createDatabaseCheck,
 	createHealthCheck,
+	livenessCheck,
+	readinessCheck,
+	runReadinessChecks,
 } from "../../src/middlewares/health-check";
 
 function createMockApp(): any {
@@ -138,6 +141,41 @@ describe("createDatabaseCheck", () => {
 		const result = await check();
 		expect(result.status).toBe("unhealthy");
 		expect(result.checks?.database?.message).toBe("Connection refused");
+	});
+});
+
+describe("readiness and liveness", () => {
+	it("returns a healthy liveness response", async () => {
+		const app = createMockApp();
+		livenessCheck(app);
+		const response = await app.getHandler()(createMockContext());
+		expect(response.status).toBe(200);
+		expect((await response.json()).status).toBe("healthy");
+	});
+
+	it("runs readiness checks and reports failures", async () => {
+		const app = createMockApp();
+		readinessCheck(app, {
+			checks: [
+				{ name: "database", check: async () => true },
+				{ name: "cache", check: async () => false },
+			],
+		});
+		const response = await app.getHandler()(createMockContext());
+		const body = await response.json();
+		expect(response.status).toBe(503);
+		expect(body.checks.database.status).toBe("up");
+		expect(body.checks.cache.status).toBe("down");
+	});
+
+	it("bounds a hanging check", async () => {
+		const started = performance.now();
+		const result = await runReadinessChecks([
+			{ name: "database", timeout: 10, check: () => new Promise<boolean>(() => { }) },
+		]);
+		expect(result.status).toBe("unhealthy");
+		expect(result.checks?.database?.status).toBe("down");
+		expect(performance.now() - started).toBeLessThan(200);
 	});
 });
 

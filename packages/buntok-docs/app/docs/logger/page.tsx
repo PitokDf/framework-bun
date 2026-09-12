@@ -51,7 +51,7 @@ logger.debug("Verbose", { meta: 1 });
             {[
               ["level", "LogLevel", "INFO (dev) / WARN (prod)", "Min level to output"],
               ["format", '"text" | "json"', '"text" (dev) / "json" (prod)', "Output format"],
-              ["logRequests", "boolean", "true", "Log every request (method + path + status)"],
+              ["logRequests", "boolean", "false (prod) / true (dev)", "Log every request (method + path + status). Disabled in production for performance."],
             ].map(([opt, type, def, desc]) => (
               <tr key={opt} className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
                 <td className="px-4 py-2 font-mono text-accent">{opt}</td>
@@ -92,7 +92,7 @@ custom.info("Hello", { user: "Alice" });
             {[
               ["NODE_ENV=production", "JSON format + WARN level (vs text + INFO)"],
               ["LOG_DIR=./logs", "Write logs to file: app-YYYY-MM-DD.log (JSON lines), auto mkdir"],
-              ["LOG_REQUESTS=false", "Disable request logging (also: new Logger({ logRequests: false }))"],
+              ["LOG_REQUESTS=true", "Enable request logging (disabled by default in production for performance)"],
             ].map(([env, desc]) => (
               <tr key={env} className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
                 <td className="px-4 py-2 font-mono text-accent">{env}</td>

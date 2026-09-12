@@ -1,19 +1,21 @@
 import { join, sep, dirname } from "node:path";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { Server, ServerWebSocket } from "bun";
-import { z } from "zod";
+import type { z } from "zod";
 import { Container } from "./container";
 import { Context } from "./context";
 import { getControllerMeta } from "./decorators";
 import { HttpError } from "./helpers/async-handler";
 import { generateOpenApiDocument } from "./helpers/openapi";
 import { toResponse } from "./helpers/response";
+import { analyzeHandler } from "./aot/sucrose";
 import { logger } from "./logger";
 import { Router } from "./router";
 import { VERSION } from "./core-exports";
 import type { Plugin } from "./plugin";
 import type { CorsOptions } from "./middlewares/cors";
 import { applyCorsHeaders, cors } from "./middlewares/cors";
+import { getClientIP, type TrustedProxyOptions } from "./helpers/network";
 
 export interface WSData<DI = Record<string, unknown>> {
 	ctx: Context<DI>;
@@ -132,6 +134,9 @@ export type ZodCtx<
 
 export type HandlerReturn =
 	| Response
+	| Blob
+	| ArrayBuffer
+	| Uint8Array
 	| string
 	| number
 	| boolean
@@ -143,6 +148,9 @@ export type HandlerReturn =
 	| void
 	| Promise<
 		| Response
+		| Blob
+		| ArrayBuffer
+		| Uint8Array
 		| string
 		| number
 		| boolean
@@ -218,6 +226,29 @@ export interface ApiDocsOptions {
 	safeOnProduction?: boolean;
 }
 
+export interface RouteDebugInfo {
+	method: string;
+	path: string;
+	middlewares: string[];
+	handler: string;
+	source: "route" | "controller" | "group";
+	controller?: string;
+	group?: string;
+}
+
+export interface AppOptions {
+	/** Register SIGINT and SIGTERM handlers when the app starts listening. */
+	handleSignals?: boolean;
+	/** Maximum time allowed for graceful shutdown. */
+	shutdownTimeout?: number;
+}
+
+export interface DisposableResource {
+	name?: string;
+	close?: () => void | Promise<void>;
+	dispose?: () => void | Promise<void>;
+}
+
 export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private router: Router;
 	private middlewares: Middleware<DI>[] = [];
@@ -233,14 +264,26 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private poweredByHeaderEnabled: boolean = true;
 	private _reusePort: boolean = false;
 	private _skipLogResponse: boolean = false;
+	// Cache sucrose analysis per handler to avoid AST analysis per request
+	private _handlerNeedsFullContext = new WeakMap<Function, boolean>();
+	// Precomputed client IP resolver — avoid closure alloc per request
+	private _clientIPResolver: (request: Request) => string = (req) => getClientIP(req);
 	public _apiDocsConfig: ApiDocsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: Required for internal OpenAPI registry
 	public openApiDocs: any[] = [];
 	private container: Container | null = null;
 	private installedPlugins = new Set<string>();
+	private pluginDisposers = new Map<string, (app: App<DI>) => void | Promise<void>>();
+	private trustedProxy?: TrustedProxyOptions;
+	private readonly handleSignals: boolean;
+	private readonly shutdownTimeout: number;
+	private shutdownPromise?: Promise<void>;
+	private signalHandlers?: { signal: "SIGTERM" | "SIGINT"; handler: () => void }[];
+	private resources = new Set<DisposableResource>();
 	private corsConfig: CorsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: OpenAPI document is dynamically generated
 	private _swaggerDocument: any | null = null;
+	public routeDebugInfo: RouteDebugInfo[] = [];
 
 	/**
 	 * The underlying Bun Server instance. Only available after app.listen() is called.
@@ -298,13 +341,32 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		);
 	};
 
-	constructor() {
+	constructor(options: AppOptions = {}) {
+		this.handleSignals = options.handleSignals ?? true;
+		this.shutdownTimeout = options.shutdownTimeout ?? 30_000;
 		this.router = new Router();
-		this.registerFaviconRoute();
+		// Favicon route registered lazily on first request or via app.icon()
+		// Avoids extra async case in AOT switch for apps that don't need it
 	}
 
 	public use(middleware: Middleware<DI>): this {
 		this.middlewares.push(middleware);
+		return this;
+	}
+
+	/** Configure which proxy peers may supply forwarding headers. */
+	public setTrustedProxy(options?: TrustedProxyOptions): this {
+		this.trustedProxy = options;
+		this._clientIPResolver = options
+			? (req) => getClientIP(req, options)
+			: (req) => getClientIP(req);
+		this._aotReady = false;
+		return this;
+	}
+
+	/** Register an owned resource for graceful application shutdown. */
+	public registerResource(resource: DisposableResource): this {
+		this.resources.add(resource);
 		return this;
 	}
 
@@ -326,7 +388,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	public async plugin(plugin: Plugin<DI>): Promise<this> {
 		if (this.installedPlugins.has(plugin.name)) return this;
 		this.installedPlugins.add(plugin.name);
-		await plugin.install(this);
+		try {
+			await plugin.install(this);
+			if (plugin.dispose) this.pluginDisposers.set(plugin.name, plugin.dispose);
+		} catch (error) {
+			this.installedPlugins.delete(plugin.name);
+			throw error;
+		}
 		return this;
 	}
 
@@ -410,11 +478,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		schema: T,
 		options?: EnvValidationOptions,
 	): z.infer<z.ZodObject<T>> {
-		const envSchema = z.object(schema);
+		// biome-ignore lint/style/noNonNullAssertion: Lazy load zod on first use
+		const zod = (globalThis as Record<string, unknown>).__buntok_zod ??= require("zod").z;
+		const envSchema = zod.object(schema);
 		const result = envSchema.safeParse(process.env);
 
 		if (!result.success) {
-			const errors = result.error.issues.map((err) => ({
+			const errors = result.error.issues.map((err: { path: { join: (s: string) => string }; message: string }) => ({
 				field: err.path.join("."),
 				message: err.message,
 			}));
@@ -424,7 +494,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				options.onError(errors);
 				// If onError didn't throw/exit, throw error for caller to handle
 				throw new Error(
-					`Environment validation failed: ${errors.map((e) => `${e.field}: ${e.message}`).join(", ")}`,
+					`Environment validation failed: ${errors.map((e: { field: string; message: string }) => `${e.field}: ${e.message}`).join(", ")}`,
 				);
 			}
 
@@ -434,7 +504,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				"\x1b[31mMissing or invalid environment variables:\x1b[0m\n",
 			);
 
-			errors.forEach((err) => {
+			errors.forEach((err: { field: string; message: string }) => {
 				console.error(
 					`  \x1b[33m❯\x1b[0m \x1b[36m${err.field}\x1b[0m: \x1b[90m${err.message}\x1b[0m`,
 				);
@@ -477,12 +547,23 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 *
 	 * ```ts
 	 * app.registerController(UserController);
+	 * app.registerController([UserController, PostController]);
 	 * ```
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(target: (new (...args: any[]) => T) | T): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(targets: Array<(new (...args: any[]) => T) | T>): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
 	public registerController<T extends object>(
-		// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
-		target: (new (...args: any[]) => T) | T,
+		target: (new (...args: any[]) => T) | T | Array<(new (...args: any[]) => T) | T>,
 	): this {
+		if (Array.isArray(target)) {
+			for (const t of target) {
+				this.registerController(t);
+			}
+			return this;
+		}
 		// Detect if target is a class (constructor) or an instance
 		const isInstance =
 			typeof target === "object" &&
@@ -526,9 +607,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			const cleanPath = route.path === "/" ? "" : route.path;
 			const fullPath = `${normalizedPrefix}${cleanPath}` || "/";
 			// biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch by decorated property key
-			let handler = (instance as any)[route.propertyKey].bind(
-				instance,
-			) as Handler<DI>;
+			const originalMethod = (instance as any)[route.propertyKey];
+			let handler = ((...args: any[]) => originalMethod.apply(instance, args)) as Handler<DI>;
+			// Attach original for sucrose analysis (bound/closure wrappers hide toString)
+			(handler as any)._sucroseTarget = originalMethod;
 
 			// Apply zero-cost wrappers for @HttpCode/@Header/@Redirect (boot-time, no per-request alloc beyond wrapper closure)
 			const hasStatus = route.statusCode !== undefined;
@@ -537,6 +619,22 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			if (hasStatus || hasHeaders || hasRedirect) {
 				const original = handler;
 				const routeMeta = route;
+				const apply = (res: Response): Response => {
+					let r: Response = res;
+					if (hasStatus && r.status === 200) {
+						// Override status only if default 200 (preserve explicit ctx.status etc.)
+						r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
+					} else if (hasStatus && r.status === 204 && routeMeta.statusCode !== 204) {
+						// For void returns that became 204, respect HttpCode
+						r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
+					}
+					if (hasHeaders) {
+						for (const [k, v] of routeMeta.headers!) {
+							r.headers.set(k, v);
+						}
+					}
+					return r;
+				};
 				// biome-ignore lint/suspicious/noExplicitAny: wrapper must accept any Context shape
 				handler = ((ctx: any) => {
 					// Redirect - static or dynamic override (Nest behavior)
@@ -575,33 +673,23 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 						});
 					}
 					const raw: any = original(ctx);
-					const apply = (res: Response): Response => {
-						let r: Response = res;
-						if (hasStatus && r.status === 200) {
-							// Override status only if default 200 (preserve explicit ctx.status etc.)
-							r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
-						} else if (hasStatus && r.status === 204 && routeMeta.statusCode !== 204) {
-							// For void returns that became 204, respect HttpCode
-							r = new Response(r.body, { status: routeMeta.statusCode!, headers: r.headers });
-						}
-						if (hasHeaders) {
-							for (const [k, v] of routeMeta.headers!) {
-								r.headers.set(k, v);
-							}
-						}
-						return r;
-					};
 					if (raw instanceof Promise) {
-						return raw.then((v: any) => apply(toResponse(v)));
+						return raw.then((v: any) =>
+							typeof v === "string"
+								? apply(new Response(v))
+								: apply(v instanceof Response ? v : toResponse(v)),
+						);
 					}
-					return apply(toResponse(raw));
+					return typeof raw === "string"
+						? apply(new Response(raw))
+						: apply(raw instanceof Response ? raw : toResponse(raw));
 				}) as Handler<DI>;
 			}
 
 			this.registerRoute(route.method, fullPath, [
 				...(route.middlewares as Middleware<DI>[]),
 				handler,
-			]);
+			], { source: "controller", controller: ControllerClass.name });
 		}
 
 		return this;
@@ -663,8 +751,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return this;
 	}
 
-	public icon(path: string): this {
-		this.iconPath = path;
+	public icon(path?: string): this {
+		if (path) this.iconPath = path;
+		this.registerFaviconRoute();
 		return this;
 	}
 
@@ -729,7 +818,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("GET", path, handlers);
+		this.registerRoute("GET", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -776,7 +865,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("POST", path, handlers);
+		this.registerRoute("POST", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -820,7 +909,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("PUT", path, handlers);
+		this.registerRoute("PUT", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -867,7 +956,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("DELETE", path, handlers);
+		this.registerRoute("DELETE", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -914,7 +1003,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("OPTIONS", path, handlers);
+		this.registerRoute("OPTIONS", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -958,7 +1047,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: string,
 		...handlers: Array<Middleware<DI> | Handler<DI>>
 	): this {
-		this.registerRoute("QUERY", path, handlers);
+		this.registerRoute("QUERY", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -1005,7 +1094,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("PATCH", path, handlers);
+		this.registerRoute("PATCH", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -1052,7 +1141,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		path: Path,
 		...handlers: Array<Middleware<DI, Path> | Handler<DI, Path>>
 	): this {
-		this.registerRoute("HEAD", path, handlers);
+		this.registerRoute("HEAD", path, handlers, { source: "route" });
 		return this;
 	}
 
@@ -1109,7 +1198,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"OPTIONS",
 		];
 		for (const method of methods) {
-			this.registerRoute(method, path, handlers);
+			this.registerRoute(method, path, handlers, { source: "route" });
 		}
 		return this;
 	}
@@ -1210,9 +1299,28 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		method: string,
 		path: string,
 		handlers: Array<Middleware<DI> | Handler<DI>>,
+		options?: { source?: "route" | "controller" | "group"; controller?: string; group?: string },
 	): void {
 		const mainHandler = handlers[handlers.length - 1] as Handler<DI>;
 		const routeMiddlewares = handlers.slice(0, -1) as Middleware<DI>[];
+
+		// Pre-compute sucrose analysis for fallback path
+		if (!this._handlerNeedsFullContext.has(mainHandler)) {
+			const a = analyzeHandler(mainHandler);
+			this._handlerNeedsFullContext.set(mainHandler, !!(a.needsBody || a.needsValidation ||
+				a.needsFormData || a.needsQuery || a.needsText || a.needsBinary));
+		}
+
+		// Capture debug info before compilation
+		this.routeDebugInfo.push({
+			method,
+			path,
+			middlewares: routeMiddlewares.map((mw) => mw.name || "anonymous"),
+			handler: mainHandler.name || "anonymous",
+			source: options?.source || "route",
+			controller: options?.controller,
+			group: options?.group,
+		});
 
 		// Collect OpenAPI metadata
 		// biome-ignore lint/suspicious/noExplicitAny: Required for flexible schema representation
@@ -1317,6 +1425,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 					/const swaggerJsonPath = '.*?'/,
 					`const swaggerJsonPath = ${JSON.stringify(swaggerPath)}`,
 				);
+				// Fix relative asset paths — browser resolves ./ against URL
+				// which breaks when page is at /docs (no trailing slash)
+				html = html.replace(/"\.\//g, `"${basePath}/`);
 				return new Response(html, {
 					headers: { "Content-Type": "text/html; charset=utf-8" },
 				});
@@ -1370,6 +1481,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		this.router.insert("GET", `${basePath}/index.html`, uiHandler);
 		this.router.insert("GET", `${basePath}/*`, assetsHandler);
 		this.router.insert("GET", basePath, uiHandler);
+		this.router.insert("GET", `${basePath}/`, uiHandler);
 	}
 
 	private compileGlobalPipeline(): void {
@@ -1400,6 +1512,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		request: Request,
 		server?: Server<WSData<DI>>,
 	) => Response | Promise<Response> {
+		const hasGlobalMiddleware = this.middlewares.length > 0;
 		let code =
 			"return function(request, server) {\n" +
 			"  const url = request.url;\n" +
@@ -1413,7 +1526,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code +=
 				"  if (server && wsRoutes.has(pathname)) {\n" +
 				"    const wsHandler = wsRoutes.get(pathname);\n" +
-				"    const ctx = new Context(request, EMPTY_PARAMS, di);\n" +
+				"    const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n" +
 				"    const data = { ctx, handler: wsHandler };\n" +
 				"    const upgraded = server.upgrade(request, { data });\n" +
 				"    if (upgraded) return undefined;\n" +
@@ -1421,7 +1534,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				"  }\n";
 		}
 
-		code += "  const method = request.method;\n" + "  switch(method) {\n";
+		code += "  const method = request.method;\n" + "  try {\n" + "  switch(method) {\n";
 
 		// biome-ignore lint/suspicious/noExplicitAny: generic
 		const handlersList: any[] = [];
@@ -1452,29 +1565,60 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code += "  switch(pathname) {\n";
 			for (const route of routes) {
 				const handlerRef = getHandlerIndex(route.handler);
+				// Sucrose analysis: skip full Context alloc if handler only needs request
+				const analysis = analyzeHandler(route.handler);
+				const needsFullContext = analysis.needsBody || analysis.needsValidation ||
+					analysis.needsFormData || analysis.needsQuery;
+				const needsParamsOnly = analysis.needsParams && !needsFullContext;
+				const ctxArg = needsFullContext ? "ctx" : needsParamsOnly ? "{ request, params: routeParams }" : "{ request }";
+				const ctxDecl = needsFullContext
+					? "      const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n"
+					: needsParamsOnly
+					? ""  // params come from router.find, but in AOT we use EMPTY_PARAMS for static routes
+					: "";
+
 				code += `    case "${route.path}": {\n`;
-				code += "      const ctx = new Context(request, EMPTY_PARAMS, di);\n";
-				code += "      try {\n";
-				code +=
-					"        const raw = compiledGlobalPipeline(ctx, " +
-					handlerRef +
-					");\n";
+				code += ctxDecl;
+				code += hasGlobalMiddleware
+					? `      const raw = compiledGlobalPipeline(${ctxArg}, ${handlerRef});\n`
+					: `      const raw = ${handlerRef}(${ctxArg});\n`;
 				if (this._skipLogResponse) {
-					code += "        if (raw instanceof Promise) {\n";
-					code +=
-						"          return raw.then((v) => toResponse(v)).catch((e) => handleError(request, pathname, ctx, e));\n";
-					code += "        }\n";
-					code += "        return toResponse(raw);\n";
+					if (!this.poweredByHeaderEnabled) {
+						// Fastest path: no logging, no powered-by — skip setPoweredBy entirely
+						code += "      if (raw instanceof Promise) {\n";
+						code +=
+							'        return raw.then((v) => typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v)).catch((e) => handleError(request, pathname, { request }, e));\n';
+						code += "      }\n";
+						code +=
+							'      if (typeof raw === "string") return new Response(raw, plainTextHeaders);\n';
+						code +=
+							"      if (raw instanceof Response) return raw;\n" +
+							"      if (typeof raw === \"object\") return Response.json(raw);\n" +
+							"      return toResponse(raw);\n";
+					} else {
+						code += "      if (raw instanceof Promise) {\n";
+						code +=
+							'        return raw.then((v) => setPoweredBy(typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => handleError(request, pathname, { request }, e));\n';
+						code += "      }\n";
+						code +=
+							'      if (typeof raw === "string") return setPoweredBy(new Response(raw, plainTextHeaders));\n';
+						code +=
+							"      if (raw instanceof Response) return setPoweredBy(raw);\n" +
+							"      if (typeof raw === \"object\") return setPoweredBy(Response.json(raw));\n" +
+							"      return setPoweredBy(toResponse(raw));\n";
+					}
 				} else {
-					code += "        if (raw instanceof Promise) {\n";
+					code += "      if (raw instanceof Promise) {\n";
 					code +=
-						"          return raw.then((v) => logResponse(request, pathname, toResponse(v))).catch((e) => handleError(request, pathname, ctx, e));\n";
-					code += "        }\n";
-					code += "        return logResponse(request, pathname, toResponse(raw));\n";
+						'        return raw.then((v) => typeof v === "string" ? logResponse(request, pathname, new Response(v, plainTextHeaders)) : logResponse(request, pathname, v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => handleError(request, pathname, { request }, e));\n';
+					code += "      }\n";
+					code +=
+						'      if (typeof raw === "string") return logResponse(request, pathname, new Response(raw, plainTextHeaders));\n';
+					code +=
+						"      if (raw instanceof Response) return logResponse(request, pathname, raw);\n" +
+						"      if (typeof raw === \"object\") return logResponse(request, pathname, Response.json(raw));\n" +
+						"      return logResponse(request, pathname, toResponse(raw));\n";
 				}
-				code += "      } catch (err) {\n";
-				code += "        return handleError(request, pathname, ctx, err);\n";
-				code += "      }\n";
 				code += "    }\n";
 			}
 			code += "  }\n";
@@ -1482,7 +1626,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code += "}\n";
 		}
 
-		code += "  }\n" + "  return fallback(request, server);\n" + "};\n";
+		code += "  }\n  } catch(err) { return handleError(request, pathname, { request }, err); }\n" + "  return fallback(request, server);\n" + "};\n";
 
 		const factory = new Function(
 			"Context",
@@ -1494,7 +1638,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"handleError",
 			"fallback",
 			"wsRoutes",
+			"clientIPResolver",
 			"toResponse",
+			"setPoweredBy",
+			"plainTextHeaders",
 			code,
 		);
 
@@ -1509,7 +1656,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			this.handleError,
 			this.fallbackHandleRequest.bind(this),
 			this.wsRoutes,
+			this._clientIPResolver,
 			toResponse,
+			this.setPoweredBy,
+			this._plainTextHeaders,
 		);
 	}
 
@@ -1532,10 +1682,11 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (!response) {
 			return new Response("Internal Server Error", { status: 500 });
 		}
-		// Skip building the log string entirely when request logging is off
+		// Read requestId only when logging is on (avoids Headers.get per-request in prod)
+		const requestId = logger.logRequests ? request.headers.get("x-request-id") : null;
 		if (logger.logRequests) {
 			const status = response.status;
-			const logData = { status };
+			const logData = requestId ? { status, requestId } : { status };
 			if (status >= 500) {
 				logger.error(`${request.method} ${pathname}`, logData);
 			} else if (status >= 400) {
@@ -1547,8 +1698,20 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (this.poweredByHeaderEnabled) {
 			response.headers.set("X-Powered-By", "buntok");
 		}
+		if (requestId) response.headers.set("x-request-id", requestId);
 		return response;
 	};
+
+	// Lightweight X-Powered-By setter for AOT skip-log path (no logging overhead)
+	private readonly setPoweredBy = (response: Response): Response => {
+		if (this.poweredByHeaderEnabled) {
+			response.headers.set("X-Powered-By", "buntok");
+		}
+		return response;
+	};
+
+	// Pre-allocated headers for hot paths — avoid alloc per request
+	private _plainTextHeaders = Object.freeze({ "Content-Type": "text/plain; charset=utf-8" });
 
 	/**
 	 * Normalize flexible handler return (string | object | null etc.) to Response.
@@ -1556,9 +1719,16 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	 */
 	private normalizeReturn(value: unknown): Response | Promise<Response> {
 		if (value instanceof Promise) {
-			return value.then((v) => toResponse(v));
+			return value.then((v) =>
+				typeof v === "string"
+					? new Response(v)
+					: v instanceof Response
+						? v
+						: toResponse(v),
+			);
 		}
-		return toResponse(value);
+		if (typeof value === "string") return new Response(value);
+		return value instanceof Response ? value : toResponse(value);
 	}
 
 	/**
@@ -1679,7 +1849,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (server && this.wsRoutes.size > 0) {
 			const wsHandler = this.wsRoutes.get(pathname);
 			if (wsHandler) {
-				const ctx = new Context(request, {}, this.di) as Context<DI>;
+				const ctx = new Context(request, {}, this.di, this._clientIPResolver) as Context<DI>;
 				const data: WSData<DI> = { ctx, handler: wsHandler };
 				const upgraded = server.upgrade(request, { data });
 				if (upgraded) {
@@ -1696,26 +1866,37 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		}
 
 		const route = this.router.find(request.method, pathname);
-
-		const ctx = new Context(request, route.params, this.di) as Context<DI>;
+		const routeParams = route.params;
 
 		let finalHandler = route.handler as Handler<DI>;
 		if (!finalHandler) {
 			finalHandler = this.customNotFoundHandler;
 		}
 
+		// Sucrose: use cached analysis from compile time
+		const needsFullContext = this._handlerNeedsFullContext.get(finalHandler) ?? true;
+		const fullCtx = needsFullContext
+			? new Context(request, routeParams, this.di, this._clientIPResolver)
+			: null;
+		const ctxArg = fullCtx ?? { request, params: routeParams };
+
 		try {
 			// biome-ignore lint/style/noNonNullAssertion: Guaranteed by compileGlobalPipeline
-			const result = this.compiledGlobalPipeline!(ctx, finalHandler);
+			const result = this.compiledGlobalPipeline!(ctxArg as Context<DI>, finalHandler);
 
 			if (result instanceof Promise) {
 				return result
 					.then((value) => this.logNormalized(request, pathname, value))
-					.catch((err) => this.handleError(request, pathname, ctx, err));
+					.catch((err) => {
+						// Ensure full Context for error handler
+						const errCtx = fullCtx ?? new Context(request, routeParams, this.di, this._clientIPResolver);
+						return this.handleError(request, pathname, errCtx, err);
+					});
 			}
 			return this.logNormalized(request, pathname, result);
 		} catch (err) {
-			return this.handleError(request, pathname, ctx, err);
+			const errCtx = fullCtx ?? new Context(request, routeParams, this.di, this._clientIPResolver);
+			return this.handleError(request, pathname, errCtx, err);
 		}
 	}
 
@@ -1728,7 +1909,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		const startTime = performance.now();
 
 		// Pre-compute whether logResponse can be skipped entirely
-		this._skipLogResponse = !logger.logRequests && !this.poweredByHeaderEnabled;
+		// When logging is off, the AOT template skips logResponse() entirely —
+		// X-Powered-By is inlined in the AOT codegen below.
+		this._skipLogResponse = !logger.logRequests;
 
 		// Register API docs routes directly on router (bypasses openApiDocs)
 		if (this._apiDocsConfig) {
@@ -1883,63 +2066,98 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (callback) callback();
 	}
 
+	/** Stop accepting traffic and release resources owned by this app. */
+	public close(options: { timeout?: number; force?: boolean } = {}): Promise<void> {
+		if (this.shutdownPromise) return this.shutdownPromise;
+
+		const timeout = options.timeout ?? this.shutdownTimeout;
+		this.shutdownPromise = (async () => {
+			this.removeSignalHandlers();
+			if (!this.server) {
+				this.isListening = false;
+				await this.closeResources(timeout);
+				return;
+			}
+
+			const server = this.server;
+			this.server = undefined;
+			this.isListening = false;
+			let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+			try {
+				const stopped = await Promise.race([
+					Promise.resolve(server.stop(false)).then(() => true),
+					new Promise<boolean>((resolve) => {
+						timeoutHandle = setTimeout(() => resolve(false), timeout);
+					}),
+				]);
+				if (!stopped && options.force) server.stop(true);
+			} finally {
+				if (timeoutHandle) clearTimeout(timeoutHandle);
+			}
+			await this.closeResources(timeout);
+		})().catch((error) => {
+			this.shutdownPromise = undefined;
+			throw error;
+		});
+
+		return this.shutdownPromise;
+	}
+
+	private async closeResources(timeout: number): Promise<void> {
+		const deadline = Date.now() + timeout;
+		for (const resource of this.resources) {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) break;
+			await Promise.race([
+				(resource.close ?? resource.dispose)?.(),
+				new Promise<void>((resolve) => setTimeout(resolve, remaining)),
+			]);
+		}
+		this.resources.clear();
+		for (const dispose of this.pluginDisposers.values()) {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) break;
+			await Promise.race([
+				dispose(this),
+				new Promise<void>((resolve) => setTimeout(resolve, remaining)),
+			]);
+		}
+		this.pluginDisposers.clear();
+	}
+
+	/** Alias for close(), kept for hosts that use shutdown terminology. */
+	public shutdown(options: { timeout?: number; force?: boolean } = {}): Promise<void> {
+		return this.close(options);
+	}
+
 	/**
 	 * Setup graceful shutdown handlers for SIGTERM and SIGINT signals.
 	 * When a signal is received, the server stops accepting new connections,
 	 * waits for in-flight requests to complete, then exits cleanly.
 	 */
 	private setupGracefulShutdown(): void {
-		// Prevent duplicate signal handlers (e.g., hot reload, multiple instances)
-		if ((globalThis as any).__buntokShutdownHandlers) return;
-		(globalThis as any).__buntokShutdownHandlers = true;
+		if (!this.handleSignals || this.signalHandlers) return;
 
 		const shutdown = async (signal: string) => {
 			logger.info(`\n${signal} received. Starting graceful shutdown...`);
-
-			if (this.server) {
-				// Stop accepting new connections
-				this.server.stop(false);
-
-				// Drain SSE — industrial graceful (close all streams dengan 30s heartbeat comment)
-				try {
-					const { SSE } = await import("./sse");
-					// kirim close event sebelum terminate
-					for (const c of SSE.getActiveConnections()) {
-						try { c.sendEvent("close", "Server shutting down"); } catch { }
-					}
-					// beri waktu 1s untuk flush
-					await new Promise((r) => setTimeout(r, 1000));
-					SSE.closeAll();
-				} catch { }
-
-				// Drain WS — close dengan 1001 Going Away
-				try {
-					// broadcast ke semua topic jika pakai publish
-					try { this.server.publish("buntok:shutdown", "shutting down"); } catch { }
-				} catch { }
-
-				// Give in-flight requests time to complete (max 30 seconds)
-				const shutdownTimeout = 30_000;
-				const forceExitTimeout = setTimeout(() => {
-					logger.warn("Forcing shutdown after timeout");
-					process.exit(1);
-				}, shutdownTimeout);
-				// Jangan clear langsung — biarkan timeout jadi safety net
-				// Cleanup setelah graceful selesai
-				setTimeout(() => {
-					clearTimeout(forceExitTimeout);
-					logger.info("Server shut down gracefully");
-					process.exit(0);
-				}, 1500);
-				return;
-			}
-
+			await this.close();
 			logger.info("Server shut down gracefully");
 			process.exit(0);
 		};
 
-		process.on("SIGTERM", () => shutdown("SIGTERM"));
-		process.on("SIGINT", () => shutdown("SIGINT"));
+		const signals = ["SIGTERM", "SIGINT"] as const;
+		this.signalHandlers = signals.map((signal) => {
+			const handler = () => { shutdown(signal).catch(() => process.exit(1)); };
+			process.on(signal, handler);
+			return { signal, handler };
+		});
+	}
+
+	private removeSignalHandlers(): void {
+		for (const { signal, handler } of this.signalHandlers ?? []) {
+			process.off(signal, handler);
+		}
+		this.signalHandlers = undefined;
 	}
 }
 
@@ -2014,7 +2232,7 @@ export class RouterGroup<
 		this.app.registerRoute("GET", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2064,7 +2282,7 @@ export class RouterGroup<
 		this.app.registerRoute("POST", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2111,7 +2329,7 @@ export class RouterGroup<
 		this.app.registerRoute("PUT", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2161,7 +2379,7 @@ export class RouterGroup<
 		this.app.registerRoute("DELETE", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2209,7 +2427,7 @@ export class RouterGroup<
 		this.app.registerRoute("QUERY", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2259,7 +2477,7 @@ export class RouterGroup<
 		this.app.registerRoute("OPTIONS", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2309,7 +2527,7 @@ export class RouterGroup<
 		this.app.registerRoute("PATCH", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2359,7 +2577,7 @@ export class RouterGroup<
 		this.app.registerRoute("HEAD", this.normalizePath(path), [
 			...this.groupMiddlewares,
 			...handlers,
-		]);
+		], { source: "group", group: this.prefix });
 		return this;
 	}
 
@@ -2419,7 +2637,7 @@ export class RouterGroup<
 			this.app.registerRoute(method, this.normalizePath(path), [
 				...this.groupMiddlewares,
 				...handlers,
-			]);
+			], { source: "group", group: this.prefix });
 		}
 		return this;
 	}
@@ -2449,12 +2667,23 @@ export class RouterGroup<
 	 * @example
 	 * const api = app.group("/api/v1");
 	 * api.registerController(UserController);
+	 * api.registerController([UserController, PostController]);
 	 * // → routes registered as /api/v1/users, /api/v1/users/:id, etc.
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(target: (new (...args: any[]) => T) | T): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
+	public registerController<T extends object>(targets: Array<(new (...args: any[]) => T) | T>): this;
+	// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
 	public registerController<T extends object>(
-		// biome-ignore lint/suspicious/noExplicitAny: Constructor args are unknowable
-		target: (new (...args: any[]) => T) | T,
+		target: (new (...args: any[]) => T) | T | Array<(new (...args: any[]) => T) | T>,
 	): this {
+		if (Array.isArray(target)) {
+			for (const t of target) {
+				this.registerController(t);
+			}
+			return this;
+		}
 		const isInstance =
 			typeof target === "object" &&
 			target !== null &&
@@ -2481,7 +2710,7 @@ export class RouterGroup<
 			instance = target as T;
 		} else {
 			const container = this.app.getContainer();
-			if (container) {
+			if (container.has(ControllerClass)) {
 				instance = container.resolve<T>(ControllerClass);
 			} else {
 				instance = new ControllerClass();
@@ -2496,16 +2725,13 @@ export class RouterGroup<
 			const cleanPath = route.path === "/" ? "" : route.path;
 			const fullPath =
 				`${this.normalizePath(normalizedPrefix)}${cleanPath}` || "/";
-			// biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch by decorated property key
-			const handler = (instance as any)[route.propertyKey].bind(
-				instance,
-			) as Handler<DI>;
+			const handler = ((...args: any[]) => (instance as any)[route.propertyKey](...args)) as Handler<DI>;
 
 			this.app.registerRoute(route.method, fullPath, [
-				...(route.middlewares as Middleware<DI>[]),
 				...this.groupMiddlewares,
+				...(route.middlewares as Middleware<DI>[]),
 				handler,
-			]);
+			], { source: "controller", controller: ControllerClass.name, group: this.prefix });
 		}
 
 		return this;

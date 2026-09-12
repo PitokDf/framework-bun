@@ -191,6 +191,65 @@ healthCheck(app, {
         level={2}
         className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
       >
+        Kubernetes Liveness & Readiness Probes
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Kubernetes-ready health check endpoints for container orchestration.
+      </p>
+      <CodeBlock
+        code={`import { livenessCheck, readinessCheck } from "@buntok/core";
+
+// Liveness probe — is the process alive?
+livenessCheck(app, { path: "/health/live" });  // default: "/health/live"
+
+// Readiness probe — can it serve traffic?
+readinessCheck(app, {
+  path: "/health/ready",
+  checks: [
+    async () => {
+      const dbOk = await checkDbConnection();
+      return dbOk
+        ? { status: "healthy" }
+        : { status: "unhealthy", message: "DB unreachable" };
+    },
+  ],
+});`}
+      />
+
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Function
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <td className="px-4 py-2 font-mono text-accent">livenessCheck(app, opts?)</td>
+              <td className="px-4 py-2">Register liveness endpoint — always returns <code>200 OK</code> if server is running</td>
+            </tr>
+            <tr className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <td className="px-4 py-2 font-mono text-accent">readinessCheck(app, opts?)</td>
+              <td className="px-4 py-2">Register readiness endpoint — runs <code>checks</code> array, returns <code>200</code> if all healthy</td>
+            </tr>
+            <tr className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <td className="px-4 py-2 font-mono text-accent">runReadinessChecks(checks)</td>
+              <td className="px-4 py-2">Execute <code>ReadinessCheck[]</code> and aggregate results</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* ──────────────── CUSTOM CHECK ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
         Custom Check Function
       </Heading>
       <CodeBlock

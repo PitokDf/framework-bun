@@ -58,6 +58,10 @@ app.listen(1212);
         <code>swagger.json</code> is automatically generated in the background when the server starts. No need to run <code>buntok make:docs</code> manually. The generation runs via <code>setImmediate()</code> and does not affect API response time.
       </Callout>
 
+      <Callout type="info">
+        Both <code>/docs</code> and <code>/docs/</code> (with trailing slash) work. Asset paths (CSS/JS) are automatically resolved to the correct absolute paths, so the docs UI loads correctly regardless of how the URL is accessed.
+      </Callout>
+
       {/* ──────────────── OPTIONS ──────────────── */}
       <Heading
         level={2}

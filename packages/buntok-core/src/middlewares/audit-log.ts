@@ -101,7 +101,7 @@ export function auditLog(options: AuditLogOptions = {}) {
 				path,
 				status,
 				duration: Math.round(duration * 100) / 100,
-				ip: ctx.request.headers?.get("x-forwarded-for") ?? "",
+				ip: ctx.ip,
 				userId: ctx.user?.id,
 				userAgent: ctx.request.headers?.get("user-agent"),
 			};

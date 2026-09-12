@@ -185,6 +185,55 @@ server.stop(); // stop the server`}
         <code>devServer()</code> without <code>routes</code> or <code>fetch</code> returns 404 for
         all requests by default. This is useful for testing that the server starts correctly.
       </Callout>
+
+      {/* ──────────────── CLI DEV COMMAND ──────────────── */}
+      <Heading level={2} className="text-2xl font-semibold mt-12 mb-3 text-text-primary border-b border-border-primary pb-2">
+        CLI Dev Command
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        The <code>buntok dev</code> CLI command provides a convenient way to start your development server with hot reload:
+      </p>
+      <CodeBlock code={`bunx buntok dev`} />
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Public Tunnel
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        Use <code>--expose</code> to create a public URL via localtunnel. Useful for webhook testing, mobile testing, or sharing with others:
+      </p>
+      <CodeBlock code={`bunx buntok dev --expose`} />
+      <CodeBlock
+        code={`$ bunx buntok dev --expose
+
+Starting development server with tunnel...
+
+  Server running at http://localhost:1212
+  Tunnel: https://buntok-1234.loca.lt → http://localhost:1212
+
+  Press Ctrl+C to stop`}
+      />
+
+      <Callout type="warning">
+        Requires <code>localtunnel</code> as a dev dependency. Install with: <code>bun add -d localtunnel</code>
+      </Callout>
+
+      <Heading level={3} className="text-xl font-semibold mt-6 mb-2 text-text-primary">
+        Options
+      </Heading>
+      <div className="overflow-x-auto my-4">
+        <table className="min-w-full border border-border-primary text-sm">
+          <thead>
+            <tr className="bg-bg-secondary">
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Flag</th>
+              <th className="border border-border-primary px-4 py-2 text-left text-text-primary">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--expose</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Create public tunnel URL via localtunnel</td></tr>
+            <tr><td className="border border-border-primary px-4 py-2 text-text-secondary"><code>--port=PORT</code></td><td className="border border-border-primary px-4 py-2 text-text-secondary">Port number (default: 1212)</td></tr>
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

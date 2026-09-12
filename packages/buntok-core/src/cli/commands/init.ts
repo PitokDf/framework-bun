@@ -51,6 +51,12 @@ const BIOME_CONFIG = {
 		enabled: true,
 		rules: {
 			preset: "recommended",
+			correctness: {
+				noUnusedImports: {
+					level: "warn",
+					fix: "safe",
+				},
+			},
 			suspicious: {
 				noExplicitAny: "off",
 			},
@@ -107,17 +113,37 @@ const VSCODE_SETTINGS = {
 		"source.fixAll.biome": "explicit",
 		"source.organizeImports.biome": "explicit",
 	},
+	"[javascript]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[html]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
+	"[css]": {
+		"editor.defaultFormatter": "biomejs.biome",
+	},
 };
 
 const INDEX_TEMPLATE = `import { App } from "@buntok/core";
+import "./env";
 
 export const app = new App();
 
 app.get("/", (ctx) => {
   return ctx.json({ message: "Hello from Buntok!" });
 });
-
-export default app;
 `;
 
 const ENV_TS_TEMPLATE = `import { App, z } from "@buntok/core";
@@ -387,6 +413,7 @@ node_modules/
 *.swp
 *.swo
 *~
+public/swagger.json
 
 # OS
 .DS_Store

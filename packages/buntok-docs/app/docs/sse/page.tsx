@@ -448,6 +448,68 @@ app.get("/live/metrics", (ctx) => {
         </table>
       </div>
 
+      {/* ──────────────── PLUGGABLE INFRASTRUCTURE ──────────────── */}
+      <Heading
+        level={2}
+        className="text-2xl font-semibold mt-8 mb-3 text-text-primary border-b border-border-primary pb-2"
+      >
+        Pluggable Infrastructure
+      </Heading>
+      <p className="my-3 text-text-secondary leading-relaxed">
+        For production cluster deployments (multiple instances), replace in-memory PubSub and history with pluggable stores.
+      </p>
+      <CodeBlock
+        code={`import {
+  SSEBroadcaster,
+  MemorySSEPubSub,     // default in-memory PubSub
+  MemorySSEHistory,    // default in-memory ring buffer (1000 msg)
+} from "@buntok/core";
+
+// Default (single instance)
+const broadcaster = new SSEBroadcaster();
+
+// Custom (e.g., Redis-backed for multi-instance)
+const broadcaster = new SSEBroadcaster({
+  pubSub: redisPubSub,      // implements SSEPubSub interface
+  historyStore: redisHistory, // implements SSEHistoryStore interface
+  channel: "events",        // pub/sub channel name
+});`}
+      />
+
+      <div className="my-4 overflow-x-auto">
+        <table className="w-full text-sm text-text-secondary border border-border-primary rounded-lg overflow-hidden">
+          <thead className="bg-bg-tertiary border-b border-border-primary">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Interface
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Methods
+              </th>
+              <th className="px-4 py-2 text-left font-semibold text-text-primary">
+                Default
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <td className="px-4 py-2 font-mono text-accent">SSEPubSub</td>
+              <td className="px-4 py-2 font-mono text-xs">publish, subscribe, unsubscribe</td>
+              <td className="px-4 py-2">MemorySSEPubSub</td>
+            </tr>
+            <tr className="border-b border-border-primary/50 hover:bg-bg-tertiary/50 transition-colors">
+              <td className="px-4 py-2 font-mono text-accent">SSEHistoryStore</td>
+              <td className="px-4 py-2 font-mono text-xs">add, getAfter, clear</td>
+              <td className="px-4 py-2">MemorySSEHistory (1000 msg ring buffer)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <Callout type="info">
+        Additional SSE methods: <code>sse.sendComment(comment)</code> for custom heartbeats, <code>sse.offClose(callback)</code> to unregister close handlers, and <code>SSE.closeAll()</code> to gracefully close all connections.
+      </Callout>
+
       {/* ──────────────── NEXT STEPS ──────────────── */}
       <Heading
         level={2}

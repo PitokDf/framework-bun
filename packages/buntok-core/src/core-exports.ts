@@ -19,7 +19,7 @@ try {
 		const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
 		if (typeof pkg.version === "string") _version = pkg.version;
 	}
-} catch {}
+} catch { }
 export const VERSION: string = _version;
 
 export { z } from "zod";
@@ -48,9 +48,12 @@ export type {
 	WSHandler,
 	ZodCtx,
 } from "./app";
-export { App, type ApiDocsOptions, type StaticOptions, type WSOptions } from "./app";
+export { App, type ApiDocsOptions, type AppOptions, type DisposableResource, type StaticOptions, type WSOptions, type RouteDebugInfo } from "./app";
 // Auth
-export { JwtService, requireAuth } from "./auth";
+export { JwtService, requireAuth, type JwtOptions } from "./auth";
+export { redactLogMeta, type LoggerOptions } from "./logger";
+// Factory
+export { Factory } from "./factory";
 // OAuth
 export {
 	BaseOAuthProvider,
@@ -212,7 +215,7 @@ export {
 	ulid,
 } from "./helpers/id";
 // Network helpers
-export { getClientIP, isPrivateIP, parseUserAgent } from "./helpers/network";
+export { getClientIP, isPrivateIP, parseUserAgent, type TrustedProxyOptions } from "./helpers/network";
 // Number helpers
 export {
 	clamp,
@@ -298,11 +301,16 @@ export { cors } from "./middlewares/cors";
 export type {
 	HealthCheckOptions,
 	HealthStatus,
+	ReadinessCheck,
+	ReadinessOptions,
 } from "./middlewares/health-check";
 export {
 	createDatabaseCheck,
 	createHealthCheck,
 	healthCheck,
+	livenessCheck,
+	readinessCheck,
+	runReadinessChecks,
 } from "./middlewares/health-check";
 export type { HelmetOptions } from "./middlewares/helmet";
 // Helmet
@@ -311,6 +319,7 @@ export type { RateLimiterOptions } from "./middlewares/rate-limiter";
 export {
 	rateLimiter,
 	slidingWindowRateLimiter,
+	sqliteStore,
 } from "./middlewares/rate-limiter";
 export type { RequestIdOptions } from "./middlewares/request-id";
 export { requestId, shortId, uuid } from "./middlewares/request-id";
@@ -340,6 +349,7 @@ export {
 	MemoryQueueDriver,
 	Queue,
 	type QueueDriver,
+	type QueueCapabilities,
 	type QueueDriverOptions,
 	type QueueOptions,
 	type RedisDriverOptions,
@@ -358,6 +368,7 @@ export {
 	type RabbitmqQueueDriverOptions,
 } from "./queue-drivers";
 export { Router } from "./router";
+export { Metrics, metricsEndpoint, metricsMiddleware, type MetricSnapshot } from "./metrics";
 // Payment
 export {
 	PaymentConfigurationError,

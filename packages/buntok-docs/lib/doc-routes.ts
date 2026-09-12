@@ -32,6 +32,7 @@ export const DOC_ROUTES: DocRoute[] = [
   { href: "/docs/static-files", title: "Static Files", section: "Advanced", description: "Static file serving, public directory, asset configuration." },
   { href: "/docs/emitter", title: "Event Emitter", section: "Advanced", description: "Event emitter pattern, publish/subscribe, decoupled architecture." },
   { href: "/docs/testing", title: "Testing", section: "Advanced", description: "Unit testing, integration testing, test utilities, mocking." },
+  { href: "/docs/factory", title: "Factory", section: "Advanced", description: "Type-safe data factories for generating test and seed data with @faker-js/faker." },
 
   { href: "/docs/cache", title: "Cache", section: "Integrations", description: "Caching layer, MemoryCacheDriver, Redis driver, cache strategies, TTL." },
   { href: "/docs/graphql", title: "GraphQL", section: "Integrations", description: "GraphQL integration with Apollo Server and Yoga, schema, resolvers." },
@@ -41,6 +42,8 @@ export const DOC_ROUTES: DocRoute[] = [
   { href: "/docs/template", title: "Template Engine", section: "Integrations", description: "Template engine integration, HTML rendering, dynamic content." },
   { href: "/docs/queue", title: "Queue", section: "Integrations", description: "Background job processing with built-in drivers: Memory, Redis, Bun Redis, BullMQ, and RabbitMQ." },
   { href: "/docs/scheduler", title: "Scheduler", section: "Integrations", description: "Task scheduling, cron jobs, interval tasks, MemorySchedulerDriver, Bun cron." },
+
+  { href: "/docs/metrics", title: "Metrics", section: "Utilities", description: "Request metrics collector, Prometheus export, per-route stats, in-flight tracking." },
 
   { href: "/docs/helpers", title: "Helpers", section: "Utilities", description: "Utility functions: hash, compare, slug, random, formatDate, paginate." },
   { href: "/docs/download", title: "Download / Export", section: "Utilities", description: "File downloads, data export (CSV/JSON), and archive creation with Bun.Archive." },

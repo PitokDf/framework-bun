@@ -12,28 +12,28 @@
  * - object/array -> application/json via Response.json
  */
 
-const TEXT_HEADERS: Record<string, string> = {
-	"Content-Type": "text/plain; charset=utf-8",
-};
+const TEXT_CT = { "Content-Type": "text/plain; charset=utf-8" };
 
 export function toResponse(value: unknown): Response {
 	if (value instanceof Response) return value;
 	if (value === null || value === undefined) {
 		return new Response(null, { status: 204 });
 	}
+	// Fast path: string (most common return type)
+	if (typeof value === "string") {
+		return new Response(value, { headers: TEXT_CT });
+	}
 	const t = typeof value;
-	if (t === "string") {
-		return new Response(value as string, { headers: TEXT_HEADERS });
-	}
 	if (t === "number" || t === "boolean" || t === "bigint") {
-		return new Response(String(value), { headers: TEXT_HEADERS });
+		return new Response(String(value), { headers: TEXT_CT });
 	}
-	// Binary / stream bodies should not be JSON-stringified
+	// Binary / stream — only reachable for objects
 	if (
-		value instanceof Blob ||
-		value instanceof ArrayBuffer ||
-		value instanceof Uint8Array ||
-		value instanceof ReadableStream
+		t === "object" &&
+		(value instanceof Blob ||
+			value instanceof ArrayBuffer ||
+			value instanceof Uint8Array ||
+			value instanceof ReadableStream)
 	) {
 		// biome-ignore lint/suspicious/noExplicitAny: BodyInit union is DOM-specific
 		return new Response(value as any);

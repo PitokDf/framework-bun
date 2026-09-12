@@ -4,9 +4,9 @@ import { Callout } from "@/components/ui/Callout";
 
 export const metadata = {
   title: "Routing",
-  description: "Define routes with path parameters, wildcards, and regex patterns in Buntok.",
+  description:
+    "Define routes with path parameters, wildcards, and regex patterns in Buntok.",
 };
-
 
 export default function RoutingPage() {
   return (
@@ -125,13 +125,11 @@ app.listen(1212);`}
       </Callout>
 
       <Callout type="warning">
-        <strong>Route matching order:</strong> Routes are matched in the order
-        they are registered. If multiple routes could match the same URL, the{" "}
-        <strong>first registered</strong> route wins. For example, register{" "}
-        <code>app.get(&quot;/users/admin&quot;)</code>{" "}
-        <strong>before</strong>{" "}
-        <code>app.get(&quot;/users/:id&quot;)</code>, otherwise <code>:id</code>{" "}
-        will match &quot;admin&quot;.
+        <strong>Route matching:</strong> Exact static routes are checked before
+        dynamic routes, so <code>app.get(&quot;/users/admin&quot;)</code> takes
+        precedence over <code>app.get(&quot;/users/:id&quot;)</code> regardless
+        of registration order. If you register the same static method and path
+        more than once, the later registration replaces the earlier handler.
       </Callout>
 
       <Heading
@@ -315,8 +313,8 @@ v2.get("/users", listUsersV2);
         Group Middleware
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Apply middleware to all routes in a group using <code>group.use()</code>.
-        Group middleware runs after global middleware but before route-level
+        Apply middleware to all routes in a group using <code>group.use()</code>
+        . Group middleware runs after global middleware but before route-level
         middleware.
       </p>
       <CodeBlock
@@ -396,9 +394,15 @@ app.cors({ origin: "*" });  // Use app.cors() for CORS
         Middleware executes in this order:
       </p>
       <ol className="my-3 ml-6 list-decimal text-text-secondary space-y-1">
-        <li>Global middleware (<code>app.use()</code>)</li>
-        <li>Group middleware (<code>group.use()</code>)</li>
-        <li>Route-level middleware (inline or <code>@Use()</code> decorator)</li>
+        <li>
+          Global middleware (<code>app.use()</code>)
+        </li>
+        <li>
+          Group middleware (<code>group.use()</code>)
+        </li>
+        <li>
+          Route-level middleware (inline or <code>@Use()</code> decorator)
+        </li>
         <li>Final handler</li>
       </ol>
 
@@ -444,10 +448,10 @@ app.static("/files", "./assets");`}
         Caching
       </Heading>
       <p className="my-3 text-text-secondary leading-relaxed">
-        Static file responses include <code>Cache-Control: public, max-age=3600</code>{" "}
-        (1 hour). ETag support is also included - if the client sends{" "}
-        <code>If-None-Match</code> and the ETag matches, the server returns{" "}
-        <code>304 Not Modified</code>.
+        Static file responses include{" "}
+        <code>Cache-Control: public, max-age=3600</code> (1 hour). ETag support
+        is also included - if the client sends <code>If-None-Match</code> and
+        the ETag matches, the server returns <code>304 Not Modified</code>.
       </p>
 
       {/* ──────────────── WEBSOCKET ──────────────── */}
@@ -583,12 +587,12 @@ app.get("/users/:id", async (ctx) => {
       </p>
       <ul className="my-3 ml-6 list-disc text-text-secondary space-y-1">
         <li>
-          <strong>Static routes</strong> - Stored in a flat{" "}
-          <code>Map</code> for O(1) lookup
+          <strong>Static routes</strong> - Stored in a flat <code>Map</code> for
+          O(1) lookup
         </li>
         <li>
-          <strong>Dynamic routes</strong> - Trie-based with native FFI (with JS
-          fallback)
+          <strong>Dynamic routes</strong> - Trie-based with efficient JS
+          implementation (optimized over native FFI)
         </li>
         <li>
           <strong>LRU cache</strong> - 2048-entry cache avoids re-traversal for

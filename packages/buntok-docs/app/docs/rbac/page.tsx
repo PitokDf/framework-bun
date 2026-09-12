@@ -172,14 +172,14 @@ async createPost(ctx: Context) {
         code={`// Default detection for requireRole:
 {
   userId: 1,
-  role: "admin",           // ← requireRole check ini
-  roles: ["admin", "user"] // ← atau ini
+  role: "admin",           // ← requireRole checks this
+  roles: ["admin", "user"] // ← or this
 }
 
 // Default detection for requirePermission:
 {
   userId: 1,
-  permissions: ["users:delete", "posts:create"]  // ← requirePermission check ini
+  permissions: ["users:delete", "posts:create"]  // ← requirePermission checks this
 }`}
       />
 

@@ -28,6 +28,89 @@ export interface HealthStatus {
 	>;
 }
 
+export interface ReadinessCheck {
+	name: string;
+	timeout?: number;
+	check: () => boolean | Promise<boolean>;
+}
+
+export interface ReadinessOptions {
+	path?: string;
+	checks: ReadinessCheck[];
+	overallTimeout?: number;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timeoutPromise = new Promise<T>((_, reject) => {
+		timer = setTimeout(() => reject(new Error("check timeout")), timeout);
+		if (typeof timer === "object" && timer && "unref" in timer) {
+			(timer as { unref: () => void }).unref();
+		}
+	});
+	return Promise.race([promise, timeoutPromise]).finally(() => {
+		if (timer) clearTimeout(timer);
+	});
+}
+
+export async function runReadinessChecks(
+	checks: ReadinessCheck[],
+	overallTimeout = 5000,
+): Promise<HealthStatus> {
+	const started = Date.now();
+	const results: NonNullable<HealthStatus["checks"]> = {};
+	let healthy = true;
+
+	for (const check of checks) {
+		const remaining = overallTimeout - (Date.now() - started);
+		if (remaining <= 0) {
+			results[check.name] = { status: "timeout" };
+			healthy = false;
+			continue;
+		}
+
+		const checkStarted = performance.now();
+		try {
+			const passed = await withTimeout(
+				Promise.resolve(check.check()),
+				Math.min(check.timeout ?? remaining, remaining),
+			);
+			results[check.name] = {
+				status: passed ? "up" : "down",
+				duration: Math.round(performance.now() - checkStarted),
+			};
+			if (!passed) healthy = false;
+		} catch {
+			results[check.name] = {
+				status: Date.now() - started >= overallTimeout ? "timeout" : "down",
+				duration: Math.round(performance.now() - checkStarted),
+			};
+			healthy = false;
+		}
+	}
+
+	return { status: healthy ? "healthy" : "unhealthy", checks: results };
+}
+
+/** Register a process liveness endpoint that never depends on external services. */
+export function livenessCheck(app: AnyApp, path = "/health/live"): void {
+	app.get(path, (ctx: Context) =>
+		ctx.json({ status: "healthy", timestamp: new Date().toISOString() }, 200),
+	);
+}
+
+/** Register a bounded dependency readiness endpoint. */
+export function readinessCheck(app: AnyApp, options: ReadinessOptions): void {
+	const path = options.path ?? "/health/ready";
+	app.get(path, async (ctx: Context) => {
+		const status = await runReadinessChecks(options.checks, options.overallTimeout);
+		return ctx.json(
+			{ ...status, timestamp: new Date().toISOString() },
+			status.status === "healthy" ? 200 : 503,
+		);
+	});
+}
+
 const startTime = Date.now();
 
 /**

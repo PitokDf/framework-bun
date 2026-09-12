@@ -333,4 +333,51 @@ describe("CORS on error responses", () => {
 			"http://trusted.example.com",
 		);
 	});
+
+	it("should include CORS headers when handler returns a plain string", async () => {
+		const app = new App();
+		app.cors({ origin: "http://example.com" });
+		app.get("/text", () => "hello world");
+
+		const res = await app.request("/text", {
+			headers: { Origin: "http://example.com" },
+		});
+
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+			"http://example.com",
+		);
+		expect(await res.text()).toBe("hello world");
+	});
+
+	it("should include CORS headers when handler returns a number", async () => {
+		const app = new App();
+		app.cors({ origin: "http://example.com" });
+		app.get("/number", () => 42);
+
+		const res = await app.request("/number", {
+			headers: { Origin: "http://example.com" },
+		});
+
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+			"http://example.com",
+		);
+		expect(await res.text()).toBe("42");
+	});
+
+	it("should include CORS headers when handler returns null", async () => {
+		const app = new App();
+		app.cors({ origin: "http://example.com" });
+		app.get("/null", () => null);
+
+		const res = await app.request("/null", {
+			headers: { Origin: "http://example.com" },
+		});
+
+		expect(res.status).toBe(204);
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+			"http://example.com",
+		);
+	});
 });

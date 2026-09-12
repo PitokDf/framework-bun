@@ -1,4 +1,5 @@
 import { TestService } from "@/services/test.service";
+import { LocalDiskStorage } from "@buntok/core";
 import {
 	Dependencies,
 	Context,
@@ -18,7 +19,6 @@ import {
 	UseGuard,
 	handleUploads,
 } from "@buntok/core";
-import { LocalDiskStorage } from "buntok";
 
 const scrt = "pitok-123";
 
@@ -38,17 +38,17 @@ export class TestController {
 			{ contentType: "application/json" },
 		),
 	)
-	@Use(
-		zResponse(
-			200,
-			z.array(
-				z.object({
-					name: z.string(),
-					role: z.enum(["admin", "user"]),
-				}),
-			),
-		),
-	)
+	// @Use(
+	// 	zResponse(
+	// 		200,
+	// 		z.array(
+	// 			z.object({
+	// 				name: z.string(),
+	// 				role: z.enum(["admin", "user"]),
+	// 			}),
+	// 		),
+	// 	),
+	// )
 	async generateToken(ctx: ZodCtx<{ body: { name: string; role: string } }>) {
 		const body = ctx.valid("body");
 		const jwt = new JwtService(scrt);

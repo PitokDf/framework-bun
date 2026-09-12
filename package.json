@@ -85,6 +85,7 @@
     "check": "bunx @biomejs/biome check --write .",
     "prepublishOnly": "bun run build && bun run check",
     "publish:all": "npm run publish:core && npm run publish:prisma && npm run publish:drizzle && npm run publish:typeorm",
+    "publish:create": "cd packages/create-buntok && npm publish --access public",
     "publish:core": "cd packages/buntok-core && npm publish --access public",
     "publish:prisma": "cd packages/buntok-prisma && npm publish --access public",
     "publish:drizzle": "cd packages/buntok-drizzle && npm publish --access public",

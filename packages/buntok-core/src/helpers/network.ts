@@ -1,26 +1,71 @@
 const PRIVATE_IP_REGEX =
 	/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|localhost|::1|fc|fd)/i;
 
-/**
- * Get the client IP address from a Request.
- * Checks X-Forwarded-For, X-Real-IP, then falls back to request.remoteAddress.
- */
-export function getClientIP(request: Request): string {
-	const xff = request.headers.get("x-forwarded-for");
-	if (xff) {
-		const first = xff.split(",")[0]?.trim();
-		if (first) return first;
-	}
+export interface TrustedProxyOptions {
+	addresses?: string[];
+	depth?: number;
+}
 
-	const xri = request.headers.get("x-real-ip");
-	if (xri) return xri;
+function normalizeIP(ip: string): string {
+	return ip.replace(/^::ffff:/i, "").trim().toLowerCase();
+}
 
-	// Bun exposes remoteAddress on the request
+function ipv4ToNumber(ip: string): number | undefined {
+	const parts = ip.split(".");
+	if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part))) return undefined;
+	const octets = parts.map(Number);
+	if (octets.some((part) => part < 0 || part > 255)) return undefined;
+	const [first, second, third, fourth] = octets;
+	if (first === undefined || second === undefined || third === undefined || fourth === undefined) return undefined;
+	return (((first * 256 + second) * 256 + third) * 256 + fourth) >>> 0;
+}
+
+function matchesProxy(ip: string, configured: string): boolean {
+	const normalizedIP = normalizeIP(ip);
+	const normalizedConfigured = normalizeIP(configured);
+	if (!normalizedConfigured.includes("/")) return normalizedIP === normalizedConfigured;
+
+	const [network, prefixText] = normalizedConfigured.split("/");
+	if (!network || !prefixText) return false;
+	const value = ipv4ToNumber(normalizedIP);
+	const networkValue = ipv4ToNumber(network);
+	const prefix = Number(prefixText);
+	if (value === undefined || networkValue === undefined || !Number.isInteger(prefix) || prefix < 0 || prefix > 32) return false;
+	const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+	return (value & mask) === (networkValue & mask);
+}
+
+function getRemoteAddress(request: Request): string | undefined {
+	// Bun exposes remoteAddress on the request.
 	// biome-ignore lint/suspicious/noExplicitAny: Bun-specific property
 	const remote = (request as any).remoteAddress;
-	if (remote) return remote;
+	return typeof remote === "string" && remote ? remote : undefined;
+}
 
-	return "unknown";
+/**
+ * Get the client IP. Forwarding headers are ignored unless the direct peer is
+ * explicitly trusted through addresses or a proxy depth.
+ */
+export function getClientIP(request: Request, trustedProxy?: TrustedProxyOptions): string {
+	const remote = getRemoteAddress(request);
+	const addresses = trustedProxy?.addresses ?? [];
+	const trustedPeer = remote ? addresses.some((address) => matchesProxy(remote, address)) : false;
+	const depth = trustedProxy?.depth;
+	const canTrustForwarding = trustedPeer || (depth !== undefined && depth > 0);
+
+	if (canTrustForwarding) {
+		const forwarded = request.headers.get("x-forwarded-for");
+		const chain = forwarded?.split(",").map((ip) => ip.trim()).filter(Boolean) ?? [];
+		if (chain.length) {
+			const index = depth ? Math.max(0, chain.length - depth - 1) : 0;
+			const clientIP = chain[index] ?? chain[0];
+			if (clientIP) return clientIP;
+		}
+		const realIP = request.headers.get("x-real-ip")?.trim();
+		if (realIP) return realIP;
+	}
+
+	return remote ?? "unknown";
 }
 
 /**

@@ -1,6 +1,7 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import { join } from "node:path";
+import { detectORM, type ORM } from "../generators/repository.js";
 
 function toPascalCase(str: string): string {
 	return str
@@ -9,32 +10,133 @@ function toPascalCase(str: string): string {
 		.join("");
 }
 
-function generateSeeder(name: string, pascalName: string): string {
-	return `import { db } from "@/db";
-import { ${name} } from "@/db/schemas/${name}"; // Adjust schema import if needed
+function generatePrismaSeeder(name: string, pascalName: string, useFactory: boolean): string {
+	if (useFactory) {
+		return `import { prisma } from "@/lib/prisma";
+import { ${pascalName}Factory } from "@/factories/${name}.factory";
 
 export async function seed${pascalName}() {
   console.log("Seeding ${pascalName}...");
-  
+
+  const items = ${pascalName}Factory.buildMany(100);
+  await prisma.${name}.createMany({ data: items });
+
+  console.log("✓ ${pascalName} seeded successfully (100 records)");
+}
+`;
+	}
+	return `import { prisma } from "@/lib/prisma";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
   // TODO: Insert your dummy data here
-  // await db.insert(${name}).values([
-  //   { name: "Dummy 1" },
-  //   { name: "Dummy 2" },
-  // ]);
-  
+  // await prisma.${name}.createMany({
+  //   data: [
+  //     { name: "Dummy 1" },
+  //     { name: "Dummy 2" },
+  //   ],
+  // });
+
   console.log("✓ ${pascalName} seeded successfully");
 }
 `;
 }
 
-export async function makeSeederCommand(name: string) {
+function generateDrizzleSeeder(name: string, pascalName: string, useFactory: boolean): string {
+	if (useFactory) {
+		return `import { db } from "@/lib/db";
+import { ${name} } from "@/lib/db/schema";
+import { ${pascalName}Factory } from "@/factories/${name}.factory";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
+  const items = ${pascalName}Factory.buildMany(100);
+  await db.insert(${name}).values(items);
+
+  console.log("✓ ${pascalName} seeded successfully (100 records)");
+}
+`;
+	}
+	return `import { db } from "@/lib/db";
+import { ${name} } from "@/lib/db/schema";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
+  // TODO: Insert your dummy data here
+  // await db.insert(${name}).values([
+  //   { name: "Dummy 1" },
+  //   { name: "Dummy 2" },
+  // ]);
+
+  console.log("✓ ${pascalName} seeded successfully");
+}
+`;
+}
+
+function generateTypeORMSeeder(name: string, pascalName: string, useFactory: boolean): string {
+	if (useFactory) {
+		return `import { AppDataSource } from "@/lib/data-source";
+import { ${pascalName} } from "@/lib/entities/${pascalName}";
+import { ${pascalName}Factory } from "@/factories/${name}.factory";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
+  const repo = AppDataSource.getRepository(${pascalName});
+  const items = ${pascalName}Factory.buildMany(100);
+  await repo.save(items.map(item => repo.create(item)));
+
+  console.log("✓ ${pascalName} seeded successfully (100 records)");
+}
+`;
+	}
+	return `import { AppDataSource } from "@/lib/data-source";
+import { ${pascalName} } from "@/lib/entities/${pascalName}";
+
+export async function seed${pascalName}() {
+  console.log("Seeding ${pascalName}...");
+
+  const repo = AppDataSource.getRepository(${pascalName});
+
+  // TODO: Insert your dummy data here
+  // await repo.save(repo.create({ name: "Dummy 1" }));
+  // await repo.save(repo.create({ name: "Dummy 2" }));
+
+  console.log("✓ ${pascalName} seeded successfully");
+}
+`;
+}
+
+function generateSeeder(name: string, pascalName: string, orm: ORM, useFactory: boolean): string {
+	switch (orm) {
+		case "drizzle":
+			return generateDrizzleSeeder(name, pascalName, useFactory);
+		case "typeorm":
+			return generateTypeORMSeeder(name, pascalName, useFactory);
+		case "prisma":
+		default:
+			return generatePrismaSeeder(name, pascalName, useFactory);
+	}
+}
+
+export async function makeSeederCommand(name: string, flags: string[] = []) {
 	const pascalName = toPascalCase(name);
-	console.log(`\n\x1b[36mScaffolding Seeder for ${pascalName}...\x1b[0m\n`);
+	const orm = detectORM();
+	const useFactory = flags.includes("--factory");
+	const dryRun = flags.includes("--dry-run");
+	console.log(`\n\x1b[36mScaffolding Seeder for ${pascalName} (orm: ${orm}${useFactory ? ", using factory" : ""}${dryRun ? ", dry-run" : ""})...\x1b[0m\n`);
 
 	const seederDir = "src/db/seeders";
 
 	if (!existsSync(seederDir)) {
-		await fs.mkdir(seederDir, { recursive: true });
+		if (dryRun) {
+			console.log(`\x1b[90mWould create directory: ${seederDir}\x1b[0m`);
+		} else {
+			await fs.mkdir(seederDir, { recursive: true });
+		}
 	}
 
 	const filePath = join(seederDir, `${name}.seeder.ts`);
@@ -47,7 +149,15 @@ export async function makeSeederCommand(name: string) {
 		return;
 	}
 
-	const content = generateSeeder(name, pascalName);
+	const content = generateSeeder(name, pascalName, orm, useFactory);
+
+	if (dryRun) {
+		console.log(`\x1b[90mWould create file: ${filePath}\x1b[0m`);
+		console.log(`\n\x1b[36m--- Generated content ---\x1b[0m\n`);
+		console.log(content);
+		return;
+	}
+
 	await fs.writeFile(filePath, content);
 
 	const biomeProc = Bun.spawnSync(
@@ -64,4 +174,13 @@ export async function makeSeederCommand(name: string) {
 	}
 
 	console.log(`\x1b[32m✓ Generated seeder:\x1b[0m ${filePath}`);
+
+	if (useFactory) {
+		// Check if factory file exists
+		const factoryPath = `src/factories/${name}.factory.ts`;
+		if (!existsSync(factoryPath)) {
+			console.log(`\n\x1b[33m⚠ Warning: Factory file not found at ${factoryPath}\x1b[0m`);
+			console.log(`  Run \x1b[36mbuntok make:factory ${name}\x1b[0m to create it first.`);
+		}
+	}
 }

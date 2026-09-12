@@ -22,6 +22,7 @@ import type { App } from "./app";
 export interface Plugin<DI extends Record<string, unknown> = Record<string, unknown>> {
 	name: string;
 	install: (app: App<DI>) => void | Promise<void>;
+	dispose?: (app: App<DI>) => void | Promise<void>;
 }
 
 /**
@@ -30,9 +31,11 @@ export interface Plugin<DI extends Record<string, unknown> = Record<string, unkn
 export function createPlugin<DI extends Record<string, unknown> = Record<string, unknown>>(config: {
 	name: string;
 	install: (app: App<DI>) => void | Promise<void>;
+	dispose?: (app: App<DI>) => void | Promise<void>;
 }): Plugin<DI> {
 	return {
 		name: config.name,
 		install: config.install,
+		dispose: config.dispose,
 	};
 }

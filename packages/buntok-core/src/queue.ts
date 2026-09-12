@@ -36,19 +36,43 @@ export interface QueueOptions {
 	backoff?: "fixed" | "exponential";
 }
 
+export interface QueueCapabilities {
+	durability: "process-local" | "persistent";
+	delivery: "best-effort" | "at-least-once";
+	acknowledgment: "none" | "driver";
+	crashRecovery: boolean;
+	deadLetter: boolean;
+}
+
 export interface QueueDriver<T> {
 	add(data: T, opts?: { priority?: number; delay?: number }): Promise<void>;
 	process(handler: JobHandler<T>): void;
-	size(): number;
+	size(): number | null;
 	clear(): void;
+	readonly capabilities?: QueueCapabilities;
+	pause?(): Promise<void> | void;
+	resume?(): Promise<void> | void;
+	drain?(options?: { timeout?: number }): Promise<void>;
+	close?(options?: { timeout?: number; force?: boolean }): Promise<void>;
 }
 
 // ─── Memory Driver ────────────────────────────────────────────────────────────
 
 export class MemoryQueueDriver<T> implements QueueDriver<T> {
+	readonly capabilities: QueueCapabilities = {
+		durability: "process-local",
+		delivery: "best-effort",
+		acknowledgment: "none",
+		crashRecovery: false,
+		deadLetter: false,
+	};
 	private queue: Job<T>[] = [];
 	private isProcessing = false;
 	private handlers: JobHandler<T>[] = [];
+	private delayedTimers = new Set<ReturnType<typeof setTimeout>>();
+	private closed = false;
+	private paused = false;
+	private drainWaiters: Array<() => void> = [];
 	private readonly opts: Required<QueueOptions>;
 
 	constructor(
@@ -71,6 +95,7 @@ export class MemoryQueueDriver<T> implements QueueDriver<T> {
 		data: T,
 		opts: { priority?: number; delay?: number } = {},
 	): Promise<void> {
+		if (this.closed) throw new Error(`Queue ${this.name} is closed`);
 		const job: Job<T> = {
 			id: crypto.randomUUID(),
 			data,
@@ -82,10 +107,12 @@ export class MemoryQueueDriver<T> implements QueueDriver<T> {
 
 		if (job.delay > 0) {
 			// Schedule for later
-			setTimeout(() => {
+			const timer = setTimeout(() => {
+				this.delayedTimers.delete(timer);
 				this.enqueue(job);
 				this.pump();
 			}, job.delay);
+			this.delayedTimers.add(timer);
 		} else {
 			this.enqueue(job);
 			this.pump();
@@ -117,10 +144,11 @@ export class MemoryQueueDriver<T> implements QueueDriver<T> {
 	}
 
 	private async pump(): Promise<void> {
-		if (this.isProcessing || this.handlers.length === 0) return;
+		if (this.isProcessing || this.paused || this.handlers.length === 0) return;
 		this.isProcessing = true;
 
 		while (this.queue.length > 0) {
+			if (this.closed) break;
 			const job = this.queue.shift();
 			if (job === undefined) break;
 
@@ -136,6 +164,7 @@ export class MemoryQueueDriver<T> implements QueueDriver<T> {
 							err,
 						);
 						setTimeout(() => {
+							if (this.closed) return;
 							this.enqueue({ ...job, attempt: nextAttempt });
 							this.pump();
 						}, delay);
@@ -153,16 +182,44 @@ export class MemoryQueueDriver<T> implements QueueDriver<T> {
 		}
 
 		this.isProcessing = false;
+		for (const resolve of this.drainWaiters.splice(0)) resolve();
 	}
 
 	/** Number of jobs currently waiting in the queue */
 	size(): number {
-		return this.queue.length;
+		return this.queue.length + this.delayedTimers.size;
 	}
 
 	/** Remove all pending jobs from the queue */
 	clear(): void {
 		this.queue = [];
+	}
+
+	async drain(options: { timeout?: number } = {}): Promise<void> {
+		if (!this.isProcessing && this.queue.length === 0) return;
+		const timeout = options.timeout ?? 30_000;
+		await Promise.race([
+			new Promise<void>((resolve) => this.drainWaiters.push(resolve)),
+			new Promise<void>((resolve) => setTimeout(resolve, timeout)),
+		]);
+	}
+
+	pause(): void {
+		this.paused = true;
+	}
+
+	resume(): void {
+		this.paused = false;
+		this.pump();
+	}
+
+	async close(): Promise<void> {
+		if (this.closed) return;
+		this.closed = true;
+		for (const timer of this.delayedTimers) clearTimeout(timer);
+		this.delayedTimers.clear();
+		this.queue = [];
+		await this.drain();
 	}
 }
 
@@ -348,12 +405,40 @@ export class Queue<T = unknown> {
 	}
 
 	/** Number of jobs currently waiting in the queue */
-	size(): number {
+	size(): number | null {
 		return this.driver.size();
+	}
+
+	get capabilities(): QueueCapabilities {
+		return this.driver.capabilities ?? {
+			durability: "process-local",
+			delivery: "best-effort",
+			acknowledgment: "none",
+			crashRecovery: false,
+			deadLetter: false,
+		};
 	}
 
 	/** Remove all pending (not yet started) jobs */
 	clear(): void {
 		this.driver.clear();
+	}
+
+	/** Stop accepting jobs and release driver resources. Safe to call repeatedly. */
+	async close(options: { timeout?: number; force?: boolean } = {}): Promise<void> {
+		await this.driver.close?.(options);
+	}
+
+	/** Wait for active work to finish up to the configured timeout. */
+	async drain(options: { timeout?: number } = {}): Promise<void> {
+		await this.driver.drain?.(options);
+	}
+
+	async pause(): Promise<void> {
+		await this.driver.pause?.();
+	}
+
+	async resume(): Promise<void> {
+		await this.driver.resume?.();
 	}
 }

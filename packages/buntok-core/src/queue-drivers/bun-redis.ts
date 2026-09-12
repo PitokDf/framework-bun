@@ -1,4 +1,4 @@
-import type { QueueDriver, Job, JobHandler, QueueOptions } from "../queue";
+import type { QueueDriver, Job, JobHandler, QueueCapabilities, QueueOptions } from "../queue";
 
 /**
  * Queue Driver using Bun's native Redis client (built-in, zero dependencies).
@@ -30,12 +30,20 @@ export interface BunRedisQueueDriverOptions {
 }
 
 export class BunRedisQueueDriver<T> implements QueueDriver<T> {
+	readonly capabilities: QueueCapabilities = {
+		durability: "persistent",
+		delivery: "at-least-once",
+		acknowledgment: "driver",
+		crashRecovery: false,
+		deadLetter: false,
+	};
 	private redis: any;
 	private prefix: string;
 	private opts: Required<Omit<BunRedisQueueDriverOptions, "client" | "url" | "prefix"> & { prefix: string }>;
 	private handlers: JobHandler<T>[] = [];
 	private isProcessing = false;
 	private pollTimer: ReturnType<typeof setInterval> | null = null;
+	private closed = false;
 
 	constructor(public name: string, options: BunRedisQueueDriverOptions = {}) {
 		this.prefix = options.prefix ?? "buntok:queue";
@@ -76,6 +84,7 @@ export class BunRedisQueueDriver<T> implements QueueDriver<T> {
 		data: T,
 		opts: { priority?: number; delay?: number } = {},
 	): Promise<void> {
+		if (this.closed) throw new Error(`Queue ${this.name} is closed`);
 		const job: Job<T> = {
 			id: crypto.randomUUID(),
 			data,
@@ -103,8 +112,8 @@ export class BunRedisQueueDriver<T> implements QueueDriver<T> {
 		this.startPolling();
 	}
 
-	size(): number {
-		return 0;
+	size(): number | null {
+		return null;
 	}
 
 	clear(): void {
@@ -114,6 +123,31 @@ export class BunRedisQueueDriver<T> implements QueueDriver<T> {
 	private startPolling(): void {
 		if (this.pollTimer) return;
 		this.pollTimer = setInterval(() => this.moveToReady(), 1000);
+	}
+
+	async close(): Promise<void> {
+		if (this.closed) return;
+		this.closed = true;
+		if (this.pollTimer) {
+			clearInterval(this.pollTimer);
+			this.pollTimer = null;
+		}
+		await this.redis?.close?.().catch(() => undefined);
+	}
+
+	async drain(options?: { timeout?: number }): Promise<void> {
+		if (!this.redis || this.closed) return;
+		const deadline = options?.timeout ? Date.now() + options.timeout : Date.now() + 30_000;
+		while (Date.now() < deadline) {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) break;
+			const result = await Promise.race([
+				this.redis.send("ZPOPMIN", [this.queueKey, "1"]),
+				new Promise<never>((_, reject) => setTimeout(() => reject(new Error("drain timeout")), remaining)),
+			]).catch(() => null);
+			if (!result || result.length === 0) break;
+			await new Promise((r) => setTimeout(r, 0));
+		}
 	}
 
 	private async moveToReady(): Promise<void> {

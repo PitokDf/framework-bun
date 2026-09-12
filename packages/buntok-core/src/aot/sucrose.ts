@@ -56,11 +56,35 @@ export function analyzeHandler(
 	};
 
 	try {
+		// Use _sucroseTarget if available (closure wrappers hide toString)
+		const target = (handler as any)._sucroseTarget ?? handler;
 		// Get function source code
-		const source = handler.toString();
+		const source = target.toString();
 
 		// Quick check: if source is too short or is a native function, return defaults
 		if (source.length < 10 || source.includes("[native code]")) {
+			return analysis;
+		}
+
+		// If handler uses destructuring in params (e.g. `handler({ params })`),
+		// we can't safely skip Context — the destructured props come from ctx
+		const hasDestructuredParams = /\(\s*\{[^}]*\b(params|query|body|valid|request|headers|store|cookies|ip)\b/.test(source) ||
+			/function\s*\w*\s*\(\s*\{[^}]+\}/.test(source) ||
+			/\)\s*=>\s*\{[^}]*\bparams\b/.test(source);
+
+		if (hasDestructuredParams) {
+			// Destructured ctx props — detect WHICH props are destructured
+			const destrMatch = source.match(/\(\s*\{([^}]+)\}/);
+			if (destrMatch) {
+				const destrProps = destrMatch[1];
+				analysis.needsBody = /body|request|raw|arrayBuffer/.test(destrProps);
+				analysis.needsQuery = /query/.test(destrProps);
+				analysis.needsParams = /params/.test(destrProps);
+				analysis.needsValidation = /valid/.test(destrProps);
+				analysis.needsFormData = /formData/.test(destrProps);
+				analysis.needsText = /request\.text/.test(destrProps);
+				analysis.needsBinary = /request\.arrayBuffer/.test(destrProps);
+			}
 			return analysis;
 		}
 

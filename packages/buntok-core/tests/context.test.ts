@@ -33,16 +33,16 @@ describe("Context", () => {
 	});
 
 	describe("ip", () => {
-		it("should return 127.0.0.1 by default", () => {
-			expect(ctx.ip).toBe("127.0.0.1");
+		it("should return unknown without a peer address", () => {
+			expect(ctx.ip).toBe("unknown");
 		});
 
-		it("should return x-forwarded-for header value", () => {
+		it("should ignore x-forwarded-for unless a proxy is trusted", () => {
 			const req = createRequest("/test", {
 				headers: { "x-forwarded-for": "192.168.1.1, 10.0.0.1" },
 			});
 			const context = new Context(req, {});
-			expect(context.ip).toBe("192.168.1.1");
+			expect(context.ip).toBe("unknown");
 		});
 	});
 

@@ -1,29 +1,30 @@
-import {
-	App,
-	asyncHandler,
-	compress,
-	healthCheck,
-	LocalDiskStorage,
-	handleUploads,
-	z,
-	zResponse,
-	zValidator,
-	responseTime,
-	rateLimiter,
-} from "@buntok/core";
+import { App, metricsEndpoint, metricsMiddleware } from "@buntok/core";
 import "./env";
 import { TestController } from "./controllers/test.controller";
-import { PaymentController } from "./controllers/payment.controller";
-import { MailerController } from "./controllers/mailer.controller";
-import { UserController } from "./controllers/user.controller";
 import { Container } from "@buntok/core";
+import { MailerController } from "./controllers/mailer.controller";
+import { PaymentController } from "./controllers/payment.controller";
+import { Metrics } from "@buntok/core";
 
-export const app = new App();
-app.use(responseTime());
+export const app = new App({ handleSignals: true });
 
-app.use(compress());
+app.registerResource({
+	name: "test", close() {
+		console.log("Closing test resource...");
+	},
+})
+
+const metric = new Metrics()
+app.use(metricsMiddleware(metric));
+metricsEndpoint(metric)(app);
+
+app.cors({
+	origin: "*",
+	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+	credentials: true,
+});
+
 app.apiDocs({
-	path: "/api-docs",
 	title: "API Documentation",
 	version: "1.0.1",
 	description: "api docs for buntok test",
@@ -33,53 +34,8 @@ const container = new Container();
 container.scan([TestController]);
 app.setContainer(container);
 
-healthCheck(app, {
-	version: "1.0.0",
-	includeUptime: false,
-});
-
-app.post(
-	"/test",
-	zValidator(
-		"body",
-		{ avatar: z.file(), name: z.string() },
-		{ contentType: "multipart/form-data" },
-	),
-	asyncHandler(async (ctx) => {
-		const result = await handleUploads(ctx, {
-			storage: new LocalDiskStorage("./uploads"),
-			fields: {
-				avatar: {
-					maxFileSize: 1024 * 1024 * 5, // 5MB
-					allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
-					outputFormat: "webp",
-				},
-			},
-		});
-		return ctx.success({ result: result.fields.avatar });
-	}),
-);
-
-app.get(
-	"/wellcome/:name",
-	zValidator(
-		"params",
-		z.object({
-			name: z
-				.string()
-				.min(3, "Name is required and must be at least 1 character long."),
-		}),
-		{ contentType: "application/json" },
-	),
-	zResponse(200, { name: z.string() }),
-	asyncHandler(async (ctx) => {
-		return ctx.success({ name: "Hello " + ctx.params.name });
-	}),
-);
-
-app.registerController(TestController);
-app.registerController(PaymentController);
-app.registerController(MailerController);
-app.registerController(UserController);
-
-export default app;
+app.registerController([
+	TestController,
+	MailerController,
+	PaymentController
+]);

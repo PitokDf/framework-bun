@@ -11,8 +11,8 @@ function toPascalCase(str: string): string {
 
 function generateTest(name: string, pascalName: string): string {
 	return `import { describe, it, expect, beforeEach, mock } from "bun:test";
-import { ${pascalName}Service } from "../src/services/${name}.service";
-import { ${pascalName}Repository } from "../src/repositories/${name}.repository";
+import { ${pascalName}Service } from "@/modules/${name}/${name}.service";
+import { ${pascalName}Repository } from "@/modules/${name}/${name}.repository";
 
 describe("${pascalName}Service", () => {
   let service: ${pascalName}Service;
@@ -54,14 +54,19 @@ describe("${pascalName}Service", () => {
 `;
 }
 
-export async function makeTestCommand(name: string) {
+export async function makeTestCommand(name: string, flags: string[] = []) {
 	const pascalName = toPascalCase(name);
-	console.log(`\n\x1b[36mScaffolding Unit Test for ${pascalName}...\x1b[0m\n`);
+	const dryRun = flags.includes("--dry-run");
+	console.log(`\n\x1b[36mScaffolding Unit Test for ${pascalName}${dryRun ? " (dry-run)" : ""}...\x1b[0m\n`);
 
 	const testsDir = "tests";
 
 	if (!existsSync(testsDir)) {
-		await fs.mkdir(testsDir, { recursive: true });
+		if (dryRun) {
+			console.log(`\x1b[90mWould create directory: ${testsDir}\x1b[0m`);
+		} else {
+			await fs.mkdir(testsDir, { recursive: true });
+		}
 	}
 
 	const filePath = join(testsDir, `${name}.spec.ts`);
@@ -75,6 +80,14 @@ export async function makeTestCommand(name: string) {
 	}
 
 	const content = generateTest(name, pascalName);
+
+	if (dryRun) {
+		console.log(`\x1b[90mWould create file: ${filePath}\x1b[0m`);
+		console.log(`\n\x1b[36m--- Generated content ---\x1b[0m\n`);
+		console.log(content);
+		return;
+	}
+
 	await fs.writeFile(filePath, content);
 
 	// Auto-format generated file with Biome if available
