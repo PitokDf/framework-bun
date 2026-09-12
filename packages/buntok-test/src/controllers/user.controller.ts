@@ -1,4 +1,5 @@
-import { Controller, Get, handleUploads, Post, Use, z, zValidator } from "@buntok/core";
+import { Controller, Get, handleUploads, Post, Use, zValidator } from "@buntok/core";
+import { z } from "@buntok/core/middlewares/validator";
 import { generateInitialAvatar, LocalDiskStorage, serveFileOrFallback } from "@buntok/core";
 import { users } from "../../data.json";
 import type { Context } from "@buntok/core";
