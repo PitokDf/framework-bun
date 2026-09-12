@@ -69,3 +69,7 @@ declare module "@opentelemetry/exporter-trace-otlp-http" {
 		export(spans: any[]): Promise<void>;
 	}
 }
+
+declare module "nodemailer" {
+	export function createTransport(config: any): any;
+}

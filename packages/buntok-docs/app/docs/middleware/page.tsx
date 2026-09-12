@@ -263,7 +263,7 @@ app.get("/api", rateLimit(100, 60_000), handler);`}
         Validate request data with Zod schemas:
       </p>
       <CodeBlock
-        code={`import { zValidator, z } from "@buntok/core";
+        code={`import { zValidator, z } from "@buntok/core/middlewares/validator";
 
 const userSchema = z.object({
   name: z.string().min(1),

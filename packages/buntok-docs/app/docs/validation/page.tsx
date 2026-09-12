@@ -47,7 +47,7 @@ export default function ValidationPage() {
         Body Validation
       </Heading>
       <CodeBlock
-        code={`import { zValidator, z } from "@buntok/core";
+        code={`import { zValidator, z } from "@buntok/core/middlewares/validator";
 
 const userSchema = z.object({
   name: z.string().min(1),
@@ -176,7 +176,8 @@ type MyCtx = ZodCtx<{
         Body Validation
       </Heading>
       <CodeBlock
-        code={`import { Controller, Post, Use, zValidator, ZodCtx, z } from "@buntok/core";
+        code={`import { Controller, Post, Use, ZodCtx } from "@buntok/core";
+import { zValidator, z } from "@buntok/core/middlewares/validator";
 
 const createUserSchema = z.object({
   name: z.string().min(2),

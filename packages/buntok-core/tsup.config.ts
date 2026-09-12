@@ -14,6 +14,10 @@ export default defineConfig({
 		"src/plugins/graphql/apollo.ts",
 		"src/plugins/graphql/yoga.ts",
 		"src/queue-drivers/index.ts",
+		// Subpath exports for heavy modules (zod-dependent, lazy-loaded)
+		"src/middlewares/validator.ts",
+		"src/payment/index.ts",
+		"src/ws-helpers.ts",
 	],
 	format: ["esm", "cjs"],
 	dts: false,

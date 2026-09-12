@@ -856,8 +856,8 @@ app.use(bodySizeLimit({ maxSize: 10 * 1024 * 1024, statusCode: 413, message: "Pa
 ## Validation (zValidator)
 
 ```ts
-import { zValidator } from "@buntok/core";
-import { z } from "zod";
+import { zValidator } from "@buntok/core/middlewares/validator";
+import { z } from "@buntok/core/middlewares/validator";
 ```
 
 ### Body Validation
@@ -963,7 +963,7 @@ On failure returns `422 { success:false, message:"Validation Failed", details:[{
 `zResponse` is for docs only (no runtime validation) — wraps schema in `{success, message, data}` envelope. Collected in `app.openApiDocs`.
 
 ```ts
-import { zResponse } from "@buntok/core";
+import { zResponse } from "@buntok/core/middlewares/validator";
 
 app.get("/users",
   zValidator("query", paginationSchema),
@@ -978,7 +978,7 @@ app.get("/users",
 ### Deprecated Shortcuts
 
 ```ts
-import { validateBody, validateParams } from "@buntok/core";
+import { validateBody, validateParams } from "@buntok/core/middlewares/validator";
 
 // These still work but are deprecated — prefer zValidator above
 app.post("/users", validateBody(schema), handler);
@@ -1127,8 +1127,8 @@ Prefer `ZodCtx` for fully-typed `ctx.valid()` / `ctx.body()` — it infers types
 ```ts
 import { Controller, Get, Post, Put, Delete, Use } from "@buntok/core";
 import type { Context, ZodCtx } from "@buntok/core";
-import { zValidator } from "@buntok/core";
-import { z } from "zod";
+import { zValidator } from "@buntok/core/middlewares/validator";
+import { z } from "@buntok/core/middlewares/validator";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -1971,7 +1971,7 @@ Additional SSE methods:
 ## WebSocket
 
 ```ts
-import { validateWSMessage, Room, wsAuth, wsHeartbeat } from "@buntok/core";
+import { validateWSMessage, Room, wsAuth, wsHeartbeat } from "@buntok/core/ws-helpers";
 ```
 
 ### Basic Usage
@@ -2012,8 +2012,8 @@ app.ws("/chat", {
 ### Message Validation
 
 ```ts
-import { z } from "zod";
-import { validateWSMessage } from "@buntok/core";
+import { z } from "@buntok/core/middlewares/validator";
+import { validateWSMessage } from "@buntok/core/ws-helpers";
 
 const schema = z.object({
   type: z.enum(["chat", "ping"]),
@@ -2035,7 +2035,7 @@ app.ws("/chat", {
 ### Room Management
 
 ```ts
-import { Room } from "@buntok/core";
+import { Room } from "@buntok/core/ws-helpers";
 
 const rooms = new Map<string, Room>();
 
@@ -2060,7 +2060,7 @@ app.ws("/chat", {
 ### Heartbeat
 
 ```ts
-import { wsHeartbeat } from "@buntok/core";
+import { wsHeartbeat } from "@buntok/core/ws-helpers";
 
 app.ws("/chat", {
   ...wsHeartbeat(30_000),
@@ -2072,7 +2072,7 @@ app.ws("/chat", {
 ### WebSocket Rate Limiting
 
 ```ts
-import { wsRateLimit } from "@buntok/core";
+import { wsRateLimit } from "@buntok/core/ws-helpers";
 
 app.ws("/chat", {
   ...wsRateLimit({
@@ -3257,7 +3257,7 @@ class RedisCacheDriver implements CacheDriver {
 Pluggable payment gateway integration supporting Stripe, Midtrans, Xendit, and PayPal. All providers share a unified `PaymentDriver` interface with normalized types.
 
 ```ts
-import { createPayment } from "@buntok/core";
+import { createPayment } from "@buntok/core/payment";
 
 const stripe = createPayment.stripe({
   secretKey: process.env.STRIPE_SECRET_KEY!,
@@ -3329,7 +3329,7 @@ const link = await stripe.createPaymentLink({
 ### Webhooks
 
 ```ts
-import { paymentWebhook } from "@buntok/core";
+import { paymentWebhook } from "@buntok/core/payment";
 
 app.post("/webhooks/stripe",
   paymentWebhook({
@@ -3359,7 +3359,7 @@ import {
   PaymentVerificationError,  // 400 — webhook signature mismatch
   PaymentIdempotencyError,   // 409 — idempotency key reuse
   PaymentConfigurationError, // 500 — invalid driver config
-} from "@buntok/core";
+} from "@buntok/core/payment";
 ```
 
 ---

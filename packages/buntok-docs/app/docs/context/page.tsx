@@ -287,7 +287,7 @@ app.post("/upload", async (ctx) => {
         via <code>ctx.valid()</code>:
       </p>
       <CodeBlock
-        code={`import { zValidator, z } from "@buntok/core";
+        code={`import { zValidator, z } from "@buntok/core/middlewares/validator";
 
 const userSchema = z.object({
   name: z.string().min(1),

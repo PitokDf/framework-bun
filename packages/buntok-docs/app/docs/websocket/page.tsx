@@ -175,7 +175,7 @@ app.listen(1212);`}
         <code>WSHandler</code> with the <code>open</code> callback wired up:
       </p>
       <CodeBlock
-        code={`import { wsAuth } from "@buntok/core";
+        code={`import { wsAuth } from "@buntok/core/ws-helpers";
 
 app.ws("/chat", {
   ...wsAuth(async (ws) => {
@@ -204,8 +204,8 @@ app.ws("/chat", {
         messages:
       </p>
       <CodeBlock
-        code={`import { z } from "zod";
-import { validateWSMessage } from "@buntok/core";
+        code={`import { z } from "@buntok/core/middlewares/validator";
+import { validateWSMessage } from "@buntok/core/ws-helpers";
 
 const messageSchema = z.object({
   type: z.enum(["chat", "ping", "join"]),

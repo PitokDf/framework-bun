@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { Middleware } from "../app";
 
+export { z } from "zod";
+
 export interface ValidatorSchema {
 	parse: (data: unknown) => unknown;
 }

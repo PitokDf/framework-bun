@@ -6,12 +6,11 @@ import { Container } from "./container";
 import { Context } from "./context";
 import { getControllerMeta } from "./decorators";
 import { HttpError } from "./helpers/async-handler";
-import { generateOpenApiDocument } from "./helpers/openapi";
 import { toResponse } from "./helpers/response";
 import { analyzeHandler } from "./aot/sucrose";
 import { logger } from "./logger";
 import { Router } from "./router";
-import { VERSION } from "./core-exports";
+import { VERSION } from "./version";
 import type { Plugin } from "./plugin";
 import type { CorsOptions } from "./middlewares/cors";
 import { applyCorsHeaders, cors } from "./middlewares/cors";
@@ -1930,8 +1929,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (this._apiDocsConfig) {
 			const docsConfig = this._apiDocsConfig;
 			const openApiDocs = this.openApiDocs;
-			setImmediate(() => {
+			setImmediate(async () => {
 				try {
+					const { generateOpenApiDocument } = await import("./helpers/openapi");
 					const doc = generateOpenApiDocument({
 						openApiDocs,
 						title: docsConfig.title,
