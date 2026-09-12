@@ -1525,7 +1525,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code +=
 				"  if (server && wsRoutes.has(pathname)) {\n" +
 				"    const wsHandler = wsRoutes.get(pathname);\n" +
-				"    const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n" +
+				"    ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n" +
 				"    const data = { ctx, handler: wsHandler };\n" +
 				"    const upgraded = server.upgrade(request, { data });\n" +
 				"    if (upgraded) return undefined;\n" +
@@ -1533,7 +1533,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				"  }\n";
 		}
 
-		code += "  const method = request.method;\n" + "  try {\n" + "  switch(method) {\n";
+		code += "  let ctx;\n  const method = request.method;\n" + "  try {\n" + "  switch(method) {\n";
 
 		// biome-ignore lint/suspicious/noExplicitAny: generic
 		const handlersList: any[] = [];
@@ -1571,10 +1571,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				const ctxArg = needsFullContext ? "ctx" : needsParamsOnly ? "{ request, params: routeParams }" : "{ request }";
 				// Error handler always needs full Context, so we declare ctx for catch blocks
 				const ctxDecl = needsFullContext
-					? "      const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n"
-					: needsParamsOnly
-					? "      let ctx;\n"
-					: "      let ctx;\n";
+					? "      ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n"
+					: "";
 
 				code += `    case "${route.path}": {\n`;
 				code += ctxDecl;
