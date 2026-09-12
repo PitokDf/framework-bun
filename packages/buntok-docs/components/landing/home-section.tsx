@@ -421,7 +421,7 @@ export class UserController {
               Benchmarks
             </Link>
             <a
-              href="https://github.com/PitokDf/framework-bun"
+              href="https://github.com/PitokDf/buntok"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-accent transition-colors"

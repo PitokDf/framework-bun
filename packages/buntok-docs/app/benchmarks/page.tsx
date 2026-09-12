@@ -399,7 +399,7 @@ function BenchmarkPage({ data }: { data: BenchmarkData }) {
             <p className="text-xs text-text-secondary mt-3">
               Source code:{" "}
               <a
-                href="https://github.com/PitokDf/framework-bun/blob/master/benchmarks/runner.ts"
+                href="https://github.com/PitokDf/buntok/blob/master/benchmarks/runner.ts"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#f97316] hover:underline font-mono"

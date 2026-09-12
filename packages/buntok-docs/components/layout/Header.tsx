@@ -117,7 +117,7 @@ export function Header({ onToggleSidebar, isSidebarOpen }: HeaderProps) {
             </button>
           )}
           <Link
-            href="https://github.com/PitokDf/framework-bun"
+            href="https://github.com/PitokDf/buntok"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-lg hover:bg-bg-tertiary transition-colors"
