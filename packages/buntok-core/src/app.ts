@@ -255,7 +255,6 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		ctx: Context<DI>,
 		finalHandler: Handler<DI>,
 	) => HandlerReturn;
-	private iconPath: string = "./public/favicon.ico";
 	private isListening: boolean = false;
 	public di = {} as DI;
 	private wsRoutes: Map<string, WSHandler<DI>> = new Map();
@@ -265,8 +264,14 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private _skipLogResponse: boolean = false;
 	// Cache sucrose analysis per handler to avoid AST analysis per request
 	private _handlerNeedsFullContext = new WeakMap<Function, boolean>();
+	// Track routes that have per-route middlewares (need full Context)
+	private _routesWithMiddleware = new Set<string>();
 	// Precomputed client IP resolver — avoid closure alloc per request
 	private _clientIPResolver: (request: Request) => string = (req) => getClientIP(req);
+	// Cache full needsFullContext per handler for AOT codegen (includes ctx.json detection)
+	private _handlerFullContextCache = new WeakMap<Function, { needsFullContext: boolean; needsParams: boolean }>();
+	// Map compiled pipeline → original handler for AOT sucrose analysis
+	private _pipelineToHandler = new WeakMap<Function, Function>();
 	public _apiDocsConfig: ApiDocsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: Required for internal OpenAPI registry
 	public openApiDocs: any[] = [];
@@ -340,12 +345,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		);
 	};
 
+	private iconPath: string = "./public/favicon.ico";
+
 	constructor(options: AppOptions = {}) {
 		this.handleSignals = options.handleSignals ?? true;
 		this.shutdownTimeout = options.shutdownTimeout ?? 30_000;
 		this.router = new Router();
-		// Favicon route registered lazily on first request or via app.icon()
-		// Avoids extra async case in AOT switch for apps that don't need it
+		// Favicon served as static file from docs templates directory
 	}
 
 	public use(middleware: Middleware<DI>): this {
@@ -642,6 +648,12 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 						// If handler returns promise, handle async
 						if (result instanceof Promise) {
 							return result.then((val: any) => {
+								if (val instanceof Response) {
+									return new Response(val.body, {
+										status: routeMeta.redirect!.statusCode,
+										headers: { Location: routeMeta.redirect!.url, ...Object.fromEntries(val.headers) },
+									});
+								}
 								if (val && typeof val === "object" && "url" in val) {
 									const url = (val as any).url as string;
 									const sc = (val as any).statusCode ?? routeMeta.redirect!.statusCode;
@@ -658,7 +670,14 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 								});
 							});
 						}
-						if (result && typeof result === "object" && "url" in result) {
+						if (result instanceof Response) {
+						// Handler returned a Response — apply redirect status + Location header
+						return new Response(result.body, {
+							status: routeMeta.redirect!.statusCode,
+							headers: { Location: routeMeta.redirect!.url, ...Object.fromEntries(result.headers) },
+						});
+					}
+					if (result && typeof result === "object" && "url" in result) {
 							const url = (result as any).url as string;
 							const sc = (result as any).statusCode ?? routeMeta.redirect!.statusCode;
 							return new Response(null, { status: sc, headers: { Location: url } });
@@ -683,6 +702,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 						? apply(new Response(raw))
 						: apply(raw instanceof Response ? raw : toResponse(raw));
 				}) as Handler<DI>;
+				// Preserve sucrose target from original handler for AST analysis
+				(handler as any)._sucroseTarget = (original as any)._sucroseTarget ?? original;
 			}
 
 			this.registerRoute(route.method, fullPath, [
@@ -1303,11 +1324,24 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		const mainHandler = handlers[handlers.length - 1] as Handler<DI>;
 		const routeMiddlewares = handlers.slice(0, -1) as Middleware<DI>[];
 
-		// Pre-compute sucrose analysis for fallback path
+		// Track routes with per-route middlewares for AOT Context optimization
+		if (routeMiddlewares.length > 0) {
+			this._routesWithMiddleware.add(`${method}:${path}`);
+		}
+
+		// Pre-compute sucrose analysis for fallback path and AOT codegen
 		if (!this._handlerNeedsFullContext.has(mainHandler)) {
 			const a = analyzeHandler(mainHandler);
 			this._handlerNeedsFullContext.set(mainHandler, !!(a.needsBody || a.needsValidation ||
 				a.needsFormData || a.needsQuery || a.needsText || a.needsBinary));
+		}
+		// Full context check for AOT: includes ctx.json, ctx.error, etc.
+		if (!this._handlerFullContextCache.has(mainHandler)) {
+			const a = analyzeHandler(mainHandler);
+			this._handlerFullContextCache.set(mainHandler, {
+				needsFullContext: !!a.needsFullContext,
+				needsParams: !!a.needsParams,
+			});
 		}
 
 		// Capture debug info before compilation
@@ -1354,6 +1388,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 
 		// AOT Compile route middlewares
 		const executionChain = this.compilePipeline(routeMiddlewares, mainHandler);
+
+		// Map compiled pipeline → original handler for AOT sucrose analysis
+		this._pipelineToHandler.set(executionChain, mainHandler);
 
 		this.router.insert(method, path, executionChain);
 	}
@@ -1467,6 +1504,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 					json: "application/json",
 					png: "image/png",
 					svg: "image/svg+xml",
+					ico: "image/x-icon",
 				};
 				return new Response(file, {
 					headers: { "Content-Type": contentTypes[ext] || "application/octet-stream" },
@@ -1479,8 +1517,18 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		this.router.insert("GET", `${basePath}/swagger.json`, swaggerHandler);
 		this.router.insert("GET", `${basePath}/index.html`, uiHandler);
 		this.router.insert("GET", `${basePath}/*`, assetsHandler);
-		this.router.insert("GET", basePath, uiHandler);
+		this.router.insert("GET", `${basePath}`, uiHandler);
 		this.router.insert("GET", `${basePath}/`, uiHandler);
+
+		// Serve favicon.ico from templates directory (root path)
+		const faviconHandler: Handler<DI> = async () => {
+			const file = Bun.file(join(templatesDir, "favicon.ico"));
+			if (await file.exists()) {
+				return new Response(file, { headers: { "Content-Type": "image/x-icon" } });
+			}
+			return new Response(null, { status: 404 });
+		};
+		this.router.insert("GET", "/favicon.ico", faviconHandler);
 	}
 
 	private compileGlobalPipeline(): void {
@@ -1564,10 +1612,15 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code += "  switch(pathname) {\n";
 			for (const route of routes) {
 				const handlerRef = getHandlerIndex(route.handler);
-				// Sucrose analysis: skip full Context alloc if handler only needs request
-				const analysis = analyzeHandler(route.handler);
-				const needsFullContext = analysis.needsFullContext;
-				const needsParamsOnly = analysis.needsParams && !needsFullContext;
+				// Resolve original handler from pipeline for sucrose analysis
+				const originalHandler = this._pipelineToHandler.get(route.handler) ?? route.handler;
+				// Sucrose analysis via cached full-context check (detects ctx.json, ctx.error, etc.)
+				const cached = this._handlerFullContextCache.get(originalHandler) ?? { needsFullContext: true, needsParams: false };
+				// Global middleware or per-route middleware (e.g. requireAuth, zValidator)
+				// may use ctx.error, ctx.json, etc. — must provide full Context
+				const routeKey = `${method}:${route.path}`;
+				const needsFullContext = hasGlobalMiddleware || this._routesWithMiddleware.has(routeKey) || cached.needsFullContext;
+				const needsParamsOnly = !needsFullContext && cached.needsParams;
 				const ctxArg = needsFullContext ? "ctx" : needsParamsOnly ? "{ request, params: routeParams }" : "{ request }";
 				// Error handler always needs full Context, so we declare ctx for catch blocks
 				const ctxDecl = needsFullContext
@@ -1870,12 +1923,14 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			finalHandler = this.customNotFoundHandler;
 		}
 
-		// Sucrose: use cached analysis from compile time
-		const needsFullContext = this._handlerNeedsFullContext.get(finalHandler) ?? true;
+		// Sucrose: use cached analysis from compile time (includes ctx.json detection)
+		const cached = this._handlerFullContextCache.get(finalHandler);
+		const needsFullContext = cached ? cached.needsFullContext : true;
+		const needsParams = cached ? cached.needsParams : false;
 		const fullCtx = needsFullContext
 			? new Context(request, routeParams, this.di, this._clientIPResolver)
 			: null;
-		const ctxArg = fullCtx ?? { request, params: routeParams };
+		const ctxArg = fullCtx ?? (needsParams ? { request, params: routeParams } : { request, params: routeParams });
 
 		try {
 			// biome-ignore lint/style/noNonNullAssertion: Guaranteed by compileGlobalPipeline
