@@ -330,6 +330,17 @@ export function Controller(prefix = "") {
 			throw new Error("@Controller can only decorate classes");
 		}
 		const routes = pendingRoutes.filter((r) => r.method !== "");
+		// Transfer metadata from pendingRoutes to global metadataRegistry
+		for (const route of routes) {
+			if (route.metadata) {
+				let classMap = metadataRegistry.get(target);
+				if (!classMap) {
+					classMap = new Map();
+					metadataRegistry.set(target, classMap);
+				}
+				classMap.set(route.propertyKey, route.metadata);
+			}
+		}
 		pendingRoutes = [];
 		controllerRegistry.set(target, { prefix, routes });
 	};

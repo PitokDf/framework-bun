@@ -5,7 +5,7 @@
  * Bun creates symlinks at `bun install` time. New files added after install
  * won't be symlinked automatically. This script fixes that.
  */
-import { readdirSync, statSync, mkdirSync, symlinkSync, existsSync } from "fs";
+import { readdirSync, statSync, mkdirSync, symlinkSync, existsSync, copyFileSync } from "fs";
 import { join, basename } from "path";
 
 const CORE_DIST = join(import.meta.dir, "..", "dist");
@@ -35,14 +35,21 @@ function syncDir(distDir: string, targetDir: string) {
 
 // Known local dependents (add more as needed)
 const LOCAL_DEPENDENTS = [
-  join(MONOREPO_ROOT, "packages", "buntok-test"),
+	join(MONOREPO_ROOT, "packages", "buntok-test"),
 ];
 
+const CORE_PKG = join(import.meta.dir, "..", "package.json");
+
 for (const dep of LOCAL_DEPENDENTS) {
-  const targetDist = join(dep, "node_modules", "@buntok", "core", "dist");
-  if (existsSync(targetDist)) {
-    console.log(`Syncing dist to ${dep}...`);
-    syncDir(CORE_DIST, targetDist);
-    console.log(`Done: ${dep}`);
-  }
+	const targetDist = join(dep, "node_modules", "@buntok", "core", "dist");
+	if (existsSync(targetDist)) {
+		console.log(`Syncing dist to ${dep}...`);
+		syncDir(CORE_DIST, targetDist);
+		console.log(`Done: ${dep}`);
+	}
+	// Sync package.json so subpath exports are reflected
+	const targetPkg = join(dep, "node_modules", "@buntok", "core", "package.json");
+	if (existsSync(targetPkg)) {
+		copyFileSync(CORE_PKG, targetPkg);
+	}
 }

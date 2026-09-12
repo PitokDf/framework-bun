@@ -10,15 +10,6 @@
     "parameters": {}
   },
   "paths": {
-    "/favicon.ico": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Success"
-          }
-        }
-      }
-    },
     "/metrics": {
       "get": {
         "responses": {

@@ -1,4 +1,5 @@
-import { Context, Controller, createPayment, generateCode, Post } from "@buntok/core";
+import { Context, Controller, generateCode, Post } from "@buntok/core";
+import { createPayment } from "@buntok/core/payment";
 
 const midtrans = createPayment.midtrans({
 	clientKey: "SB-Mid-client-_BxOLfo7ZCtihmRR",

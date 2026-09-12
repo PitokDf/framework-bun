@@ -140,6 +140,7 @@ export function analyzeHandler(
 			source.includes("ctx.error") ||
 			source.includes("ctx.created") ||
 			source.includes("ctx.noContent") ||
+			source.includes("ctx.status") ||
 			source.includes("ctx.headers") ||
 			source.includes("ctx.store") ||
 			source.includes("ctx.ip") ||
