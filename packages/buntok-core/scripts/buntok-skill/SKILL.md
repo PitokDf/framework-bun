@@ -233,7 +233,7 @@ const app = new App();
 | `app.disable` | `("x-powered-by")` | Disable built-in `X-Powered-By: buntok` header |
 | `app.enable` | `("x-powered-by")` | Re-enable disabled features |
 | `app.enableReusePort` | `(enabled?)` | `SO_REUSEPORT` (Linux only — warns on macOS/Windows) |
-| `app.icon` | `(path)` | Set custom favicon path (default `./public/favicon.ico` + built-in fallback) |
+| `app.icon` | `(path?)` | Register favicon route with optional custom path (default `./public/favicon.ico` + built-in fallback). Not registered by default in production to reduce AOT overhead — call `app.icon()` if you need it. |
 | `app.apiDocs` | `(options?)` | Register API docs UI at `/docs` — routes NOT in `openApiDocs` |
 | `app.server` | `Server<WSData>` | Underlying `Bun.Server` after `listen()` — for `server.publish()` |
 | `app.di` | `DI` | Public DI store |
@@ -2127,8 +2127,9 @@ logger.warn("High memory usage", { mb: 512 });
 logger.error("DB connection failed");
 // LogLevel: DEBUG=0, INFO=1, WARN=2, ERROR=3
 // Logger {level, logFileLevel, format:"text"|"json", logRequests, redactPatterns, redactReplacement} — production defaults to JSON+WARN
+// logRequests defaults to false in production (opt-in for performance). Enable via `LOG_REQUESTS=true` env or `new Logger({ logRequests: true })`
 // logFileLevel defaults to DEBUG (write all to file) — independent of console level
-// Env: LOG_DIR=./logs → daily app-YYYY-MM-DD.log, LOG_REQUESTS=false disables
+// Env: LOG_DIR=./logs → daily app-YYYY-MM-DD.log, LOG_REQUESTS=true enables request logging
 logger.debug("verbose", { meta: 1 });
 logger.flushSync(); // flush file logs
 ```
@@ -2661,7 +2662,7 @@ app.listen(1212);
 |----------|--------|
 | `NODE_ENV=production` | JSON format logs, WARN level |
 | `LOG_DIR=./logs` | Write logs to file |
-| `LOG_REQUESTS=false` | Disable request logging |
+| `LOG_REQUESTS=true` | Enable request logging (disabled by default in production for performance) |
 | `PORT=1212` | Server port (default: 1212) |
 
 ---

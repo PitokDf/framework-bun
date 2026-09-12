@@ -95,7 +95,7 @@ export class Logger {
 		this.level =
 			options?.level ?? (this.isProd ? LogLevel.WARN : LogLevel.INFO);
 		this.format = options?.format ?? (this.isProd ? "json" : "text");
-		this._logRequests = options?.logRequests ?? true;
+		this._logRequests = options?.logRequests ?? (process.env.LOG_REQUESTS === "true" ? true : process.env.LOG_REQUESTS === "false" ? false : process.env.NODE_ENV !== "production");
 		this.flushInterval = options?.flushInterval ?? 2000;
 		this.flushThreshold = options?.flushThreshold ?? 100;
 		this.redactPatterns = options?.redactPatterns;
@@ -288,6 +288,4 @@ export class Logger {
 }
 
 // Create logger with env-based configuration
-export const logger = new Logger({
-	logRequests: process.env.LOG_REQUESTS !== "false",
-});
+export const logger = new Logger();

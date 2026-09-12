@@ -1,13 +1,14 @@
 import { join, sep, dirname } from "node:path";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { Server, ServerWebSocket } from "bun";
-import { z } from "zod";
+import type { z } from "zod";
 import { Container } from "./container";
 import { Context } from "./context";
 import { getControllerMeta } from "./decorators";
 import { HttpError } from "./helpers/async-handler";
 import { generateOpenApiDocument } from "./helpers/openapi";
 import { toResponse } from "./helpers/response";
+import { analyzeHandler } from "./aot/sucrose";
 import { logger } from "./logger";
 import { Router } from "./router";
 import { VERSION } from "./core-exports";
@@ -263,6 +264,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	private poweredByHeaderEnabled: boolean = true;
 	private _reusePort: boolean = false;
 	private _skipLogResponse: boolean = false;
+	// Cache sucrose analysis per handler to avoid AST analysis per request
+	private _handlerNeedsFullContext = new WeakMap<Function, boolean>();
+	// Precomputed client IP resolver — avoid closure alloc per request
+	private _clientIPResolver: (request: Request) => string = (req) => getClientIP(req);
 	public _apiDocsConfig: ApiDocsOptions | null = null;
 	// biome-ignore lint/suspicious/noExplicitAny: Required for internal OpenAPI registry
 	public openApiDocs: any[] = [];
@@ -340,7 +345,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		this.handleSignals = options.handleSignals ?? true;
 		this.shutdownTimeout = options.shutdownTimeout ?? 30_000;
 		this.router = new Router();
-		this.registerFaviconRoute();
+		// Favicon route registered lazily on first request or via app.icon()
+		// Avoids extra async case in AOT switch for apps that don't need it
 	}
 
 	public use(middleware: Middleware<DI>): this {
@@ -351,6 +357,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 	/** Configure which proxy peers may supply forwarding headers. */
 	public setTrustedProxy(options?: TrustedProxyOptions): this {
 		this.trustedProxy = options;
+		this._clientIPResolver = options
+			? (req) => getClientIP(req, options)
+			: (req) => getClientIP(req);
 		this._aotReady = false;
 		return this;
 	}
@@ -469,11 +478,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		schema: T,
 		options?: EnvValidationOptions,
 	): z.infer<z.ZodObject<T>> {
-		const envSchema = z.object(schema);
+		// biome-ignore lint/style/noNonNullAssertion: Lazy load zod on first use
+		const zod = (globalThis as Record<string, unknown>).__buntok_zod ??= require("zod").z;
+		const envSchema = zod.object(schema);
 		const result = envSchema.safeParse(process.env);
 
 		if (!result.success) {
-			const errors = result.error.issues.map((err) => ({
+			const errors = result.error.issues.map((err: { path: { join: (s: string) => string }; message: string }) => ({
 				field: err.path.join("."),
 				message: err.message,
 			}));
@@ -483,7 +494,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				options.onError(errors);
 				// If onError didn't throw/exit, throw error for caller to handle
 				throw new Error(
-					`Environment validation failed: ${errors.map((e) => `${e.field}: ${e.message}`).join(", ")}`,
+					`Environment validation failed: ${errors.map((e: { field: string; message: string }) => `${e.field}: ${e.message}`).join(", ")}`,
 				);
 			}
 
@@ -493,7 +504,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				"\x1b[31mMissing or invalid environment variables:\x1b[0m\n",
 			);
 
-			errors.forEach((err) => {
+			errors.forEach((err: { field: string; message: string }) => {
 				console.error(
 					`  \x1b[33m❯\x1b[0m \x1b[36m${err.field}\x1b[0m: \x1b[90m${err.message}\x1b[0m`,
 				);
@@ -596,9 +607,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			const cleanPath = route.path === "/" ? "" : route.path;
 			const fullPath = `${normalizedPrefix}${cleanPath}` || "/";
 			// biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch by decorated property key
-			let handler = (instance as any)[route.propertyKey].bind(
-				instance,
-			) as Handler<DI>;
+			const originalMethod = (instance as any)[route.propertyKey];
+			let handler = ((...args: any[]) => originalMethod.apply(instance, args)) as Handler<DI>;
+			// Attach original for sucrose analysis (bound/closure wrappers hide toString)
+			(handler as any)._sucroseTarget = originalMethod;
 
 			// Apply zero-cost wrappers for @HttpCode/@Header/@Redirect (boot-time, no per-request alloc beyond wrapper closure)
 			const hasStatus = route.statusCode !== undefined;
@@ -739,8 +751,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		return this;
 	}
 
-	public icon(path: string): this {
-		this.iconPath = path;
+	public icon(path?: string): this {
+		if (path) this.iconPath = path;
+		this.registerFaviconRoute();
 		return this;
 	}
 
@@ -1291,6 +1304,13 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		const mainHandler = handlers[handlers.length - 1] as Handler<DI>;
 		const routeMiddlewares = handlers.slice(0, -1) as Middleware<DI>[];
 
+		// Pre-compute sucrose analysis for fallback path
+		if (!this._handlerNeedsFullContext.has(mainHandler)) {
+			const a = analyzeHandler(mainHandler);
+			this._handlerNeedsFullContext.set(mainHandler, !!(a.needsBody || a.needsValidation ||
+				a.needsFormData || a.needsQuery || a.needsText || a.needsBinary));
+		}
+
 		// Capture debug info before compilation
 		this.routeDebugInfo.push({
 			method,
@@ -1514,7 +1534,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				"  }\n";
 		}
 
-		code += "  const method = request.method;\n" + "  switch(method) {\n";
+		code += "  const method = request.method;\n" + "  try {\n" + "  switch(method) {\n";
 
 		// biome-ignore lint/suspicious/noExplicitAny: generic
 		const handlersList: any[] = [];
@@ -1545,36 +1565,60 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code += "  switch(pathname) {\n";
 			for (const route of routes) {
 				const handlerRef = getHandlerIndex(route.handler);
+				// Sucrose analysis: skip full Context alloc if handler only needs request
+				const analysis = analyzeHandler(route.handler);
+				const needsFullContext = analysis.needsBody || analysis.needsValidation ||
+					analysis.needsFormData || analysis.needsQuery;
+				const needsParamsOnly = analysis.needsParams && !needsFullContext;
+				const ctxArg = needsFullContext ? "ctx" : needsParamsOnly ? "{ request, params: routeParams }" : "{ request }";
+				const ctxDecl = needsFullContext
+					? "      const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n"
+					: needsParamsOnly
+					? ""  // params come from router.find, but in AOT we use EMPTY_PARAMS for static routes
+					: "";
+
 				code += `    case "${route.path}": {\n`;
-				code += "      const ctx = new Context(request, EMPTY_PARAMS, di, clientIPResolver);\n";
-				code += "      try {\n";
+				code += ctxDecl;
 				code += hasGlobalMiddleware
-					? "        const raw = compiledGlobalPipeline(ctx, " +
-					handlerRef +
-					");\n"
-					: `        const raw = ${handlerRef}(ctx);\n`;
+					? `      const raw = compiledGlobalPipeline(${ctxArg}, ${handlerRef});\n`
+					: `      const raw = ${handlerRef}(${ctxArg});\n`;
 				if (this._skipLogResponse) {
-					code += "        if (raw instanceof Promise) {\n";
-					code +=
-						'          return raw.then((v) => typeof v === "string" ? new Response(v) : v instanceof Response ? v : toResponse(v)).catch((e) => handleError(request, pathname, ctx, e));\n';
-					code += "        }\n";
-					code +=
-						'        if (typeof raw === "string") return new Response(raw);\n';
-					code +=
-						"        return raw instanceof Response ? raw : toResponse(raw);\n";
+					if (!this.poweredByHeaderEnabled) {
+						// Fastest path: no logging, no powered-by — skip setPoweredBy entirely
+						code += "      if (raw instanceof Promise) {\n";
+						code +=
+							'        return raw.then((v) => typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v)).catch((e) => handleError(request, pathname, { request }, e));\n';
+						code += "      }\n";
+						code +=
+							'      if (typeof raw === "string") return new Response(raw, plainTextHeaders);\n';
+						code +=
+							"      if (raw instanceof Response) return raw;\n" +
+							"      if (typeof raw === \"object\") return Response.json(raw);\n" +
+							"      return toResponse(raw);\n";
+					} else {
+						code += "      if (raw instanceof Promise) {\n";
+						code +=
+							'        return raw.then((v) => setPoweredBy(typeof v === "string" ? new Response(v, plainTextHeaders) : v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => handleError(request, pathname, { request }, e));\n';
+						code += "      }\n";
+						code +=
+							'      if (typeof raw === "string") return setPoweredBy(new Response(raw, plainTextHeaders));\n';
+						code +=
+							"      if (raw instanceof Response) return setPoweredBy(raw);\n" +
+							"      if (typeof raw === \"object\") return setPoweredBy(Response.json(raw));\n" +
+							"      return setPoweredBy(toResponse(raw));\n";
+					}
 				} else {
-					code += "        if (raw instanceof Promise) {\n";
+					code += "      if (raw instanceof Promise) {\n";
 					code +=
-						'          return raw.then((v) => typeof v === "string" ? logResponse(request, pathname, new Response(v)) : logResponse(request, pathname, v instanceof Response ? v : toResponse(v))).catch((e) => handleError(request, pathname, ctx, e));\n';
-					code += "        }\n";
+						'        return raw.then((v) => typeof v === "string" ? logResponse(request, pathname, new Response(v, plainTextHeaders)) : logResponse(request, pathname, v instanceof Response ? v : typeof v === "object" ? Response.json(v) : toResponse(v))).catch((e) => handleError(request, pathname, { request }, e));\n';
+					code += "      }\n";
 					code +=
-						'        if (typeof raw === "string") return logResponse(request, pathname, new Response(raw));\n';
+						'      if (typeof raw === "string") return logResponse(request, pathname, new Response(raw, plainTextHeaders));\n';
 					code +=
-						"        return logResponse(request, pathname, raw instanceof Response ? raw : toResponse(raw));\n";
+						"      if (raw instanceof Response) return logResponse(request, pathname, raw);\n" +
+						"      if (typeof raw === \"object\") return logResponse(request, pathname, Response.json(raw));\n" +
+						"      return logResponse(request, pathname, toResponse(raw));\n";
 				}
-				code += "      } catch (err) {\n";
-				code += "        return handleError(request, pathname, ctx, err);\n";
-				code += "      }\n";
 				code += "    }\n";
 			}
 			code += "  }\n";
@@ -1582,7 +1626,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			code += "}\n";
 		}
 
-		code += "  }\n" + "  return fallback(request, server);\n" + "};\n";
+		code += "  }\n  } catch(err) { return handleError(request, pathname, { request }, err); }\n" + "  return fallback(request, server);\n" + "};\n";
 
 		const factory = new Function(
 			"Context",
@@ -1596,6 +1640,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			"wsRoutes",
 			"clientIPResolver",
 			"toResponse",
+			"setPoweredBy",
+			"plainTextHeaders",
 			code,
 		);
 
@@ -1610,8 +1656,10 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 			this.handleError,
 			this.fallbackHandleRequest.bind(this),
 			this.wsRoutes,
-			(request: Request) => getClientIP(request, this.trustedProxy),
+			this._clientIPResolver,
 			toResponse,
+			this.setPoweredBy,
+			this._plainTextHeaders,
 		);
 	}
 
@@ -1634,9 +1682,8 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (!response) {
 			return new Response("Internal Server Error", { status: 500 });
 		}
-		// Read requestId once for both logging and response propagation
-		const requestId = request.headers.get("x-request-id");
-		// Skip building the log string entirely when request logging is off
+		// Read requestId only when logging is on (avoids Headers.get per-request in prod)
+		const requestId = logger.logRequests ? request.headers.get("x-request-id") : null;
 		if (logger.logRequests) {
 			const status = response.status;
 			const logData = requestId ? { status, requestId } : { status };
@@ -1654,6 +1701,17 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (requestId) response.headers.set("x-request-id", requestId);
 		return response;
 	};
+
+	// Lightweight X-Powered-By setter for AOT skip-log path (no logging overhead)
+	private readonly setPoweredBy = (response: Response): Response => {
+		if (this.poweredByHeaderEnabled) {
+			response.headers.set("X-Powered-By", "buntok");
+		}
+		return response;
+	};
+
+	// Pre-allocated headers for hot paths — avoid alloc per request
+	private _plainTextHeaders = Object.freeze({ "Content-Type": "text/plain; charset=utf-8" });
 
 	/**
 	 * Normalize flexible handler return (string | object | null etc.) to Response.
@@ -1791,7 +1849,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		if (server && this.wsRoutes.size > 0) {
 			const wsHandler = this.wsRoutes.get(pathname);
 			if (wsHandler) {
-				const ctx = new Context(request, {}, this.di, (req) => getClientIP(req, this.trustedProxy)) as Context<DI>;
+				const ctx = new Context(request, {}, this.di, this._clientIPResolver) as Context<DI>;
 				const data: WSData<DI> = { ctx, handler: wsHandler };
 				const upgraded = server.upgrade(request, { data });
 				if (upgraded) {
@@ -1808,26 +1866,37 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		}
 
 		const route = this.router.find(request.method, pathname);
-
-		const ctx = new Context(request, route.params, this.di, (req) => getClientIP(req, this.trustedProxy)) as Context<DI>;
+		const routeParams = route.params;
 
 		let finalHandler = route.handler as Handler<DI>;
 		if (!finalHandler) {
 			finalHandler = this.customNotFoundHandler;
 		}
 
+		// Sucrose: use cached analysis from compile time
+		const needsFullContext = this._handlerNeedsFullContext.get(finalHandler) ?? true;
+		const fullCtx = needsFullContext
+			? new Context(request, routeParams, this.di, this._clientIPResolver)
+			: null;
+		const ctxArg = fullCtx ?? { request, params: routeParams };
+
 		try {
 			// biome-ignore lint/style/noNonNullAssertion: Guaranteed by compileGlobalPipeline
-			const result = this.compiledGlobalPipeline!(ctx, finalHandler);
+			const result = this.compiledGlobalPipeline!(ctxArg as Context<DI>, finalHandler);
 
 			if (result instanceof Promise) {
 				return result
 					.then((value) => this.logNormalized(request, pathname, value))
-					.catch((err) => this.handleError(request, pathname, ctx, err));
+					.catch((err) => {
+						// Ensure full Context for error handler
+						const errCtx = fullCtx ?? new Context(request, routeParams, this.di, this._clientIPResolver);
+						return this.handleError(request, pathname, errCtx, err);
+					});
 			}
 			return this.logNormalized(request, pathname, result);
 		} catch (err) {
-			return this.handleError(request, pathname, ctx, err);
+			const errCtx = fullCtx ?? new Context(request, routeParams, this.di, this._clientIPResolver);
+			return this.handleError(request, pathname, errCtx, err);
 		}
 	}
 
@@ -1840,7 +1909,9 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 		const startTime = performance.now();
 
 		// Pre-compute whether logResponse can be skipped entirely
-		this._skipLogResponse = !logger.logRequests && !this.poweredByHeaderEnabled;
+		// When logging is off, the AOT template skips logResponse() entirely —
+		// X-Powered-By is inlined in the AOT codegen below.
+		this._skipLogResponse = !logger.logRequests;
 
 		// Register API docs routes directly on router (bypasses openApiDocs)
 		if (this._apiDocsConfig) {
@@ -2654,10 +2725,7 @@ export class RouterGroup<
 			const cleanPath = route.path === "/" ? "" : route.path;
 			const fullPath =
 				`${this.normalizePath(normalizedPrefix)}${cleanPath}` || "/";
-			// biome-ignore lint/suspicious/noExplicitAny: dynamic method dispatch by decorated property key
-			const handler = (instance as any)[route.propertyKey].bind(
-				instance,
-			) as Handler<DI>;
+			const handler = ((...args: any[]) => (instance as any)[route.propertyKey](...args)) as Handler<DI>;
 
 			this.app.registerRoute(route.method, fullPath, [
 				...this.groupMiddlewares,
