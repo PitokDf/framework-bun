@@ -52,8 +52,8 @@ describe("Package exports", () => {
 		expect(mod.VERSION).toMatch(/^\d+\.\d+\.\d+/);
 	});
 
-	it("exports z from zod", async () => {
-		const mod = await import(join(DIST, "core-exports.js"));
+	it("exports z from validator subpath", async () => {
+		const mod = await import(join(DIST, "middlewares", "validator.js"));
 		expect(mod.z).toBeDefined();
 		expect(typeof mod.z.object).toBe("function");
 	});
