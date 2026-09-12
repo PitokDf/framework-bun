@@ -1566,8 +1566,7 @@ export class App<DI extends Record<string, unknown> = Record<string, unknown>> {
 				const handlerRef = getHandlerIndex(route.handler);
 				// Sucrose analysis: skip full Context alloc if handler only needs request
 				const analysis = analyzeHandler(route.handler);
-				const needsFullContext = analysis.needsBody || analysis.needsValidation ||
-					analysis.needsFormData || analysis.needsQuery;
+				const needsFullContext = analysis.needsFullContext;
 				const needsParamsOnly = analysis.needsParams && !needsFullContext;
 				const ctxArg = needsFullContext ? "ctx" : needsParamsOnly ? "{ request, params: routeParams }" : "{ request }";
 				const ctxDecl = needsFullContext
