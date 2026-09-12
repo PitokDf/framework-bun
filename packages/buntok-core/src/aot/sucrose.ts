@@ -24,6 +24,8 @@ export interface HandlerAnalysis {
 	needsText: boolean;
 	/** Whether handler uses ctx.request.arrayBuffer() (requires binary parsing) */
 	needsBinary: boolean;
+	/** Whether handler uses Context methods that require full Context instance */
+	needsFullContext: boolean;
 }
 
 /**
@@ -53,6 +55,7 @@ export function analyzeHandler(
 		needsFormData: true,
 		needsText: true,
 		needsBinary: true,
+		needsFullContext: true,
 	};
 
 	try {
@@ -120,6 +123,35 @@ export function analyzeHandler(
 			source.includes("ctx.request.arrayBuffer()") ||
 			source.includes(".arrayBuffer(");
 
+		// Detect Context methods that require full Context instance
+		analysis.needsFullContext =
+			analysis.needsBody ||
+			analysis.needsQuery ||
+			analysis.needsParams ||
+			analysis.needsValidation ||
+			analysis.needsFormData ||
+			analysis.needsText ||
+			analysis.needsBinary ||
+			source.includes("ctx.getCookie") ||
+			source.includes("ctx.getCookies") ||
+			source.includes("ctx.cookies") ||
+			source.includes("ctx.json") ||
+			source.includes("ctx.success") ||
+			source.includes("ctx.error") ||
+			source.includes("ctx.created") ||
+			source.includes("ctx.noContent") ||
+			source.includes("ctx.headers") ||
+			source.includes("ctx.store") ||
+			source.includes("ctx.ip") ||
+			source.includes("ctx.request.headers") ||
+			source.includes(".getCookie(") ||
+			source.includes(".getCookies(") ||
+			source.includes(".json(") ||
+			source.includes(".success(") ||
+			source.includes(".error(") ||
+			source.includes(".created(") ||
+			source.includes(".noContent(");
+
 		// If handler is passed to another function, conservatively assume all properties needed
 		if (
 			source.includes("handler(") ||
@@ -134,6 +166,7 @@ export function analyzeHandler(
 				needsFormData: true,
 				needsText: true,
 				needsBinary: true,
+				needsFullContext: true,
 			};
 		}
 	} catch {
@@ -165,6 +198,7 @@ export function analyzeHandlerChain(
 		needsFormData: false,
 		needsText: false,
 		needsBinary: false,
+		needsFullContext: false,
 	};
 
 	for (const handler of handlers) {
@@ -178,6 +212,7 @@ export function analyzeHandlerChain(
 			combined.needsFormData || analysis.needsFormData;
 		combined.needsText = combined.needsText || analysis.needsText;
 		combined.needsBinary = combined.needsBinary || analysis.needsBinary;
+		combined.needsFullContext = combined.needsFullContext || analysis.needsFullContext;
 	}
 
 	return combined;
